@@ -94,6 +94,7 @@ function renderDashboard() {
 
     document.querySelector('.chart-container').style.height = Math.max(300, labels.length * 40 + 50) + 'px';
     const ctx = document.getElementById('expenseChart').getContext('2d');
+    Chart.register(window.ChartDataLabels);
     chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -101,13 +102,31 @@ function renderDashboard() {
             datasets: [{
                 label: 'Expenses by Category',
                 data: data,
-                backgroundColor: '#000000',
+                backgroundColor: labels.map((_, i) => `hsl(0, 0%, ${15 + (i * 65) / Math.max(1, labels.length - 1)}%)`),
                 borderRadius: 4
             }]
         },
-        options: { indexAxis: 'y', maintainAspectRatio: false,
+        options: { 
+            indexAxis: 'y', 
+            maintainAspectRatio: false,
             responsive: true,
-            plugins: { legend: { display: false } },
+            layout: {
+                padding: { right: 60 }
+            },
+            scales: {
+                x: { display: false },
+                y: { grid: { display: false }, border: { display: false } }
+            },
+            plugins: { 
+                legend: { display: false },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'right',
+                    formatter: (value) => '$' + parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+                    color: '#333333',
+                    font: { weight: '600', size: 13 }
+                }
+            },
             onClick: (e, activeElements) => {
                 if (activeElements.length > 0) {
                     const index = activeElements[0].index;
@@ -118,7 +137,7 @@ function renderDashboard() {
         }
     });
 
-    document.getElementById('category-details-container').innerHTML = "";
+document.getElementById('category-details-container').innerHTML = "";
 }
 
 function escapeHtml(unsafe) {
