@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Expense Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>💸 AI Expense Tracker</h1>
+        </header>
+        <div class="dashboard">
+            <!-- Chart Section -->
+            <div class="panel chart-panel">
+                <h2>Spending by Category</h2>
+                <div class="chart-container">
+                    <canvas id="expenseChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Chat Section -->
+            <div class="panel chat-panel">
+                <h2>Log an Expense</h2>
+                <div id="chat-box" class="chat-box">
+                    <div class="message bot">Hello! What did you spend money on today?</div>
+                </div>
+                <div class="input-area">
+                    <input type="text" id="expense-input" placeholder="e.g., Spent $15 on Starbucks..." onkeypress="handleKeyPress(event)">
+                    <button onclick="sendExpense()">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
