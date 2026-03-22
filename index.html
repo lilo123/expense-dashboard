@@ -37,7 +37,32 @@
             </ul>
         </div>
     </div>
+    
+    <!-- Edit Expense Modal -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Expense</h2>
+            <div class="modal-form">
+                <input type="hidden" id="edit-row">
+                <label for="edit-item">Item Description</label>
+                <input type="text" id="edit-item" placeholder="e.g. Starbucks">
+                
+                <label for="edit-amount">Amount ($)</label>
+                <input type="number" id="edit-amount" step="0.01" placeholder="e.g. 15.00">
+                
+                <label for="edit-category">Category</label>
+                <input type="text" id="edit-category" placeholder="e.g. Food">
+                
+                <label for="edit-date">Date</label>
+                <input type="date" id="edit-date">
+                
+                <button id="save-edit-btn" onclick="saveEdit()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vercel trigger -->
     <script src="app.js"></script>
 </body>
 </html>
-     <!-- Vercel trigger -->

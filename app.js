@@ -1,6 +1,8 @@
 const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby7WHdT8KRVWFI2QCQzK3Us_YSm6gbf_2z4AoRMll5xkBJY5-Ro2yjLp7lJqwV8jeIX/exec";
 const WEB_SECRET = "ExpenseDashboard741236";
 
+let expensesData = [];
+
 document.addEventListener("DOMContentLoaded", fetchExpenses);
 
 async function fetchExpenses() {
@@ -9,6 +11,7 @@ async function fetchExpenses() {
         const result = await response.json();
         
         if (result.success) {
+            expensesData = result.data;
             renderDashboard(result.data);
         } else {
             alert("Error loading data: " + result.error);
@@ -43,7 +46,7 @@ function renderDashboard(data) {
             const box = document.createElement('div');
             box.className = 'stat-box';
             box.innerHTML = `
-                <span class="stat-category">${cat}</span>
+                <span class="stat-category">${escapeHtml(cat)}</span>
                 <span class="stat-amount">$${amount.toFixed(2)}</span>
             `;
             statsContainer.appendChild(box);
@@ -64,16 +67,37 @@ function renderDashboard(data) {
 
         li.innerHTML = `
             <div class="delete-btn" onclick="deleteExpense(${sheetRow}, this)">Delete</div>
-            <div class="swipe-content" onmousedown="handleSwipeStart(event, this)" ontouchstart="handleSwipeStart(event, this)">
+            <div class="swipe-content" 
+                 onmousedown="handleSwipeStart(event, this)" 
+                 ontouchstart="handleSwipeStart(event, this)"
+                 data-row="${sheetRow}"
+                 data-item="${escapeHtmlQuotes(row.item)}"
+                 data-amount="${row.amount}"
+                 data-category="${escapeHtmlQuotes(row.category)}"
+                 data-date="${row.date}"
+                 onclick="handleCardClick(this)">
                 <div class="expense-info">
-                    <span class="expense-item-name">${row.item}</span>
-                    <span class="expense-meta">${row.category} • ${formatDate(row.date)}</span>
+                    <span class="expense-item-name">${escapeHtml(row.item)}</span>
+                    <span class="expense-meta">${escapeHtml(row.category)} • ${formatDate(row.date)}</span>
                 </div>
                 <div class="expense-amount">$${Number(row.amount).toFixed(2)}</div>
             </div>
         `;
         tbody.appendChild(li);
     });
+}
+
+function escapeHtml(unsafe) {
+    return (unsafe || '').toString()
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+
+function escapeHtmlQuotes(str) {
+    return (str || '').toString().replace(/"/g, '&quot;');
 }
 
 function formatDate(dateStr) {
@@ -159,11 +183,14 @@ async function deleteExpense(rowNumber, btnElement) {
 let startX = 0;
 let currentX = 0;
 let swipingElement = null;
+let isSwiping = false;
 
 function handleSwipeStart(e, element) {
     startX = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
     swipingElement = element;
     swipingElement.classList.add('swiping');
+    isSwiping = false;
+    currentX = 0;
     
     document.addEventListener('mousemove', handleSwipeMove);
     document.addEventListener('touchmove', handleSwipeMove);
@@ -175,6 +202,10 @@ function handleSwipeMove(e) {
     if (!swipingElement) return;
     const x = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
     const diff = x - startX;
+    
+    if (Math.abs(diff) > 5) {
+        isSwiping = true;
+    }
     
     if (diff > 0 && diff <= 100) {
         swipingElement.style.transform = `translateX(${diff}px)`;
@@ -198,6 +229,98 @@ function handleSwipeEnd(e) {
         swipingElement.style.transform = `translateX(0px)`;
     }
     
-    swipingElement = null;
-    currentX = 0;
+    setTimeout(() => {
+        swipingElement = null;
+        isSwiping = false;
+    }, 50);
+}
+
+// === EDIT LOGIC ===
+
+function handleCardClick(el) {
+    if (isSwiping || currentX > 40) return;
+    const row = el.getAttribute('data-row');
+    const item = el.getAttribute('data-item');
+    const amount = el.getAttribute('data-amount');
+    const category = el.getAttribute('data-category');
+    const date = el.getAttribute('data-date');
+    openEditModal(row, item, amount, category, date);
+}
+
+function openEditModal(row, item, amount, category, date) {
+    document.getElementById('edit-row').value = row;
+    document.getElementById('edit-item').value = item;
+    document.getElementById('edit-amount').value = amount;
+    document.getElementById('edit-category').value = category;
+    
+    let formattedDate = "";
+    if (date) {
+        const d = new Date(date);
+        if (!isNaN(d.getTime())) {
+            formattedDate = d.toISOString().split('T')[0];
+        }
+    }
+    document.getElementById('edit-date').value = formattedDate;
+    
+    document.getElementById('edit-modal').style.display = 'block';
+}
+
+function closeEditModal() {
+    document.getElementById('edit-modal').style.display = 'none';
+}
+
+window.onclick = function(event) {
+    const modal = document.getElementById('edit-modal');
+    if (event.target == modal) {
+        closeEditModal();
+    }
+}
+
+async function saveEdit() {
+    const row = document.getElementById('edit-row').value;
+    const item = document.getElementById('edit-item').value.trim();
+    const amount = document.getElementById('edit-amount').value;
+    const category = document.getElementById('edit-category').value.trim();
+    const date = document.getElementById('edit-date').value;
+    
+    if (!item || !amount || !category || !date) {
+        alert("Please fill in all fields");
+        return;
+    }
+
+    const btn = document.getElementById('save-edit-btn');
+    btn.disabled = true;
+    btn.innerText = "Saving...";
+
+    try {
+        const response = await fetch(WEB_APP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'edit',
+                row: row,
+                item: item,
+                amount: amount,
+                category: category,
+                date: date,
+                secret: WEB_SECRET
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            closeEditModal();
+            document.getElementById('loading').style.display = 'block';
+            await fetchExpenses();
+        } else {
+            alert("Edit failed: " + result.error);
+        }
+    } catch (error) {
+        console.error("Edit error:", error);
+        alert("Failed to edit expense.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Save Changes";
+    }
 }
