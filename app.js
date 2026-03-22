@@ -30,7 +30,11 @@ async function fetchExpenses() {
         const response = await fetch(WEB_APP_URL);
         const result = await response.json();
         if (result.success) {
-            expenses = result.data.map((item, index) => ({...item, row: index + 2}));
+            // Map first to keep the original spreadsheet row numbers intact
+            // Then filter out all the blank rows
+            expenses = result.data
+                .map((item, index) => ({...item, row: index + 2}))
+                .filter(exp => exp.item && str_trim(exp.item) !== "" && exp.date !== "");
             renderDashboard();
             renderRecent();
         } else {
@@ -40,6 +44,9 @@ async function fetchExpenses() {
         console.error("Error fetching data:", error);
     }
 }
+
+function str_trim(s) { return String(s).trim(); }
+
 
 function getFilteredExpenses() {
     const startStr = document.getElementById('start-date').value;
