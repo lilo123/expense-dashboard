@@ -2,6 +2,9 @@ const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyA4L51xcdLzRAeQQmr
 const WEB_SECRET = "ExpenseDashboard741236";
 
 let expenses = [];
+let chartInstance = null;
+let isSelectMode = false;
+let selectedRows = new Set();
 
 document.addEventListener("DOMContentLoaded", () => {
     setDefaultDateRange();
@@ -12,13 +15,12 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${tabId}`).classList.add('active');
-    document.querySelector(`button[onclick*="${tabId}"]`).classList.add("active");
+    event.target.classList.add('active');
 }
 
 function setDefaultDateRange() {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
     document.getElementById('start-date').value = firstDay.toISOString().split('T')[0];
     document.getElementById('end-date').value = today.toISOString().split('T')[0];
 }
@@ -27,7 +29,6 @@ async function fetchExpenses() {
     try {
         const response = await fetch(WEB_APP_URL);
         const result = await response.json();
-        
         if (result.success) {
             expenses = result.data.map((item, index) => ({...item, row: index + 2}));
             renderDashboard();
@@ -43,7 +44,6 @@ async function fetchExpenses() {
 function getFilteredExpenses() {
     const startStr = document.getElementById('start-date').value;
     const endStr = document.getElementById('end-date').value;
-    
     if (!startStr && !endStr) return expenses;
 
     const start = startStr ? new Date(startStr) : new Date(0);
@@ -68,7 +68,6 @@ function clearDateFilter() {
 
 function renderDashboard() {
     const filtered = getFilteredExpenses();
-    
     const total = filtered.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0);
     document.getElementById('total-amount').innerText = `$${total.toFixed(2)}`;
 
@@ -79,41 +78,100 @@ function renderDashboard() {
         byCategory[exp.category].items.push(exp);
     });
 
-    const grid = document.getElementById('category-grid');
-    grid.innerHTML = "";
+    const labels = Object.keys(byCategory).sort((a,b) => byCategory[b].total - byCategory[a].total);
+    const data = labels.map(label => byCategory[label].total);
 
-    Object.keys(byCategory).sort((a,b) => byCategory[b].total - byCategory[a].total).forEach(cat => {
-        const catData = byCategory[cat];
-        
-        const itemsHtml = catData.items.map(item => `
-            <div class="category-detail-item" onclick="openEditModal(${item.row}, '${item.item.replace(/'/g, "\\'")}', ${item.amount}, '${item.category}', '${item.date}')">
-                <span class="detail-date">${new Date(item.date).toLocaleDateString()}</span>
-                <span class="detail-name">${item.item}</span>
-                <span class="detail-amount">$${parseFloat(item.amount).toFixed(2)}</span>
-            </div>
-        `).join('');
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
 
-        const cardHtml = `
-            <div class="summary-card category-card" onclick="toggleCategoryDetails(this)">
-                <div class="summary-card-header">
-                    <h3>${cat}</h3>
-                    <p>$${catData.total.toFixed(2)}</p>
-                </div>
-                <div class="category-details" style="display: none;">
-                    ${itemsHtml}
-                </div>
-            </div>
-        `;
-        grid.innerHTML += cardHtml;
+    const ctx = document.getElementById('expenseChart').getContext('2d');
+    chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Expenses by Category',
+                data: data,
+                backgroundColor: '#000000',
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            onClick: (e, activeElements) => {
+                if (activeElements.length > 0) {
+                    const index = activeElements[0].index;
+                    const categoryName = labels[index];
+                    showCategoryDetails(categoryName, byCategory[categoryName].items);
+                }
+            }
+        }
     });
+
+    document.getElementById('category-details-container').innerHTML = "";
 }
 
-function toggleCategoryDetails(element) {
-    const details = element.querySelector('.category-details');
-    if (details.style.display === 'none' || !details.style.display) {
-        details.style.display = 'block';
+function showCategoryDetails(categoryName, items) {
+    const container = document.getElementById('category-details-container');
+    const sortedItems = items.sort((a,b) => new Date(b.date) - new Date(a.date));
+    
+    const itemsHtml = sortedItems.map(item => `
+        <div class="category-detail-item" onclick="openEditModal(${item.row}, '${item.item.replace(/'/g, "\\'").replace(/"/g, "&quot;")}', ${item.amount}, '${item.category}', '${item.date}')">
+            <div class="detail-left">
+                <span class="detail-name">${item.item}</span>
+                <span class="detail-date">${new Date(item.date).toLocaleDateString()}</span>
+            </div>
+            <span class="detail-amount">$${parseFloat(item.amount).toFixed(2)}</span>
+        </div>
+    `).join('');
+
+    container.innerHTML = `
+        <h3>${categoryName} Details</h3>
+        ${itemsHtml}
+    `;
+}
+
+function toggleSelectMode() {
+    isSelectMode = !isSelectMode;
+    const list = document.getElementById('recent-list');
+    const selectBtn = document.getElementById('select-mode-btn');
+    const deleteBtn = document.getElementById('bulk-delete-btn');
+
+    if (isSelectMode) {
+        list.classList.add('select-mode');
+        selectBtn.innerText = "Cancel";
+        deleteBtn.style.display = "block";
+        selectedRows.clear();
     } else {
-        details.style.display = 'none';
+        list.classList.remove('select-mode');
+        selectBtn.innerText = "Select";
+        deleteBtn.style.display = "none";
+        document.querySelectorAll('.expense-checkbox').forEach(cb => cb.checked = false);
+    }
+}
+
+function handleExpenseClick(row, item, amount, category, date, element) {
+    if (isSelectMode) {
+        const cb = element.querySelector('.expense-checkbox');
+        cb.checked = !cb.checked;
+        if (cb.checked) {
+            selectedRows.add(row);
+        } else {
+            selectedRows.delete(row);
+        }
+    } else {
+        openEditModal(row, item, amount, category, date);
+    }
+}
+
+function handleCheckboxClick(event, row) {
+    event.stopPropagation();
+    if (event.target.checked) {
+        selectedRows.add(row);
+    } else {
+        selectedRows.delete(row);
     }
 }
 
@@ -129,124 +187,20 @@ function renderRecent() {
         const amt = parseFloat(exp.amount) || 0;
 
         list.innerHTML += `
-            <div class="recent-card-wrapper">
-                <div class="delete-btn" onclick="deleteExpense(${exp.row})">Delete</div>
-                <div class="recent-card" 
-                     data-row="${exp.row}"
-                     data-item="${exp.item.replace(/"/g, '&quot;')}"
-                     data-amount="${amt}"
-                     data-category="${exp.category}"
-                     data-date="${exp.date}"
-                     onclick="handleCardClick(this)"
-                     onmousedown="handleSwipeStart(event, this)"
-                     ontouchstart="handleSwipeStart(event, this)">
-                    <div class="recent-info">
-                        <strong>${exp.item}</strong>
-                        <span>${exp.category} &bull; ${dateStr}</span>
-                    </div>
-                    <div class="recent-amount">$${amt.toFixed(2)}</div>
+            <div class="expense-item" onclick="handleExpenseClick(${exp.row}, '${exp.item.replace(/'/g, "\\'").replace(/"/g, "&quot;")}', ${amt}, '${exp.category}', '${exp.date}', this)">
+                <input type="checkbox" class="expense-checkbox" onclick="handleCheckboxClick(event, ${exp.row})">
+                <div class="expense-info">
+                    <h4>${exp.item}</h4>
+                    <p>${exp.category} &bull; ${dateStr}</p>
                 </div>
+                <div class="expense-amount">$${amt.toFixed(2)}</div>
             </div>
         `;
     });
-}
-
-// === SWIPE TO DELETE LOGIC ===
-let startX = 0;
-let currentX = 0;
-let swipingElement = null;
-let isSwiping = false;
-
-function handleSwipeStart(e, el) {
-    swipingElement = el;
-    startX = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
-    currentX = 0;
-    isSwiping = false;
     
-    swipingElement.classList.add('swiping');
-    
-    document.addEventListener('mousemove', handleSwipeMove);
-    document.addEventListener('touchmove', handleSwipeMove);
-    document.addEventListener('mouseup', handleSwipeEnd);
-    document.addEventListener('touchend', handleSwipeEnd);
-}
-
-function handleSwipeMove(e) {
-    if (!swipingElement) return;
-    const x = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
-    const diff = x - startX;
-    
-    if (Math.abs(diff) > 5) {
-        isSwiping = true;
+    if (isSelectMode) {
+        toggleSelectMode();
     }
-    
-    // Swipe left (negative diff)
-    if (diff < 0 && diff >= -100) {
-        swipingElement.style.transform = `translateX(${diff}px)`;
-        currentX = diff;
-    }
-}
-
-function handleSwipeEnd(e) {
-    if (!swipingElement) return;
-    
-    document.removeEventListener('mousemove', handleSwipeMove);
-    document.removeEventListener('touchmove', handleSwipeMove);
-    document.removeEventListener('mouseup', handleSwipeEnd);
-    document.removeEventListener('touchend', handleSwipeEnd);
-    
-    swipingElement.classList.remove('swiping');
-    
-    // If swiped far enough left
-    if (currentX < -40) {
-        swipingElement.style.transform = `translateX(-80px)`;
-    } else {
-        swipingElement.style.transform = `translateX(0px)`;
-    }
-    
-    setTimeout(() => {
-        swipingElement = null;
-        isSwiping = false;
-    }, 50);
-}
-
-async function deleteExpense(row) {
-    if (!confirm("Are you sure you want to delete this expense?")) {
-        renderRecent();
-        return;
-    }
-    
-    try {
-        const response = await fetch(WEB_APP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'delete',
-                row: row,
-                secret: WEB_SECRET
-            })
-        });
-        const result = await response.json();
-        if (result.success) {
-            await fetchExpenses();
-        } else {
-            alert("Delete failed: " + result.error);
-        }
-    } catch (e) {
-        console.error(e);
-        alert("Delete failed");
-    }
-}
-
-// === EDIT LOGIC ===
-function handleCardClick(el) {
-    if (isSwiping || currentX < -40) return;
-    const row = el.getAttribute('data-row');
-    const item = el.getAttribute('data-item');
-    const amount = el.getAttribute('data-amount');
-    const category = el.getAttribute('data-category');
-    const date = el.getAttribute('data-date');
-    openEditModal(row, item, amount, category, date);
 }
 
 function openEditModal(row, item, amount, category, date) {
@@ -263,8 +217,7 @@ function openEditModal(row, item, amount, category, date) {
         }
     }
     document.getElementById('edit-date').value = formattedDate;
-    
-    document.getElementById('edit-modal').style.display = 'block';
+    document.getElementById('edit-modal').style.display = 'flex';
 }
 
 function closeEditModal() {
@@ -273,9 +226,7 @@ function closeEditModal() {
 
 window.onclick = function(event) {
     const modal = document.getElementById('edit-modal');
-    if (event.target == modal) {
-        closeEditModal();
-    }
+    if (event.target == modal) closeEditModal();
 }
 
 async function saveEdit() {
@@ -298,19 +249,9 @@ async function saveEdit() {
         const response = await fetch(WEB_APP_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'edit',
-                row: row,
-                item: item,
-                amount: amount,
-                category: category,
-                date: date,
-                secret: WEB_SECRET
-            })
+            body: JSON.stringify({ action: 'edit', row: row, item: item, amount: amount, category: category, date: date, secret: WEB_SECRET })
         });
-        
         const result = await response.json();
-        
         if (result.success) {
             closeEditModal();
             await fetchExpenses();
@@ -318,10 +259,68 @@ async function saveEdit() {
             alert("Edit failed: " + result.error);
         }
     } catch (error) {
-        console.error("Edit error:", error);
         alert("Failed to edit expense.");
     } finally {
         btn.disabled = false;
         btn.innerText = "Save Changes";
+    }
+}
+
+async function deleteFromEdit() {
+    const row = document.getElementById('edit-row').value;
+    if (!confirm("Are you sure you want to delete this expense?")) return;
+
+    const btn = document.getElementById('delete-edit-btn');
+    btn.disabled = true;
+    btn.innerText = "Deleting...";
+
+    try {
+        const response = await fetch(WEB_APP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'delete', row: row, secret: WEB_SECRET })
+        });
+        const result = await response.json();
+        if (result.success) {
+            closeEditModal();
+            await fetchExpenses();
+        } else {
+            alert("Delete failed.");
+        }
+    } catch (e) {
+        alert("Delete failed.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Delete";
+    }
+}
+
+async function deleteSelected() {
+    if (selectedRows.size === 0) return;
+    if (!confirm(`Delete ${selectedRows.size} expenses? This cannot be undone.`)) return;
+
+    const btn = document.getElementById('bulk-delete-btn');
+    btn.disabled = true;
+    btn.innerText = "Deleting...";
+
+    // Sort rows descending so index shifts don't affect subsequent deletions
+    const rowsToDelete = Array.from(selectedRows).sort((a, b) => b - a);
+
+    try {
+        for (const row of rowsToDelete) {
+            await fetch(WEB_APP_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ action: 'delete', row: row, secret: WEB_SECRET })
+            });
+        }
+        await fetchExpenses();
+    } catch (e) {
+        alert("Bulk delete encountered an error.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Delete Selected";
+        // toggleSelectMode turns it off internally if it's on
+        if (isSelectMode) toggleSelectMode();
     }
 }

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Expense Dashboard</title>
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <div class="container">
@@ -32,14 +33,18 @@
             </div>
 
             <h2>By Category</h2>
-            <div class="grid" id="category-grid">
-                <!-- Categories injected here -->
+            <div class="chart-container">
+                <canvas id="expenseChart"></canvas>
             </div>
+            <div id="category-details-container" style="margin-top: 20px;"></div>
         </div>
-        <!-- RECENT TAB -->
 
+        <!-- RECENT TAB -->
         <div id="tab-recent" class="tab-content">
-            <p style="color: #666; font-size: 14px; text-align: center; margin-bottom: 15px;">Swipe left on an item to delete.</p>
+            <div class="recent-header-controls">
+                <button id="select-mode-btn" onclick="toggleSelectMode()">Select</button>
+                <button id="bulk-delete-btn" class="danger-btn" style="display: none;" onclick="deleteSelected()">Delete Selected</button>
+            </div>
             <div class="recent-list" id="recent-list">
                 <!-- Recent items injected here -->
             </div>
@@ -73,12 +78,10 @@
                 <option value="Misc">Misc</option>
             </select>
             <button id="save-edit-btn" onclick="saveEdit()">Save Changes</button>
+            <button id="delete-edit-btn" class="danger-btn" style="margin-top: 10px;" onclick="deleteFromEdit()">Delete</button>
         </div>
     </div>
     
     <script src="app.js"></script>
 </body>
 </html>
-            <!-- Vercel Push -->
-
-                <!-- Vercel push -->
