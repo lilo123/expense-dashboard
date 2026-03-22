@@ -34,7 +34,7 @@ body {
 .summary-card h3 { margin: 0 0 10px 0; font-weight: 500; font-size: 15px; opacity: 0.9; }
 .summary-card p { margin: 0; font-size: 40px; font-weight: 800; }
 
-.chart-container { background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
+.chart-container { position: relative; width: 100%; box-sizing: border-box; background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
 
 h2 { font-size: 20px; margin-bottom: 15px; }
 
