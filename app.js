@@ -1,9 +1,27 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby7WHdT8KRVWFI2QCQzK3Us_YSm6gbf_2z4AoRMll5xkBJY5-Ro2yjLp7lJqwV8jeIX/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyA4L51xcdLzRAeQQmr5rOluihTa11nxJhtI1v48ME3xpGUBOJxEfoEKh6J7PrOdgBP/exec";
 const WEB_SECRET = "ExpenseDashboard741236";
 
-let expensesData = [];
+let expenses = [];
 
-document.addEventListener("DOMContentLoaded", fetchExpenses);
+document.addEventListener("DOMContentLoaded", () => {
+    setDefaultDateRange();
+    fetchExpenses();
+});
+
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.getElementById(`tab-${tabId}`).classList.add('active');
+    document.querySelector(`button[onclick*="${tabId}"]`).classList.add("active");
+}
+
+function setDefaultDateRange() {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    document.getElementById('start-date').value = firstDay.toISOString().split('T')[0];
+    document.getElementById('end-date').value = today.toISOString().split('T')[0];
+}
 
 async function fetchExpenses() {
     try {
@@ -11,186 +29,141 @@ async function fetchExpenses() {
         const result = await response.json();
         
         if (result.success) {
-            expensesData = result.data;
-            renderDashboard(result.data);
+            expenses = result.data.map((item, index) => ({...item, row: index + 2}));
+            renderDashboard();
+            renderRecent();
         } else {
-            alert("Error loading data: " + result.error);
+            alert("Failed to load data.");
         }
     } catch (error) {
-        console.error("Fetch error:", error);
-        document.getElementById('loading').innerText = "Failed to load data.";
+        console.error("Error fetching data:", error);
     }
 }
 
-function renderDashboard(data) {
-    document.getElementById('loading').style.display = 'none';
+function getFilteredExpenses() {
+    const startStr = document.getElementById('start-date').value;
+    const endStr = document.getElementById('end-date').value;
     
-    let total = 0;
-    const categories = {};
-    
-    data.forEach(row => {
-        const amount = Number(row.amount) || 0;
-        total += amount;
-        
-        const cat = row.category || 'Other';
-        if (!categories[cat]) categories[cat] = 0;
-        categories[cat] += amount;
+    if (!startStr && !endStr) return expenses;
+
+    const start = startStr ? new Date(startStr) : new Date(0);
+    const end = endStr ? new Date(endStr) : new Date();
+    end.setHours(23, 59, 59, 999);
+
+    return expenses.filter(exp => {
+        const expDate = new Date(exp.date);
+        return expDate >= start && expDate <= end;
     });
+}
 
-    const statsContainer = document.getElementById('category-stats');
-    statsContainer.innerHTML = '';
+function applyDateFilter() {
+    renderDashboard();
+}
+
+function clearDateFilter() {
+    document.getElementById('start-date').value = "";
+    document.getElementById('end-date').value = "";
+    renderDashboard();
+}
+
+function renderDashboard() {
+    const filtered = getFilteredExpenses();
     
-    Object.entries(categories)
-        .sort((a, b) => b[1] - a[1])
-        .forEach(([cat, amount]) => {
-            const box = document.createElement('div');
-            box.className = 'stat-box';
-            box.innerHTML = `
-                <span class="stat-category">${escapeHtml(cat)}</span>
-                <span class="stat-amount">$${amount.toFixed(2)}</span>
-            `;
-            statsContainer.appendChild(box);
-        });
-
+    const total = filtered.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0);
     document.getElementById('total-amount').innerText = `$${total.toFixed(2)}`;
 
-    const tbody = document.getElementById('expense-list');
-    tbody.innerHTML = '';
+    const byCategory = {};
+    filtered.forEach(exp => {
+        if (!byCategory[exp.category]) byCategory[exp.category] = { total: 0, items: [] };
+        byCategory[exp.category].total += (parseFloat(exp.amount) || 0);
+        byCategory[exp.category].items.push(exp);
+    });
 
-    const reversedData = data.map((row, index) => ({ ...row, originalIndex: index })).reverse();
+    const grid = document.getElementById('category-grid');
+    grid.innerHTML = "";
 
-    reversedData.forEach(row => {
-        const li = document.createElement('li');
-        li.className = 'swipe-item';
+    Object.keys(byCategory).sort((a,b) => byCategory[b].total - byCategory[a].total).forEach(cat => {
+        const catData = byCategory[cat];
         
-        const sheetRow = row.originalIndex + 2;
+        const itemsHtml = catData.items.map(item => `
+            <div class="category-detail-item" onclick="openEditModal(${item.row}, '${item.item.replace(/'/g, "\\'")}', ${item.amount}, '${item.category}', '${item.date}')">
+                <span class="detail-date">${new Date(item.date).toLocaleDateString()}</span>
+                <span class="detail-name">${item.item}</span>
+                <span class="detail-amount">$${parseFloat(item.amount).toFixed(2)}</span>
+            </div>
+        `).join('');
 
-        li.innerHTML = `
-            <div class="delete-btn" onclick="deleteExpense(${sheetRow}, this)">Delete</div>
-            <div class="swipe-content" 
-                 onmousedown="handleSwipeStart(event, this)" 
-                 ontouchstart="handleSwipeStart(event, this)"
-                 data-row="${sheetRow}"
-                 data-item="${escapeHtmlQuotes(row.item)}"
-                 data-amount="${row.amount}"
-                 data-category="${escapeHtmlQuotes(row.category)}"
-                 data-date="${row.date}"
-                 onclick="handleCardClick(this)">
-                <div class="expense-info">
-                    <span class="expense-item-name">${escapeHtml(row.item)}</span>
-                    <span class="expense-meta">${escapeHtml(row.category)} • ${formatDate(row.date)}</span>
+        const cardHtml = `
+            <div class="summary-card category-card" onclick="toggleCategoryDetails(this)">
+                <div class="summary-card-header">
+                    <h3>${cat}</h3>
+                    <p>$${catData.total.toFixed(2)}</p>
                 </div>
-                <div class="expense-amount">$${Number(row.amount).toFixed(2)}</div>
+                <div class="category-details" style="display: none;">
+                    ${itemsHtml}
+                </div>
             </div>
         `;
-        tbody.appendChild(li);
+        grid.innerHTML += cardHtml;
     });
 }
 
-function escapeHtml(unsafe) {
-    return (unsafe || '').toString()
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
-}
-
-function escapeHtmlQuotes(str) {
-    return (str || '').toString().replace(/"/g, '&quot;');
-}
-
-function formatDate(dateStr) {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString();
-}
-
-async function addExpense() {
-    const input = document.getElementById('expense-input');
-    const btn = document.getElementById('submit-btn');
-    const text = input.value.trim();
-    
-    if (!text) return;
-
-    btn.disabled = true;
-    btn.innerText = "Adding...";
-
-    try {
-        const response = await fetch(WEB_APP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'add',
-                text: text,
-                secret: WEB_SECRET
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            input.value = '';
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('expense-list').innerHTML = '';
-            document.getElementById('category-stats').innerHTML = '';
-            await fetchExpenses();
-        } else {
-            alert("Error: " + result.error);
-        }
-    } catch (error) {
-        console.error("Add error:", error);
-        alert("Failed to add expense.");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "Add";
+function toggleCategoryDetails(element) {
+    const details = element.querySelector('.category-details');
+    if (details.style.display === 'none' || !details.style.display) {
+        details.style.display = 'block';
+    } else {
+        details.style.display = 'none';
     }
 }
 
-async function deleteExpense(rowNumber, btnElement) {
-    if (!confirm("Are you sure you want to delete this expense?")) return;
-    
-    const li = btnElement.closest('.swipe-item');
-    li.style.opacity = '0.5';
+function renderRecent() {
+    const list = document.getElementById('recent-list');
+    list.innerHTML = "";
 
-    try {
-        const response = await fetch(WEB_APP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'delete',
-                row: rowNumber,
-                secret: WEB_SECRET
-            })
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            document.getElementById('loading').style.display = 'block';
-            await fetchExpenses();
-        } else {
-            alert("Delete failed. Make sure your Apps Script supports deleting.");
-            li.style.opacity = '1';
-        }
-    } catch (error) {
-        console.error("Delete error:", error);
-        alert("Failed to delete expense.");
-        li.style.opacity = '1';
-    }
+    const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    sorted.forEach(exp => {
+        const d = new Date(exp.date);
+        const dateStr = !isNaN(d.getTime()) ? d.toLocaleDateString() : 'Unknown Date';
+        const amt = parseFloat(exp.amount) || 0;
+
+        list.innerHTML += `
+            <div class="recent-card-wrapper">
+                <div class="delete-btn" onclick="deleteExpense(${exp.row})">Delete</div>
+                <div class="recent-card" 
+                     data-row="${exp.row}"
+                     data-item="${exp.item.replace(/"/g, '&quot;')}"
+                     data-amount="${amt}"
+                     data-category="${exp.category}"
+                     data-date="${exp.date}"
+                     onclick="handleCardClick(this)"
+                     onmousedown="handleSwipeStart(event, this)"
+                     ontouchstart="handleSwipeStart(event, this)">
+                    <div class="recent-info">
+                        <strong>${exp.item}</strong>
+                        <span>${exp.category} &bull; ${dateStr}</span>
+                    </div>
+                    <div class="recent-amount">$${amt.toFixed(2)}</div>
+                </div>
+            </div>
+        `;
+    });
 }
 
+// === SWIPE TO DELETE LOGIC ===
 let startX = 0;
 let currentX = 0;
 let swipingElement = null;
 let isSwiping = false;
 
-function handleSwipeStart(e, element) {
+function handleSwipeStart(e, el) {
+    swipingElement = el;
     startX = e.type.includes('mouse') ? e.pageX : e.touches[0].clientX;
-    swipingElement = element;
-    swipingElement.classList.add('swiping');
-    isSwiping = false;
     currentX = 0;
+    isSwiping = false;
+    
+    swipingElement.classList.add('swiping');
     
     document.addEventListener('mousemove', handleSwipeMove);
     document.addEventListener('touchmove', handleSwipeMove);
@@ -207,7 +180,8 @@ function handleSwipeMove(e) {
         isSwiping = true;
     }
     
-    if (diff > 0 && diff <= 100) {
+    // Swipe left (negative diff)
+    if (diff < 0 && diff >= -100) {
         swipingElement.style.transform = `translateX(${diff}px)`;
         currentX = diff;
     }
@@ -223,8 +197,9 @@ function handleSwipeEnd(e) {
     
     swipingElement.classList.remove('swiping');
     
-    if (currentX > 40) {
-        swipingElement.style.transform = `translateX(80px)`;
+    // If swiped far enough left
+    if (currentX < -40) {
+        swipingElement.style.transform = `translateX(-80px)`;
     } else {
         swipingElement.style.transform = `translateX(0px)`;
     }
@@ -235,10 +210,37 @@ function handleSwipeEnd(e) {
     }, 50);
 }
 
-// === EDIT LOGIC ===
+async function deleteExpense(row) {
+    if (!confirm("Are you sure you want to delete this expense?")) {
+        renderRecent();
+        return;
+    }
+    
+    try {
+        const response = await fetch(WEB_APP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'delete',
+                row: row,
+                secret: WEB_SECRET
+            })
+        });
+        const result = await response.json();
+        if (result.success) {
+            await fetchExpenses();
+        } else {
+            alert("Delete failed: " + result.error);
+        }
+    } catch (e) {
+        console.error(e);
+        alert("Delete failed");
+    }
+}
 
+// === EDIT LOGIC ===
 function handleCardClick(el) {
-    if (isSwiping || currentX > 40) return;
+    if (isSwiping || currentX < -40) return;
     const row = el.getAttribute('data-row');
     const item = el.getAttribute('data-item');
     const amount = el.getAttribute('data-amount');
@@ -311,7 +313,6 @@ async function saveEdit() {
         
         if (result.success) {
             closeEditModal();
-            document.getElementById('loading').style.display = 'block';
             await fetchExpenses();
         } else {
             alert("Edit failed: " + result.error);
