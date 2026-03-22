@@ -1,4 +1,4 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyA4L51xcdLzRAeQQmr5rOluihTa11nxJhtI1v48ME3xpGUBOJxEfoEKh6J7PrOdgBP/exec";
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby7WHdT8KRVWFI2QCQzK3Us_YSm6gbf_2z4AoRMll5xkBJY5-Ro2yjLp7lJqwV8jeIX/exec";
 const WEB_SECRET = "ExpenseDashboard741236";
 
 let expenses = [];
