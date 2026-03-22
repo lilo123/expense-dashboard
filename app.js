@@ -16,6 +16,7 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById(`tab-${tabId}`).classList.add('active');
     event.target.classList.add('active');
+    if(tabId === 'yearly') setTimeout(renderYearlyChart, 50);
 }
 
 function setDefaultDateRange() {
@@ -116,7 +117,7 @@ function renderDashboard() {
             },
             scales: {
                 x: { display: false },
-                y: { grid: { display: false }, border: { display: false } }
+                y: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: 'bold', size: 14 }, color: '#000' } }
             },
             plugins: { 
                 legend: { display: false },
@@ -139,6 +140,54 @@ function renderDashboard() {
     });
 
 document.getElementById('category-details-container').innerHTML = "";
+}
+
+
+let yearlyChartInstance = null;
+function renderYearlyChart() {
+    const byMonthAndCategory = {};
+    const categoriesSet = new Set();
+    
+    expenses.forEach(exp => {
+        const dateObj = new Date(exp.date);
+        if (isNaN(dateObj.getTime())) return;
+        
+        const monthYear = dateObj.toISOString().substring(0, 7); // YYYY-MM
+        
+        if (!byMonthAndCategory[monthYear]) byMonthAndCategory[monthYear] = {};
+        if (!byMonthAndCategory[monthYear][exp.category]) byMonthAndCategory[monthYear][exp.category] = 0;
+        
+        byMonthAndCategory[monthYear][exp.category] += (parseFloat(exp.amount) || 0);
+        categoriesSet.add(exp.category);
+    });
+
+    const labels = Object.keys(byMonthAndCategory).sort();
+    const categories = Array.from(categoriesSet).sort();
+    
+    const datasets = categories.map((category, index) => ({
+        label: category,
+        data: labels.map(month => byMonthAndCategory[month][category] || 0),
+        backgroundColor: `hsl(0, 0%, ${15 + (index * 70) / Math.max(1, categories.length - 1)}%)`
+    }));
+
+    if (yearlyChartInstance) yearlyChartInstance.destroy();
+    
+    const ctx = document.getElementById('yearlyChart').getContext('2d');
+    yearlyChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels, datasets },
+        options: {
+            maintainAspectRatio: false,
+            responsive: true,
+            scales: {
+                x: { stacked: true, grid: { display: false } },
+                y: { stacked: true }
+            },
+            plugins: {
+                datalabels: { display: false }
+            }
+        }
+    });
 }
 
 function escapeHtml(unsafe) {
