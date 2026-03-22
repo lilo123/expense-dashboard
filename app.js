@@ -113,14 +113,29 @@ function renderDashboard() {
     document.getElementById('category-details-container').innerHTML = "";
 }
 
+function escapeHtml(unsafe) {
+    return (unsafe || "").toString()
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+
 function showCategoryDetails(categoryName, items) {
     const container = document.getElementById('category-details-container');
     const sortedItems = items.sort((a,b) => new Date(b.date) - new Date(a.date));
     
     const itemsHtml = sortedItems.map(item => `
-        <div class="category-detail-item" onclick="openEditModal(${item.row}, '${item.item.replace(/'/g, "\\'").replace(/"/g, "&quot;")}', ${item.amount}, '${item.category}', '${item.date}')">
+        <div class="category-detail-item"
+             data-row="${item.row}"
+             data-item="${escapeHtml(item.item)}"
+             data-amount="${item.amount}"
+             data-category="${escapeHtml(item.category)}"
+             data-date="${escapeHtml(item.date)}"
+             onclick="openEditModalFromEvent(this)">
             <div class="detail-left">
-                <span class="detail-name">${item.item}</span>
+                <span class="detail-name">${escapeHtml(item.item)}</span>
                 <span class="detail-date">${new Date(item.date).toLocaleDateString()}</span>
             </div>
             <span class="detail-amount">$${parseFloat(item.amount).toFixed(2)}</span>
@@ -128,7 +143,7 @@ function showCategoryDetails(categoryName, items) {
     `).join('');
 
     container.innerHTML = `
-        <h3>${categoryName} Details</h3>
+        <h3>${escapeHtml(categoryName)} Details</h3>
         ${itemsHtml}
     `;
 }
@@ -152,9 +167,19 @@ function toggleSelectMode() {
     }
 }
 
-function handleExpenseClick(row, item, amount, category, date, element) {
+function openEditModalFromEvent(el) {
+    const row = el.getAttribute('data-row');
+    const item = el.getAttribute('data-item');
+    const amount = el.getAttribute('data-amount');
+    const category = el.getAttribute('data-category');
+    const date = el.getAttribute('data-date');
+    openEditModal(row, item, amount, category, date);
+}
+
+function handleExpenseClick(el) {
+    const row = parseInt(el.getAttribute('data-row'), 10);
     if (isSelectMode) {
-        const cb = element.querySelector('.expense-checkbox');
+        const cb = el.querySelector('.expense-checkbox');
         cb.checked = !cb.checked;
         if (cb.checked) {
             selectedRows.add(row);
@@ -162,7 +187,7 @@ function handleExpenseClick(row, item, amount, category, date, element) {
             selectedRows.delete(row);
         }
     } else {
-        openEditModal(row, item, amount, category, date);
+        openEditModalFromEvent(el);
     }
 }
 
@@ -187,11 +212,17 @@ function renderRecent() {
         const amt = parseFloat(exp.amount) || 0;
 
         list.innerHTML += `
-            <div class="expense-item" onclick="handleExpenseClick(${exp.row}, '${exp.item.replace(/'/g, "\\'").replace(/"/g, "&quot;")}', ${amt}, '${exp.category}', '${exp.date}', this)">
+            <div class="expense-item"
+                 data-row="${exp.row}"
+                 data-item="${escapeHtml(exp.item)}"
+                 data-amount="${amt}"
+                 data-category="${escapeHtml(exp.category)}"
+                 data-date="${escapeHtml(exp.date)}"
+                 onclick="handleExpenseClick(this)">
                 <input type="checkbox" class="expense-checkbox" onclick="handleCheckboxClick(event, ${exp.row})">
                 <div class="expense-info">
-                    <h4>${exp.item}</h4>
-                    <p>${exp.category} &bull; ${dateStr}</p>
+                    <h4>${escapeHtml(exp.item)}</h4>
+                    <p>${escapeHtml(exp.category)} &bull; ${dateStr}</p>
                 </div>
                 <div class="expense-amount">$${amt.toFixed(2)}</div>
             </div>
@@ -205,9 +236,14 @@ function renderRecent() {
 
 function openEditModal(row, item, amount, category, date) {
     document.getElementById('edit-row').value = row;
-    document.getElementById('edit-item').value = item;
+
+    const txt = document.createElement("textarea");
+    txt.innerHTML = item;
+    document.getElementById('edit-item').value = txt.value;
     document.getElementById('edit-amount').value = amount;
-    document.getElementById('edit-category').value = category;
+
+    txt.innerHTML = category;
+    document.getElementById('edit-category').value = txt.value;
     
     let formattedDate = "";
     if (date) {
@@ -230,9 +266,9 @@ window.onclick = function(event) {
 }
 
 async function saveEdit() {
-    const row = document.getElementById('edit-row').value;
+    const row = parseInt(document.getElementById('edit-row').value, 10);
     const item = document.getElementById('edit-item').value.trim();
-    const amount = document.getElementById('edit-amount').value;
+    const amount = parseFloat(document.getElementById('edit-amount').value);
     const category = document.getElementById('edit-category').value.trim();
     const date = document.getElementById('edit-date').value;
     
@@ -249,9 +285,19 @@ async function saveEdit() {
         const response = await fetch(WEB_APP_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'edit', row: row, item: item, amount: amount, category: category, date: date, secret: WEB_SECRET })
+            body: JSON.stringify({
+                action: 'edit',
+                row: row,
+                item: item,
+                amount: amount,
+                category: category,
+                date: date,
+                secret: WEB_SECRET
+            })
         });
+        
         const result = await response.json();
+        
         if (result.success) {
             closeEditModal();
             await fetchExpenses();
@@ -259,6 +305,7 @@ async function saveEdit() {
             alert("Edit failed: " + result.error);
         }
     } catch (error) {
+        console.error("Edit error:", error);
         alert("Failed to edit expense.");
     } finally {
         btn.disabled = false;
@@ -267,7 +314,7 @@ async function saveEdit() {
 }
 
 async function deleteFromEdit() {
-    const row = document.getElementById('edit-row').value;
+    const row = parseInt(document.getElementById('edit-row').value, 10);
     if (!confirm("Are you sure you want to delete this expense?")) return;
 
     const btn = document.getElementById('delete-edit-btn');
@@ -278,7 +325,11 @@ async function deleteFromEdit() {
         const response = await fetch(WEB_APP_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ action: 'delete', row: row, secret: WEB_SECRET })
+            body: JSON.stringify({
+                action: 'delete',
+                row: row,
+                secret: WEB_SECRET
+            })
         });
         const result = await response.json();
         if (result.success) {
@@ -303,7 +354,6 @@ async function deleteSelected() {
     btn.disabled = true;
     btn.innerText = "Deleting...";
 
-    // Sort rows descending so index shifts don't affect subsequent deletions
     const rowsToDelete = Array.from(selectedRows).sort((a, b) => b - a);
 
     try {
@@ -311,7 +361,7 @@ async function deleteSelected() {
             await fetch(WEB_APP_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'delete', row: row, secret: WEB_SECRET })
+                body: JSON.stringify({ action: 'delete', row: parseInt(row, 10), secret: WEB_SECRET })
             });
         }
         await fetchExpenses();
@@ -320,7 +370,6 @@ async function deleteSelected() {
     } finally {
         btn.disabled = false;
         btn.innerText = "Delete Selected";
-        // toggleSelectMode turns it off internally if it's on
         if (isSelectMode) toggleSelectMode();
     }
 }
