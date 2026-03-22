@@ -17,6 +17,7 @@
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
             <button class="tab-btn" onclick="switchTab('recent')">Recent</button>
+            <button class="tab-btn" onclick="switchTab('yearly')">Yearly</button>
         </div>
 
         <!-- DASHBOARD TAB -->
@@ -38,6 +39,15 @@
                 <canvas id="expenseChart"></canvas>
             </div>
             <div id="category-details-container" style="margin-top: 20px;"></div>
+        </div>
+
+        
+        <!-- YEARLY TAB -->
+        <div id="tab-yearly" class="tab-content">
+            <h2>Monthly Expenses by Category</h2>
+            <div class="chart-container" style="height: 500px;">
+                <canvas id="yearlyChart"></canvas>
+            </div>
         </div>
 
         <!-- RECENT TAB -->

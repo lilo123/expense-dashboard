@@ -93,6 +93,7 @@ function renderDashboard() {
     }
 
     document.querySelector('.chart-container').style.height = Math.max(300, labels.length * 40 + 50) + 'px';
+    document.querySelector('.chart-container').style.height = Math.max(300, labels.length * 40 + 50) + 'px';
     const ctx = document.getElementById('expenseChart').getContext('2d');
     Chart.register(window.ChartDataLabels);
     chartInstance = new Chart(ctx, {
@@ -106,7 +107,7 @@ function renderDashboard() {
                 borderRadius: 4
             }]
         },
-        options: { 
+        options: { indexAxis: 'y', maintainAspectRatio: false, 
             indexAxis: 'y', 
             maintainAspectRatio: false,
             responsive: true,
