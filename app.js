@@ -465,8 +465,10 @@ function toggleAddModal() {
     const modal = document.getElementById('add-modal');
     if (modal.style.display === 'flex') {
         modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
     } else {
         modal.style.display = 'flex';
+        document.body.classList.add('modal-open');
         if (!document.getElementById('add-date').value) {
             const today = new Date();
             document.getElementById('add-date').value = toLocalDateString(today);
@@ -538,8 +540,10 @@ function toggleChatModal() {
     const modal = document.getElementById('chat-modal');
     if (modal.style.display === 'block') {
         modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
     } else {
         modal.style.display = 'block';
+        document.body.classList.add('modal-open');
         setTimeout(() => document.getElementById('chat-input').focus(), 100);
     }
 }

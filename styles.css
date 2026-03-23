@@ -202,3 +202,29 @@ h2 { font-size: 20px; margin-bottom: 15px; }
         right: 15px;
     }
 }
+
+/* Mobile Chat UI Fixes */
+body.modal-open { overflow: hidden; }
+
+.chat-input-area input {
+    font-size: 16px !important;
+    box-sizing: border-box !important;
+}
+
+@media (max-width: 600px) {
+    .chat-modal-content {
+        width: 100vw !important;
+        left: 0 !important;
+        box-sizing: border-box !important;
+    }
+    
+    .chat-header::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 5px;
+        background: rgba(255,255,255,0.5);
+        border-radius: 3px;
+        margin: 0 auto 10px auto;
+    }
+}
