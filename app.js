@@ -28,21 +28,28 @@ function setDefaultDateRange() {
 
 async function fetchExpenses() {
     try {
+        const cached = localStorage.getItem('expense_data');
+        if (cached) {
+            expenses = JSON.parse(cached);
+            renderDashboard();
+            renderRecent();
+            if (typeof renderYearlyChart === 'function') renderYearlyChart();
+        }
         const response = await fetch(WEB_APP_URL);
         const result = await response.json();
         if (result.success) {
-            // Map first to keep the original spreadsheet row numbers intact
-            // Then filter out all the blank rows
             expenses = result.data
                 .map((item, index) => ({...item, row: index + 2}))
-                .filter(exp => exp.item && str_trim(exp.item) !== "" && exp.date !== "");
+                .filter(exp => exp.item && str_trim(exp.item) !== '' && exp.date !== '');
+            localStorage.setItem('expense_data', JSON.stringify(expenses));
             renderDashboard();
             renderRecent();
+            if (typeof renderYearlyChart === 'function') renderYearlyChart();
         } else {
-            alert("Failed to load data.");
+            console.error("Failed to load data.");
         }
-    } catch (error) {
-        console.error("Error fetching data:", error);
+    } catch (e) {
+        console.error("Error fetching data:", e);
     }
 }
 
@@ -522,3 +529,69 @@ window.addEventListener('click', function(event) {
         closeEditModal();
     }
 });
+
+// --- CHAT LOGIC ---
+function toggleChatModal() {
+    const modal = document.getElementById('chat-modal');
+    if (modal.style.display === 'block') {
+        modal.style.display = 'none';
+    } else {
+        modal.style.display = 'block';
+        setTimeout(() => document.getElementById('chat-input').focus(), 100);
+    }
+}
+
+function handleChatKeyPress(event) {
+    if (event.key === 'Enter') {
+        sendChatMessage();
+    }
+}
+
+function appendChatMessage(text, className) {
+    const history = document.getElementById('chat-history');
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `chat-message ${className}`;
+    msgDiv.textContent = text;
+    const id = 'msg-' + Date.now();
+    msgDiv.id = id;
+    history.appendChild(msgDiv);
+    history.scrollTop = history.scrollHeight;
+    return id;
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+
+    appendChatMessage(message, 'user-message');
+    input.value = '';
+
+    const loadingId = appendChatMessage('Thinking...', 'ai-message');
+
+    try {
+        const response = await fetch(WEB_APP_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+                action: 'chat',
+                message: message
+            })
+        });
+        const result = await response.json();
+        
+        document.getElementById(loadingId).remove();
+        
+        if (result.success) {
+            appendChatMessage(result.reply, 'ai-message');
+            if (result.refresh) {
+                fetchExpenses();
+            }
+        } else {
+            appendChatMessage('Error: ' + (result.error || 'Something went wrong.'), 'ai-message');
+        }
+    } catch (e) {
+        console.error(e);
+        document.getElementById(loadingId).remove();
+        appendChatMessage('Network error.', 'ai-message');
+    }
+}

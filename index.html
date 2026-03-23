@@ -95,6 +95,7 @@
     
     <!-- Add Expense FAB and Modal -->
     <div class="fab-container">
+        <button class="fab secondary-fab" onclick="toggleChatModal()">✨</button>
         <button id="fab" class="fab" onclick="toggleAddModal()">+</button>
     </div>
 
@@ -120,6 +121,22 @@
     </div>
 
     <script src="app.js"></script>
+
+    <!-- CHAT MODAL -->
+    <div id="chat-modal" class="modal">
+        <div class="modal-content chat-modal-content">
+            <div class="chat-header">
+                <h2>✨ AI Expense Assistant</h2>
+            </div>
+            <div id="chat-history" class="chat-history">
+                <div class="chat-message ai-message">Hi! I can help you add, delete, or summarize expenses. How can I help today?</div>
+            </div>
+            <div class="chat-input-area">
+                <input type="text" id="chat-input" placeholder="e.g., I spent $15 on coffee..." onkeypress="handleChatKeyPress(event)">
+                <button id="send-chat-btn" onclick="sendChatMessage()">Send</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
         <!-- Vercel push -->
