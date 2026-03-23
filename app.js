@@ -450,3 +450,75 @@ async function deleteSelected() {
         if (isSelectMode) toggleSelectMode();
     }
 }
+
+function toggleAddModal() {
+    const modal = document.getElementById('add-modal');
+    if (modal.style.display === 'flex') {
+        modal.style.display = 'none';
+    } else {
+        modal.style.display = 'flex';
+        if (!document.getElementById('add-date').value) {
+            const today = new Date();
+            document.getElementById('add-date').value = today.toISOString().split('T')[0];
+        }
+    }
+}
+
+async function addExpense() {
+    const date = document.getElementById('add-date').value;
+    const item = document.getElementById('add-item').value;
+    const amount = document.getElementById('add-amount').value;
+    const category = document.getElementById('add-category').value;
+    const btn = document.getElementById('add-expense-btn');
+
+    if (!date || !item || !amount || !category) {
+        alert("Please fill in all fields.");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Adding...";
+
+    try {
+        const response = await fetch(WEB_APP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+                action: 'add',
+                date: date,
+                item: item,
+                amount: amount,
+                category: category,
+                secret: WEB_SECRET
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            document.getElementById('add-item').value = "";
+            document.getElementById('add-amount').value = "";
+            toggleAddModal();
+            await fetchExpenses();
+        } else {
+            alert("Failed to add expense.");
+        }
+    } catch (e) {
+        alert("Error adding expense.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Add Expense";
+    }
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', function(event) {
+    const addModal = document.getElementById('add-modal');
+    if (event.target === addModal) {
+        toggleAddModal();
+    }
+    const editModal = document.getElementById('edit-modal');
+    if (event.target === editModal) {
+        closeEditModal();
+    }
+});
