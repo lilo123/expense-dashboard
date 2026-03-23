@@ -121,7 +121,7 @@ function renderDashboard() {
         options: { indexAxis: 'y', maintainAspectRatio: false, 
             indexAxis: 'y', 
             maintainAspectRatio: false,
-            responsive: true,
+            responsive: true, interaction: { mode: "y", intersect: false },
             layout: {
                 padding: { right: 60 }
             },
@@ -188,7 +188,7 @@ function renderYearlyChart() {
         data: { labels, datasets },
         options: {
             maintainAspectRatio: false,
-            responsive: true,
+            responsive: true, interaction: { mode: "y", intersect: false },
             scales: {
                 x: { stacked: true, grid: { display: false } },
                 y: { stacked: true }
