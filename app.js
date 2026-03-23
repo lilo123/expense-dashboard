@@ -552,7 +552,7 @@ function appendChatMessage(text, className) {
     const msgDiv = document.createElement('div');
     msgDiv.className = `chat-message ${className}`;
     msgDiv.textContent = text;
-    const id = 'msg-' + Date.now();
+    const id = 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
     msgDiv.id = id;
     history.appendChild(msgDiv);
     history.scrollTop = history.scrollHeight;
@@ -574,6 +574,7 @@ async function sendChatMessage() {
             method: 'POST',
             body: JSON.stringify({
                 action: 'chat',
+                expenses: expenses,
                 message: message
             })
         });
