@@ -31,7 +31,7 @@ body {
 .date-filter button { padding: 10px 15px; background: var(--card-bg); border: 1px solid var(--border); cursor: pointer; border-radius: 8px; font-weight: 600; color: var(--text); }
 
 .summary-card { background: var(--accent); color: var(--accent-text); padding: 25px; border-radius: 12px; text-align: center; margin-bottom: 25px; }
-.summary-card h3 { margin: 0 0 10px 0; font-weight: 500; font-size: 15px; opacity: 0.9; }
+.summary-card h3 { margin: 0 0 10px 0; font-weight: 500; font-size: 16px; opacity: 0.9; }
 .summary-card p { margin: 0; font-size: 40px; font-weight: 800; }
 
 .chart-container { position: relative; width: 100%; box-sizing: border-box; background: var(--card-bg); padding: 15px; border-radius: 12px; border: 1px solid var(--border); margin-bottom: 20px; }
@@ -41,7 +41,7 @@ h2 { font-size: 20px; margin-bottom: 15px; }
 .category-detail-item { background: var(--card-bg); padding: 15px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
 .category-detail-item:hover { border-color: var(--text); }
 .detail-left { display: flex; flex-direction: column; }
-.detail-name { font-weight: 600; font-size: 15px; }
+.detail-name { font-weight: 600; font-size: 16px; }
 .detail-date { font-size: 12px; color: #666; margin-top: 4px; }
 .detail-amount { font-weight: 700; font-size: 16px; }
 
@@ -62,7 +62,7 @@ h2 { font-size: 20px; margin-bottom: 15px; }
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
 .modal-content { background: var(--bg); padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; }
 .modal-content h2 { margin-top: 0; margin-bottom: 20px; }
-.modal-content input, .modal-content select { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 15px; background: var(--bg); color: var(--text); }
+.modal-content input, .modal-content select { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 16px; background: var(--bg); color: var(--text); }
 .modal-content button { width: 100%; padding: 14px; background: var(--accent); color: var(--accent-text); border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 16px; }
 .modal-content .danger-btn { background: var(--danger); color: white; margin-top: 10px; }
 .close { float: right; font-size: 28px; cursor: pointer; color: #999; line-height: 20px; }
@@ -75,13 +75,13 @@ h2 { font-size: 20px; margin-bottom: 15px; }
     z-index: 99;
 }
 .fab {
-    width: 60px;
-    height: 60px;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
     background-color: var(--text);
     color: var(--bg);
     border: none;
-    font-size: 32px;
+    font-size: 24px;
     font-weight: 300;
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
@@ -102,9 +102,9 @@ h2 { font-size: 20px; margin-bottom: 15px; }
 }
 .secondary-fab {
     background-color: #666;
-    font-size: 32px;
-    width: 60px;
-    height: 60px;
+    font-size: 24px;
+    width: 50px;
+    height: 50px;
 }
 .chat-modal-content {
     display: flex;
@@ -178,4 +178,27 @@ h2 { font-size: 20px; margin-bottom: 15px; }
     justify-content: center;
     font-size: 18px;
     padding: 0;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+    .modal-content {
+        width: 95%;
+        padding: 20px;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    .chat-modal-content {
+        height: 85vh;
+        width: 100%;
+        max-width: 100%;
+        border-radius: 20px 20px 0 0;
+        position: absolute;
+        bottom: 0;
+        margin: 0;
+    }
+    .fab-container {
+        bottom: 15px;
+        right: 15px;
+    }
 }
