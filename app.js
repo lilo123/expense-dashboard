@@ -19,11 +19,17 @@ function switchTab(tabId) {
     if(tabId === 'yearly') setTimeout(renderYearlyChart, 50);
 }
 
+
+function toLocalDateString(dateObj) {
+    const tzOffset = dateObj.getTimezoneOffset() * 60000;
+    return new Date(dateObj.getTime() - tzOffset).toISOString().split('T')[0];
+}
+
 function setDefaultDateRange() {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    document.getElementById('start-date').value = firstDay.toISOString().split('T')[0];
-    document.getElementById('end-date').value = today.toISOString().split('T')[0];
+    document.getElementById('start-date').value = toLocalDateString(firstDay);
+    document.getElementById('end-date').value = toLocalDateString(today);
 }
 
 async function fetchExpenses() {
@@ -35,7 +41,8 @@ async function fetchExpenses() {
             renderRecent();
             if (typeof renderYearlyChart === 'function') renderYearlyChart();
         }
-        const response = await fetch(WEB_APP_URL);
+        const cacheBusterUrl = WEB_APP_URL + (WEB_APP_URL.includes('?') ? '&' : '?') + '_t=' + new Date().getTime();
+        const response = await fetch(cacheBusterUrl, { cache: 'no-store' });
         const result = await response.json();
         if (result.success) {
             expenses = result.data
@@ -57,17 +64,13 @@ function str_trim(s) { return String(s).trim(); }
 
 
 function getFilteredExpenses() {
-    const startStr = document.getElementById('start-date').value;
-    const endStr = document.getElementById('end-date').value;
-    if (!startStr && !endStr) return expenses;
-
-    const start = startStr ? new Date(startStr) : new Date(0);
-    const end = endStr ? new Date(endStr) : new Date();
-    end.setHours(23, 59, 59, 999);
+    const startStr = document.getElementById('start-date').value || "0000-00-00";
+    const endStr = document.getElementById('end-date').value || "9999-12-31";
 
     return expenses.filter(exp => {
-        const expDate = new Date(exp.date);
-        return expDate >= start && expDate <= end;
+        // Extract the YYYY-MM-DD part from the date string (e.g., "2026-03-23T04:00:00.000Z" -> "2026-03-23")
+        const eDateStr = String(exp.date || "").substring(0, 10);
+        return eDateStr >= startStr && eDateStr <= endStr;
     });
 }
 
@@ -159,7 +162,7 @@ function renderYearlyChart() {
         const dateObj = new Date(exp.date);
         if (isNaN(dateObj.getTime())) return;
         
-        const monthYear = dateObj.toISOString().substring(0, 7); // YYYY-MM
+        const monthYear = toLocalDateString(dateObj).substring(0, 7); // YYYY-MM
         
         if (!byMonthAndCategory[monthYear]) byMonthAndCategory[monthYear] = {};
         if (!byMonthAndCategory[monthYear][exp.category]) byMonthAndCategory[monthYear][exp.category] = 0;
@@ -333,7 +336,7 @@ function openEditModal(row, item, amount, category, date) {
     if (date) {
         const d = new Date(date);
         if (!isNaN(d.getTime())) {
-            formattedDate = d.toISOString().split('T')[0];
+            formattedDate = toLocalDateString(d);
         }
     }
     document.getElementById('edit-date').value = formattedDate;
@@ -466,7 +469,7 @@ function toggleAddModal() {
         modal.style.display = 'flex';
         if (!document.getElementById('add-date').value) {
             const today = new Date();
-            document.getElementById('add-date').value = today.toISOString().split('T')[0];
+            document.getElementById('add-date').value = toLocalDateString(today);
         }
     }
 }
