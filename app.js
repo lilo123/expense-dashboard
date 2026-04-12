@@ -747,6 +747,7 @@ function showMonthDetails(monthStr) {
     const container = document.getElementById('yearly-details-container');
     const monthExpenses = expenses.filter(exp => {
         const dateObj = new Date(exp.date);
+        dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
         if (isNaN(dateObj.getTime())) return false;
         return toLocalDateString(dateObj).substring(0, 7) === monthStr;
     });
@@ -766,6 +767,7 @@ function renderYearlyChart() {
     const years = new Set();
     expenses.forEach(exp => {
         const d = new Date(exp.date);
+        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
         if (!isNaN(d.getTime())) years.add(d.getFullYear().toString());
     });
     const sortedYears = Array.from(years).sort((a,b) => b - a);
@@ -792,6 +794,7 @@ function renderYearlyChart() {
 
     expenses.forEach(exp => {
         const d = new Date(exp.date);
+        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
         if (isNaN(d.getTime()) || d.getFullYear().toString() !== selectedYear) return;
         const m = d.getMonth();
         if (byMonth[m] === null) byMonth[m] = 0;
