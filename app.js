@@ -879,7 +879,7 @@ async function sendChatMessage() {
         const data = await response.json();
         if (history.contains(typingDiv)) history.removeChild(typingDiv);
         
-        if (data.error) throw new Error(typeof data.error === 'object' ? data.error.message || JSON.stringify(data.error) : data.error);
+        if (data.error) throw new Error(typeof data.error === 'string' ? data.error : JSON.stringify(data.error));
         
         const result = data.data;
         const aiDiv = document.createElement('div');
