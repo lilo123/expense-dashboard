@@ -1074,7 +1074,7 @@ async function fetchExistingSiriToken() {
             tokenInput.value = data[0].token;
         } else {
             tokenInput.value = '';
-            tokenInput.placeholder = 'No token generated yet.';
+            tokenInput.placeholder = "No token generated yet."; setTimeout(() => { if (!tokenInput.value && confirm("No Siri token found. Generate one right now?")) generateSiriToken(); }, 500);
         }
     } catch (err) {
         console.error('Error fetching token:', err);
