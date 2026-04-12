@@ -37,7 +37,7 @@ When the user asks about their expenses, use the data provided to summarize, cal
     });
     const data = await response.json();
     
-    if (!response.ok) return res.status(response.status).json({ error: data.error || 'Groq API error' });
+    if (!response.ok) return res.status(response.status).json({ error: (data.error && data.error.error && data.error.error.message) ? data.error.error.message : (data.error && data.error.message) ? data.error.message : (data.error || 'Groq API error') });
 
     const aiContent = data.choices[0].message.content.trim();
     let parsedResponse;
