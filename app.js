@@ -82,8 +82,8 @@ async function signIn() {
 async function signUp() {
     const email = document.getElementById('signup-email').value;
     const password = document.getElementById('signup-password').value;
-    const confirmPassword = document.getElementById('signup-confirm').value;
-    const msg = document.getElementById('signup-msg');
+    const confirmPassword = document.getElementById('signup-confirm-password').value;
+    const msg = document.getElementById('signup-message');
     
     if (!email || !password) {
         msg.innerText = "Please enter email and password.";
