@@ -889,7 +889,7 @@ async function sendChatMessage() {
             aiDiv.innerHTML = `Adding expense: $${result.amount} for ${result.description} (${result.category})...`;
             history.appendChild(aiDiv);
             
-            const { data: insertData, error } = await _supabase.from('expenses').insert([{
+            const { data: insertData, error } = await supabaseClient.from('expenses').insert([{
                 date: new Date().toISOString().split('T')[0],
                 item: result.description,
                 amount: parseFloat(result.amount),
