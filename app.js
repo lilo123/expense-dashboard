@@ -1060,11 +1060,11 @@ function toggleSiriModal() {
 }
 
 async function fetchExistingSiriToken() {
-    const user = _supabase.auth.user();
+    const user = currentUser;
     if (!user) return;
     
     try {
-        const { data, error } = await _supabase
+        const { data, error } = await supabaseClient
             .from('api_tokens')
             .select('token')
             .eq('user_id', user.id)
@@ -1086,7 +1086,7 @@ async function fetchExistingSiriToken() {
 }
 
 async function generateSiriToken() {
-    const user = _supabase.auth.user();
+    const user = currentUser;
     if (!user) {
         alert('You must be logged in.');
         return;
@@ -1102,7 +1102,7 @@ async function generateSiriToken() {
         const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
         const token = 'exp_sk_' + randomString;
         
-        const { data, error } = await _supabase
+        const { data, error } = await supabaseClient
             .from('api_tokens')
             .insert([
                 { user_id: user.id, token: token }
