@@ -921,24 +921,30 @@ async function sendChatMessage() {
         aiDiv.className = 'chat-message ai-message';
         
         if (result.action === 'add') {
-            aiDiv.innerHTML = `Adding expense: $${result.amount} for ${result.description} (${result.category})...`;
+            const items = result.items || [result];
+            let messageHtml = 'Adding expenses:<br>';
+            const insertPayload = items.map(item => {
+                messageHtml += '- $'+ item.amount + ' for ' + (item.description || item.item) + ' (' + item.category + ')<br>';
+                return {
+                    date: item.date || new Date().isoString().split('T')[0],
+                    item: item.description || item.item,
+                    amount: parseFloat(item.amount),
+                    category: item.category,
+                    user_id: currentUser.id
+                };
+            });
+            
+            aiDiv.innerHTML = messageHtml;
             history.appendChild(aiDiv);
             
-            const { data: insertData, error } = await supabaseClient.from('expenses').insert([{
-                date: result.date || new Date().toISOString().split('T')[0],
-                item: result.description,
-                amount: parseFloat(result.amount),
-                category: result.category,
-                user_id: currentUser.id
-            }]).select();
-            
+            const { error } = await supabaseClient.from('expenses').insert(insertPayload);
             if (error) throw error;
             
             await fetchExpenses();
             
             const successDiv = document.createElement('div');
             successDiv.className = 'chat-message ai-message';
-            successDiv.innerHTML = '✅ Added successfully!';
+            successDiv.innerHTML = 'Added ' + items.length + ' expense(s) successfully!';
             history.appendChild(successDiv);
         } else {
             aiDiv.innerHTML = result.message || JSON.stringify(result);
