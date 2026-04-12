@@ -914,7 +914,7 @@ async function sendChatMessage() {
         const errorDiv = document.createElement('div');
         errorDiv.className = 'chat-message ai-message';
         errorDiv.style.color = 'red';
-        errorDiv.textContent = 'Error: ' + err.message;
+        errorDiv.textContent = 'Error: ' + err.message + ' | Raw: ' + JSON.stringify(err, Object.getOwnPropertyNames(err));
         history.appendChild(errorDiv);
     }
     history.scrollTop = history.scrollHeight;
