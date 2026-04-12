@@ -7,12 +7,49 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Expenses</h1>
+
+    <!-- AUTHENTICATION OVERLAY -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-card" id="signin-card">
+            <h2>Welcome Back</h2>
+            <p>Please sign in to manage your expenses.</p>
+            <input type="email" id="signin-email" placeholder="Email Address" required>
+            <input type="password" id="signin-password" placeholder="Password" required>
+            <div class="auth-buttons">
+                <button onclick="signIn()" style="width: 100%;">Sign In</button>
+            </div>
+            <p style="margin-top: 15px; font-size: 0.9em; text-align: center;">
+                Don't have an account? <a href="#" onclick="toggleAuth('signup')" style="color: var(--primary); text-decoration: none; font-weight: bold;">Sign up here</a>
+            </p>
+            <p id="signin-message" class="auth-message"></p>
         </div>
+
+        <div class="auth-card" id="signup-card" style="display: none;">
+            <h2>Create Account</h2>
+            <p>Sign up to start tracking your expenses.</p>
+            <input type="email" id="signup-email" placeholder="Email Address" required>
+            <input type="password" id="signup-password" placeholder="Password" required>
+            <input type="password" id="signup-confirm-password" placeholder="Confirm Password" required>
+            <div class="auth-buttons">
+                <button onclick="signUp()" style="width: 100%;">Create Account</button>
+            </div>
+            <p style="margin-top: 15px; font-size: 0.9em; text-align: center;">
+                Already have an account? <a href="#" onclick="toggleAuth('signin')" style="color: var(--primary); text-decoration: none; font-weight: bold;">Sign in here</a>
+            </p>
+            <p id="signup-message" class="auth-message"></p>
+        </div>
+    </div>
+
+    <div class="container" id="main-app" style="display: none;">
+        
+        <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Expenses</h1>
+            <button id="logout-btn" onclick="signOut()" style="display: none; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer;">Sign Out</button>
+        </div>
+
 
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
@@ -44,21 +81,45 @@
         
         <!-- YEARLY TAB -->
         <div id="tab-yearly" class="tab-content">
-            <h2>Monthly Expenses by Category</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Monthly Expenses</h2>
+                <select id="yearSelect" onchange="renderYearlyChart()" style="padding: 6px 12px; border-radius: 6px; font-size: 16px; border: 1px solid #ccc; background-color: #fff; cursor: pointer;"></select>
+            </div>
             <div class="chart-container" style="height: 500px;">
                 <canvas id="yearlyChart"></canvas>
             </div>
+            <div id="yearly-details-container" style="margin-top: 20px;"></div>
         </div>
 
         <!-- RECENT TAB -->
         <div id="tab-recent" class="tab-content">
-            <div class="recent-header-controls">
+            <div class="recent-header-controls" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
                 <button id="select-mode-btn" onclick="toggleSelectMode()">Select</button>
-                <button id="bulk-delete-btn" class="danger-btn" style="display: none;" onclick="deleteSelected()">Delete Selected</button>
+                <div id="bulk-actions" style="display: none; gap: 10px;">
+                    <button id="bulk-edit-btn" onclick="openBulkEditModal()" style="background: #1a73e8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Edit Selected</button>
+                    <button id="bulk-delete-btn" class="danger-btn" onclick="deleteSelected()">Delete Selected</button>
+                </div>
             </div>
             <div class="recent-list" id="recent-list">
                 <!-- Recent items injected here -->
             </div>
+        </div>
+    </div>
+
+    
+    <!-- Bulk Edit Modal -->
+    <div id="bulk-edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeBulkEditModal()">&times;</span>
+            <h2>Bulk Edit Expenses</h2>
+            <p style="margin-bottom: 15px; color: #5f6368; font-size: 14px;">Select new values. Leave blank to keep existing.</p>
+            <label style="display:block; margin-bottom:5px; font-weight:500;">New Date:</label>
+            <input type="date" id="bulk-edit-date">
+            <label style="display:block; margin-top:10px; margin-bottom:5px; font-weight:500;">New Category:</label>
+            <select id="bulk-edit-category">
+                <option value="">-- Keep Existing Category --</option>
+            </select>
+            <button id="save-bulk-edit-btn" onclick="saveBulkEdit()" style="margin-top: 15px;">Apply Changes</button>
         </div>
     </div>
 
@@ -71,23 +132,7 @@
             <input type="date" id="edit-date">
             <input type="text" id="edit-item" placeholder="Item Name">
             <input type="number" id="edit-amount" placeholder="Amount">
-            <select id="edit-category">
-                <option value="Housing">Housing</option>
-                <option value="Utilities">Utilities</option>
-                <option value="Insurance">Insurance</option>
-                <option value="Groceries">Groceries</option>
-                <option value="Dining Out">Dining Out</option>
-                <option value="Transportation">Transportation</option>
-                <option value="Household">Household</option>
-                <option value="Health & Care">Health & Care</option>
-                <option value="Subscriptions">Subscriptions</option>
-                <option value="Shopping">Shopping</option>
-                <option value="Entertainment">Entertainment</option>
-                <option value="Travel">Travel</option>
-                <option value="Gifts">Gifts</option>
-                <option value="Education">Education</option>
-                <option value="Misc">Misc</option>
-            </select>
+            <select id="edit-category"></select>
             <button id="save-edit-btn" onclick="saveEdit()">Save Changes</button>
             <button id="delete-edit-btn" class="danger-btn" style="margin-top: 10px;" onclick="deleteFromEdit()">Delete</button>
         </div>
@@ -95,6 +140,7 @@
     
     <!-- Add Expense FAB and Modal -->
     <div class="fab-container">
+        <button class="fab secondary-fab" onclick="toggleCategoryModal()" style="bottom: 140px;" title="Manage Categories">📁</button>
         <button class="fab secondary-fab" onclick="toggleChatModal()">✨</button>
         <button id="fab" class="fab" onclick="toggleAddModal()">+</button>
     </div>
@@ -106,21 +152,29 @@
             <input type="date" id="add-date" required>
             <input type="text" id="add-item" placeholder="What did you buy?" required>
             <input type="number" id="add-amount" placeholder="Amount ($)" step="0.01" required>
-            <select id="add-category">
-                <option value="Food">Food</option>
-                <option value="Transport">Transport</option>
-                <option value="Shopping">Shopping</option>
-                <option value="Entertainment">Entertainment</option>
-                <option value="Travel">Travel</option>
-                <option value="Gifts">Gifts</option>
-                <option value="Education">Education</option>
-                <option value="Misc">Misc</option>
-            </select>
+            <select id="add-category"></select>
             <button id="add-expense-btn" onclick="addExpense()">Add Expense</button>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    
+        <!-- MANAGE CATEGORIES MODAL -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px; padding: 25px; border-radius: 12px;">
+            <span class="close" onclick="toggleCategoryModal()" style="font-size: 24px;">&times;</span>
+            <h2 style="margin-bottom: 20px; font-size: 1.5em; color: #202124;">Manage Categories</h2>
+            <div id="category-error" style="color: #d93025; font-size: 14px; margin-bottom: 12px; display: none; background: #fce8e6; padding: 8px; border-radius: 6px;"></div>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="new-category-name" placeholder="New Category Name" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #dadce0; font-size: 14px;">
+                <button onclick="addCategory()" style="padding: 10px 20px; border-radius: 8px; font-weight: bold; background: #1a73e8; color: white; border: none; cursor: pointer;">Add</button>
+            </div>
+            <ul id="category-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; max-height: 350px; overflow-y: auto;">
+                <!-- Categories injected here -->
+            </ul>
+        </div>
+    </div>
+
+    <script src="app.js?v=1776012666"></script>
 
     <!-- CHAT MODAL -->
     <div id="chat-modal" class="modal">
@@ -165,3 +219,4 @@
 
 
 
+<!-- Vercel cache bust AI Chat -->

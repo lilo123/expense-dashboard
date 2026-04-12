@@ -1,24 +1,603 @@
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycby7WHdT8KRVWFI2QCQzK3Us_YSm6gbf_2z4AoRMll5xkBJY5-Ro2yjLp7lJqwV8jeIX/exec";
-const WEB_SECRET = "ExpenseDashboard741236";
+// Supabase Configuration
+const supabaseUrl = 'https://zjanajeevdvhbeuyflmg.supabase.co';
+const supabaseKey = 'sb_publishable_alSzFV8OWSBkCnF8z5-0_Q_2MefRVwD';
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+let currentUser = null;
 let expenses = [];
+let categories = [];
 let chartInstance = null;
 let isSelectMode = false;
-let selectedRows = new Set();
+let selectedIds = new Set();
 
 document.addEventListener("DOMContentLoaded", () => {
     setDefaultDateRange();
-    fetchExpenses();
+    checkUser();
 });
+
+async function checkUser() {
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    if (session) {
+        currentUser = session.user;
+        showApp();
+    } else {
+        showAuth();
+    }
+
+    supabaseClient.auth.onAuthStateChange((event, session) => {
+        if (session) {
+            currentUser = session.user;
+            showApp();
+        } else {
+            currentUser = null;
+            showAuth();
+        }
+    });
+}
+
+function showAuth() {
+    document.getElementById('auth-overlay').style.display = 'flex';
+    document.getElementById('main-app').style.display = 'none';
+    document.getElementById('logout-btn').style.display = 'none';
+}
+
+function showApp() {
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    document.getElementById('logout-btn').style.display = 'block';
+    fetchCategories();
+    fetchExpenses();
+}
+
+function toggleAuth(view) {
+    if (view === 'signup') {
+        document.getElementById('signin-card').style.display = 'none';
+        document.getElementById('signup-card').style.display = 'block';
+    } else {
+        document.getElementById('signin-card').style.display = 'block';
+        document.getElementById('signup-card').style.display = 'none';
+    }
+}
+
+
+async function signIn() {
+    const email = document.getElementById('signin-email').value;
+    const password = document.getElementById('signin-password').value;
+    const msg = document.getElementById('signin-message');
+    if (!email || !password) {
+        msg.innerText = "Please enter email and password.";
+        return;
+    }
+    msg.innerText = "Signing in...";
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) {
+        msg.innerText = error.message;
+    } else {
+        msg.innerText = "Signed in successfully!";
+        currentUser = data.session.user;
+        showApp();
+    }
+}
+
+async function signUp() {
+    const email = document.getElementById('signup-email').value;
+    const password = document.getElementById('signup-password').value;
+    const confirmPassword = document.getElementById('signup-confirm').value;
+    const msg = document.getElementById('signup-msg');
+    
+    if (!email || !password) {
+        msg.innerText = "Please enter email and password.";
+        return;
+    }
+    if (password !== confirmPassword) {
+        msg.innerText = "Passwords do not match.";
+        return;
+    }
+    msg.innerText = "Signing up...";
+    
+    const { data, error } = await supabaseClient.auth.signUp({ email, password });
+    if (error) {
+        msg.innerText = error.message;
+    } else {
+        msg.innerText = "Account created! Adding default categories...";
+        const userId = data.user ? data.user.id : (data.session ? data.session.user.id : null);
+        if (userId) {
+            const defaults = ['Housing', 'Utilities', 'Insurance', 'Groceries', 'Dining Out', 'Transportation', 'Household', 'Health & Care', 'Subscriptions', 'Shopping', 'Entertainment', 'Travel', 'Gifts', 'Education', 'Misc'];
+            const inserts = defaults.map(name => ({ name: name, user_id: userId }));
+            await supabaseClient.from('categories').insert(inserts);
+        }
+        msg.innerText = "Check your email to confirm, or you may be logged in!";
+        if (data.session) {
+            currentUser = data.session.user;
+            showApp();
+        }
+    }
+}
+
+async function signOut() {
+    await supabaseClient.auth.signOut();
+}
+
+// --- Categories ---
+
+function toggleCategoryModal() {
+    const modal = document.getElementById('category-modal');
+    modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+}
+
+async function fetchCategories() {
+    if (!currentUser) return;
+    const { data, error } = await supabaseClient
+        .from('categories')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .order('name', { ascending: true });
+        
+    if (error) {
+        console.error("Error fetching categories:", error);
+        return;
+    }
+    
+    const seen = new Set();
+    categories = [];
+    (data || []).forEach(cat => {
+        const lowerName = cat.name.trim().toLowerCase();
+        if (!seen.has(lowerName)) {
+            seen.add(lowerName);
+            categories.push(cat);
+        }
+    });
+    renderCategories();
+    updateCategorySelects();
+}
+
+function renderCategories() {
+    const list = document.getElementById('category-list');
+    if (!list) return;
+    list.innerHTML = '';
+    categories.forEach(cat => {
+        const li = document.createElement('li');
+        li.style.display = 'flex';
+        li.style.justifyContent = 'space-between';
+        li.style.alignItems = 'center';
+        li.style.padding = '8px 15px';
+        li.style.background = '#ffffff';
+        li.style.borderRadius = '8px';
+        li.style.marginBottom = '8px';
+        li.style.border = '1px solid #dadce0';
+        li.style.transition = 'box-shadow 0.2s';
+        li.onmouseover = () => li.style.boxShadow = '0 1px 4px rgba(0,0,0,0.1)';
+        li.onmouseout = () => li.style.boxShadow = 'none';
+        
+        const nameSpan = document.createElement('span');
+        nameSpan.innerText = cat.name;
+        nameSpan.style.fontWeight = '500';
+        nameSpan.style.color = '#3c4043';
+        nameSpan.style.flex = '1';
+        
+        const actionsDiv = document.createElement('div');
+        actionsDiv.style.display = 'flex';
+        actionsDiv.style.gap = '8px';
+        actionsDiv.style.alignItems = 'center';
+
+        const createBtn = (svgPath, color, hoverColor, onClick) => {
+            const btn = document.createElement('button');
+            btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svgPath}</svg>`;
+            btn.style.padding = '6px';
+            btn.style.borderRadius = '50%';
+            btn.style.background = 'transparent';
+            btn.style.color = color;
+            btn.style.border = 'none';
+            btn.style.cursor = 'pointer';
+            btn.style.display = 'flex';
+            btn.style.alignItems = 'center';
+            btn.style.justifyContent = 'center';
+            btn.style.transition = 'all 0.2s';
+            btn.onmouseover = () => { btn.style.background = '#f1f3f4'; btn.style.color = hoverColor; };
+            btn.onmouseout = () => { btn.style.background = 'transparent'; btn.style.color = color; };
+            btn.onclick = onClick;
+            return btn;
+        };
+
+        const editSvg = '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>';
+        const deleteSvg = '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line>';
+
+        const editBtn = createBtn(editSvg, '#5f6368', '#1a73e8', () => editCategory(cat.id, cat.name));
+        const delBtn = createBtn(deleteSvg, '#5f6368', '#d93025', () => deleteCategory(cat.id));
+
+        actionsDiv.appendChild(editBtn);
+        actionsDiv.appendChild(delBtn);
+
+        li.appendChild(nameSpan);
+        li.appendChild(actionsDiv);
+        list.appendChild(li);
+    });
+}
+
+function updateCategorySelects() {
+    const addSelect = document.getElementById('add-category');
+    const editSelect = document.getElementById('edit-category');
+    if (!addSelect || !editSelect) return;
+    
+    addSelect.innerHTML = '';
+    editSelect.innerHTML = '';
+    const bulkSelect = document.getElementById('bulk-edit-category');
+    if (bulkSelect) {
+        bulkSelect.innerHTML = '<option value="">-- Keep Existing Category --</option>';
+    }
+    
+    categories.forEach(cat => {
+        const opt1 = document.createElement('option');
+        opt1.value = cat.name;
+        opt1.innerText = cat.name;
+        addSelect.appendChild(opt1);
+        
+        const opt2 = document.createElement('option');
+        opt2.value = cat.name;
+        opt2.innerText = cat.name;
+        editSelect.appendChild(opt2);
+        
+        if (bulkSelect) {
+            const opt3 = document.createElement('option');
+            opt3.value = cat.name;
+            opt3.innerText = cat.name;
+            bulkSelect.appendChild(opt3);
+        }
+    });
+}
+
+function showCategoryError(msg) {
+    const errEl = document.getElementById('category-error');
+    if (errEl) {
+        errEl.innerText = msg;
+        errEl.style.display = msg ? 'block' : 'none';
+    } else if (msg) {
+        alert(msg);
+    }
+}
+
+async function addCategory() {
+    const input = document.getElementById('new-category-name');
+    const name = input.value.trim();
+    showCategoryError('');
+    
+    if (!name) return;
+    
+    const lowerName = name.toLowerCase();
+    const exists = categories.some(cat => cat.name.trim().toLowerCase() === lowerName);
+    if (exists) {
+        showCategoryError('Category already exists.');
+        return;
+    }
+    
+    const { data, error } = await supabaseClient
+        .from('categories')
+        .insert([{ name: name, user_id: currentUser.id }]);
+        
+    if (error) {
+        showCategoryError("Error adding category: " + error.message);
+    } else {
+        input.value = '';
+        fetchCategories();
+    }
+}
+
+async function editCategory(id, oldName) {
+    const newName = prompt("Enter new category name:", oldName);
+    if (!newName) return;
+    const trimmedName = newName.trim();
+    if (!trimmedName || trimmedName === oldName) return;
+
+    const lowerName = trimmedName.toLowerCase();
+    const exists = categories.some(cat => cat.name.trim().toLowerCase() === lowerName && cat.id !== id);
+    if (exists) {
+        showCategoryError('Category already exists.');
+        return;
+    }
+
+    showCategoryError('');
+    
+    const { error: catError } = await supabaseClient
+        .from('categories')
+        .update({ name: trimmedName })
+        .eq('id', id);
+
+    if (catError) {
+        showCategoryError("Error updating category: " + catError.message);
+        return;
+    }
+
+    const { error: expError } = await supabaseClient
+        .from('expenses')
+        .update({ category: trimmedName })
+        .eq('user_id', currentUser.id)
+        .eq('category', oldName);
+
+    if (expError) {
+        console.error("Error cascading expense update:", expError);
+    }
+
+    fetchCategories();
+    if (typeof fetchExpenses === 'function') {
+        fetchExpenses();
+    }
+}
+
+async function deleteCategory(id) {
+    if (!confirm("Are you sure you want to delete this category?")) return;
+    showCategoryError('');
+    const { error } = await supabaseClient
+        .from('categories')
+        .delete()
+        .eq('id', id);
+        
+    if (error) {
+        showCategoryError("Error deleting category: " + error.message);
+    } else {
+        fetchCategories();
+    }
+}
+
+// --- Expenses ---
+
+async function fetchExpenses() {
+    if (!currentUser) return;
+    try {
+        const { data, error } = await supabaseClient
+            .from('expenses')
+            .select('*')
+            .eq('user_id', currentUser.id)
+            .order('date', { ascending: false });
+
+        if (error) throw error;
+        
+        expenses = data || [];
+        renderDashboard();
+        renderRecent();
+        if (typeof renderYearlyChart === 'function') renderYearlyChart();
+    } catch (e) {
+        console.error("Error fetching data:", e);
+    }
+}
+
+async function addExpense() {
+    const date = document.getElementById('add-date').value;
+    const item = document.getElementById('add-item').value;
+    const amount = parseFloat(document.getElementById('add-amount').value);
+    const category = document.getElementById('add-category').value;
+    const btn = document.getElementById('add-expense-btn');
+
+    if (!date || !item || isNaN(amount) || !category) {
+        alert("Please fill in all valid fields. Did you create a category first?");
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerText = "Adding...";
+
+    try {
+        const { error } = await supabaseClient
+            .from('expenses')
+            .insert([{
+                user_id: currentUser.id,
+                date: date,
+                item: item,
+                amount: amount,
+                category: category
+            }]);
+
+        if (error) throw error;
+
+        document.getElementById('add-item').value = "";
+        document.getElementById('add-amount').value = "";
+        toggleAddModal();
+        await fetchExpenses();
+    } catch (e) {
+        alert("Error adding expense: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Add Expense";
+    }
+}
+
+function escapeHtml(unsafe) {
+    if (!unsafe) return "";
+    return unsafe
+         .toString()
+         .replace(/&/g, "&amp;")
+         .replace(/</g, "&lt;")
+         .replace(/>/g, "&gt;")
+         .replace(/"/g, "&quot;")
+         .replace(/'/g, "&#039;");
+}
+
+function renderRecent() {
+    const list = document.getElementById('recent-list');
+    if (!list) return;
+    list.innerHTML = "";
+
+    const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    sorted.forEach(exp => {
+        const d = new Date(exp.date);
+        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+        const dateStr = !isNaN(d.getTime()) ? d.toLocaleDateString() : 'Unknown Date';
+        const amt = parseFloat(exp.amount) || 0;
+
+        const idSafe = escapeHtml(exp.id);
+        const itemSafe = escapeHtml(exp.item);
+        const catSafe = escapeHtml(exp.category);
+        const dateSafe = escapeHtml(exp.date);
+
+        list.innerHTML += '<div class="expense-item" data-id="' + idSafe + '" data-item="' + itemSafe + '" data-amount="' + amt + '" data-category="' + catSafe + '" data-date="' + dateSafe + '" onclick="handleExpenseClick(this)">' +
+                '<input type="checkbox" class="expense-checkbox" onclick="handleCheckboxClick(event, \'' + idSafe + '\')">' +
+                '<div class="expense-info">' +
+                    '<h4>' + itemSafe + '</h4>' +
+                    '<p>' + catSafe + ' &bull; ' + dateStr + '</p>' +
+                '</div>' +
+                '<div class="expense-amount">$' + amt.toFixed(2) + '</div>' +
+            '</div>';
+    });
+    
+    if (isSelectMode) toggleSelectMode();
+}
+
+function handleExpenseClick(el) {
+    if (isSelectMode) {
+        const checkbox = el.querySelector('.expense-checkbox');
+        checkbox.checked = !checkbox.checked;
+        const id = el.getAttribute('data-id');
+        if (checkbox.checked) selectedIds.add(id);
+        else selectedIds.delete(id);
+    } else {
+        openEditModal(
+            el.getAttribute('data-id'),
+            el.getAttribute('data-item'),
+            el.getAttribute('data-amount'),
+            el.getAttribute('data-category'),
+            el.getAttribute('data-date')
+        );
+    }
+}
+
+function handleCheckboxClick(event, id) {
+    event.stopPropagation();
+    if (event.target.checked) selectedIds.add(id);
+    else selectedIds.delete(id);
+}
+
+function toggleSelectMode() {
+    isSelectMode = !isSelectMode;
+    const container = document.getElementById('tab-recent');
+    if(isSelectMode) {
+        container.classList.add('select-mode');
+        document.getElementById('bulk-actions').style.display = 'flex';
+        selectedIds.clear();
+        document.querySelectorAll('.expense-checkbox').forEach(cb => cb.checked = false);
+    } else {
+        container.classList.remove('select-mode');
+        document.getElementById('bulk-actions').style.display = 'none';
+    }
+}
+
+function openEditModal(id, item, amount, category, date) {
+    document.getElementById('edit-row').value = id;
+
+    const txt = document.createElement("textarea");
+    txt.innerHTML = item;
+    document.getElementById('edit-item').value = txt.value;
+    document.getElementById('edit-amount').value = amount;
+
+    txt.innerHTML = category;
+    document.getElementById('edit-category').value = txt.value;
+    
+    if (date) document.getElementById('edit-date').value = date;
+    
+    document.getElementById('edit-modal').style.display = "block";
+    document.body.classList.add('modal-open');
+}
+
+function closeEditModal() {
+    document.getElementById('edit-modal').style.display = "none";
+    document.body.classList.remove('modal-open');
+}
+
+async function saveEdit() {
+    const id = document.getElementById('edit-row').value;
+    const item = document.getElementById('edit-item').value.trim();
+    const amount = parseFloat(document.getElementById('edit-amount').value);
+    const category = document.getElementById('edit-category').value.trim();
+    const date = document.getElementById('edit-date').value;
+    
+    if (!item || isNaN(amount) || !category || !date) {
+        alert("Please fill in all valid fields");
+        return;
+    }
+
+    const btn = document.getElementById('save-edit-btn');
+    btn.disabled = true;
+    btn.innerText = "Saving...";
+
+    try {
+        const { error } = await supabaseClient
+            .from('expenses')
+            .update({ item, amount, category, date })
+            .eq('id', id);
+            
+        if (error) throw error;
+        
+        closeEditModal();
+        await fetchExpenses();
+    } catch (error) {
+        console.error("Edit error:", error);
+        alert("Failed to edit expense: " + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Save Changes";
+    }
+}
+
+async function deleteFromEdit() {
+    const id = document.getElementById('edit-row').value;
+    if (!confirm("Are you sure you want to delete this expense?")) return;
+
+    const btn = document.getElementById('delete-edit-btn');
+    btn.disabled = true;
+    btn.innerText = "Deleting...";
+
+    try {
+        const { error } = await supabaseClient
+            .from('expenses')
+            .delete()
+            .eq('id', id);
+            
+        if (error) throw error;
+        
+        closeEditModal();
+        await fetchExpenses();
+    } catch (e) {
+        alert("Delete failed: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Delete";
+    }
+}
+
+async function deleteSelected() {
+    if (selectedIds.size === 0) return;
+    if (!confirm("Delete selected expenses? This cannot be undone.")) return;
+
+    const btn = document.getElementById('bulk-delete-btn');
+    btn.disabled = true;
+    btn.innerText = "Deleting...";
+
+    try {
+        const idsToDelete = Array.from(selectedIds);
+        const { error } = await supabaseClient
+            .from('expenses')
+            .delete()
+            .in('id', idsToDelete);
+            
+        if (error) throw error;
+        
+        await fetchExpenses();
+    } catch (e) {
+        alert("Bulk delete failed: " + e.message);
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Delete Selected";
+    }
+}
+
+// --- Utilities & Standard UI ---
 
 function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-    document.getElementById(`tab-${tabId}`).classList.add('active');
+    document.getElementById("tab-" + tabId).classList.add('active');
     event.target.classList.add('active');
-    if(tabId === 'yearly') setTimeout(renderYearlyChart, 50);
+    if(tabId === 'yearly' && typeof renderYearlyChart === 'function') setTimeout(renderYearlyChart, 50);
 }
-
 
 function toLocalDateString(dateObj) {
     const tzOffset = dateObj.getTimezoneOffset() * 60000;
@@ -32,52 +611,17 @@ function setDefaultDateRange() {
     document.getElementById('end-date').value = toLocalDateString(today);
 }
 
-async function fetchExpenses() {
-    try {
-        const cached = localStorage.getItem('expense_data');
-        if (cached) {
-            expenses = JSON.parse(cached);
-            renderDashboard();
-            renderRecent();
-            if (typeof renderYearlyChart === 'function') renderYearlyChart();
-        }
-        const cacheBusterUrl = WEB_APP_URL + (WEB_APP_URL.includes('?') ? '&' : '?') + '_t=' + new Date().getTime();
-        const response = await fetch(cacheBusterUrl, { cache: 'no-store' });
-        const result = await response.json();
-        if (result.success) {
-            expenses = result.data
-                .map((item, index) => ({...item, row: index + 2}))
-                .filter(exp => exp.item && str_trim(exp.item) !== '' && exp.date !== '');
-            localStorage.setItem('expense_data', JSON.stringify(expenses));
-            renderDashboard();
-            renderRecent();
-            if (typeof renderYearlyChart === 'function') renderYearlyChart();
-        } else {
-            console.error("Failed to load data.");
-        }
-    } catch (e) {
-        console.error("Error fetching data:", e);
-    }
-}
-
-function str_trim(s) { return String(s).trim(); }
-
-
 function getFilteredExpenses() {
     const startStr = document.getElementById('start-date').value || "0000-00-00";
     const endStr = document.getElementById('end-date').value || "9999-12-31";
 
     return expenses.filter(exp => {
-        // Extract the YYYY-MM-DD part from the date string (e.g., "2026-03-23T04:00:00.000Z" -> "2026-03-23")
         const eDateStr = String(exp.date || "").substring(0, 10);
         return eDateStr >= startStr && eDateStr <= endStr;
     });
 }
 
-function applyDateFilter() {
-    renderDashboard();
-}
-
+function applyDateFilter() { renderDashboard(); }
 function clearDateFilter() {
     document.getElementById('start-date').value = "";
     document.getElementById('end-date').value = "";
@@ -87,7 +631,7 @@ function clearDateFilter() {
 function renderDashboard() {
     const filtered = getFilteredExpenses();
     const total = filtered.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0);
-    document.getElementById('total-amount').innerText = `$${total.toFixed(2)}`;
+    document.getElementById('total-amount').innerText = "$" + total.toFixed(2);
 
     const byCategory = {};
     filtered.forEach(exp => {
@@ -98,15 +642,18 @@ function renderDashboard() {
 
     const labels = Object.keys(byCategory).sort((a,b) => byCategory[b].total - byCategory[a].total);
     const data = labels.map(label => byCategory[label].total);
+    const bgColors = labels.map((_, i) => "hsl(" + (i * (360 / labels.length)) + ", 70%, 60%)");
 
-    if (chartInstance) {
-        chartInstance.destroy();
+    document.querySelector('.chart-container').style.height = Math.max(300, labels.length * 40 + 50) + 'px';
+    const ctx = document.getElementById("expenseChart").getContext("2d");
+    Chart.register(window.ChartDataLabels);
+    if (chartInstance) chartInstance.destroy();
+
+    if (labels.length === 0) {
+        document.getElementById('category-details-container').innerHTML = "<p>No expenses in this range.</p>";
+        return;
     }
 
-    document.querySelector('.chart-container').style.height = Math.max(300, labels.length * 40 + 50) + 'px';
-    document.querySelector('.chart-container').style.height = Math.max(300, labels.length * 40 + 50) + 'px';
-    const ctx = document.getElementById('expenseChart').getContext('2d');
-    Chart.register(window.ChartDataLabels);
     chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -118,10 +665,11 @@ function renderDashboard() {
                 borderRadius: 4
             }]
         },
-        options: { indexAxis: 'y', maintainAspectRatio: false, 
+        options: { 
             indexAxis: 'y', 
             maintainAspectRatio: false,
-            responsive: true, interaction: { mode: "y", intersect: false },
+            responsive: true, 
+            interaction: { mode: "y", intersect: false },
             layout: {
                 padding: { right: 60 }
             },
@@ -134,8 +682,8 @@ function renderDashboard() {
                 datalabels: {
                     anchor: 'end',
                     align: 'right',
-                    formatter: (value) => '$' + parseFloat(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-                    color: '#333333',
+                    formatter: (value) => '$' + Math.round(parseFloat(value)).toLocaleString(),
+                    color: '#000',
                     font: { weight: '600', size: 13 }
                 }
             },
@@ -149,65 +697,233 @@ function renderDashboard() {
         }
     });
 
-document.getElementById('category-details-container').innerHTML = "";
+    document.getElementById("category-details-container").innerHTML = "";
 }
 
+function toggleCategoryExpand(label) {
+    const safeLabel = label.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
+    const el = document.getElementById('cat-items-' + safeLabel);
+    if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
 
-let yearlyChartInstance = null;
-function renderYearlyChart() {
-    const byMonthAndCategory = {};
-    const categoriesSet = new Set();
-    
-    expenses.forEach(exp => {
+function showMonthDetails(monthStr) {
+    const container = document.getElementById('yearly-details-container');
+    const monthExpenses = expenses.filter(exp => {
         const dateObj = new Date(exp.date);
-        if (isNaN(dateObj.getTime())) return;
-        
-        const monthYear = toLocalDateString(dateObj).substring(0, 7); // YYYY-MM
-        
-        if (!byMonthAndCategory[monthYear]) byMonthAndCategory[monthYear] = {};
-        if (!byMonthAndCategory[monthYear][exp.category]) byMonthAndCategory[monthYear][exp.category] = 0;
-        
-        byMonthAndCategory[monthYear][exp.category] += (parseFloat(exp.amount) || 0);
-        categoriesSet.add(exp.category);
+        if (isNaN(dateObj.getTime())) return false;
+        return toLocalDateString(dateObj).substring(0, 7) === monthStr;
+    });
+    const sortedItems = monthExpenses.sort((a,b) => new Date(b.date) - new Date(a.date));
+    const itemsHtml = sortedItems.map(item => {
+        const itemStr = escapeHtml(item.item).replace(/'/g, "\\'");
+        const catStr = escapeHtml(item.category).replace(/'/g, "\\'");
+        return `<div class="category-detail-item" onclick="openEditModal('${item.id}', '${itemStr}', '${item.amount}', '${catStr}', '${item.date}')"><div class="detail-left"><span class="detail-name">${escapeHtml(item.item)} <small>(${escapeHtml(item.category)})</small></span><span class="detail-date">${new Date(item.date).toLocaleDateString()}</span></div><span class="detail-amount">$${parseFloat(item.amount).toFixed(2)}</span></div>`;
+    }).join('');
+    const [year, month] = monthStr.split('-');
+    const date = new Date(year, month - 1);
+    const monthDisplay = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    container.innerHTML = `<h3>${monthDisplay} Details</h3>${itemsHtml}`;
+    container.scrollIntoView({ behavior: 'smooth' });
+}
+function renderYearlyChart() {
+    const years = new Set();
+    expenses.forEach(exp => {
+        const d = new Date(exp.date);
+        if (!isNaN(d.getTime())) years.add(d.getFullYear().toString());
+    });
+    const sortedYears = Array.from(years).sort((a,b) => b - a);
+
+    const yearSelect = document.getElementById('yearSelect');
+    if (!yearSelect) return;
+
+    let selectedYear = yearSelect.value;
+    yearSelect.innerHTML = '';
+    sortedYears.forEach(y => {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = y;
+        yearSelect.appendChild(opt);
+    });
+    
+    if (!selectedYear || !sortedYears.includes(selectedYear)) {
+        selectedYear = sortedYears.length > 0 ? sortedYears[0] : new Date().getFullYear().toString();
+    }
+    yearSelect.value = selectedYear;
+
+    const byMonth = {};
+    for(let i=0; i<12; i++) byMonth[i] = null;
+
+    expenses.forEach(exp => {
+        const d = new Date(exp.date);
+        if (isNaN(d.getTime()) || d.getFullYear().toString() !== selectedYear) return;
+        const m = d.getMonth();
+        if (byMonth[m] === null) byMonth[m] = 0;
+        byMonth[m] += (parseFloat(exp.amount) || 0);
     });
 
-    const labels = Object.keys(byMonthAndCategory).sort();
-    const categories = Array.from(categoriesSet).sort();
-    
-    const datasets = categories.map((category, index) => ({
-        label: category,
-        data: labels.map(month => byMonthAndCategory[month][category] || 0),
-        backgroundColor: `hsl(0, 0%, ${15 + (index * 70) / Math.max(1, categories.length - 1)}%)`
-    }));
+    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const data = labels.map((_, i) => byMonth[i]);
 
-    if (yearlyChartInstance) yearlyChartInstance.destroy();
-    
-    const ctx = document.getElementById('yearlyChart').getContext('2d');
-    yearlyChartInstance = new Chart(ctx, {
+    const datasets = [{
+        label: 'Expenses', 
+        data: data, 
+        backgroundColor: '#b0b0b0', 
+        hoverBackgroundColor: '#808080', 
+        borderRadius: 4, 
+        borderSkipped: false, 
+        maxBarThickness: 40
+    }];
+
+    if (window.yearlyChartInstance) window.yearlyChartInstance.destroy();
+    const canvas = document.getElementById('yearlyChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    window.yearlyChartInstance = new Chart(ctx, {
         type: 'bar',
         data: { labels, datasets },
         options: {
             maintainAspectRatio: false,
-            responsive: true, interaction: { mode: "y", intersect: false },
+            responsive: true, 
+            interaction: { mode: 'index', intersect: false },
             scales: {
-                x: { stacked: true, grid: { display: false } },
-                y: { stacked: true }
+                x: { grid: { display: false }, border: { display: false }, ticks: { color: '#000000', font: { weight: 'bold' } } },
+                y: { grid: { display: false }, border: { display: false }, ticks: { display: false }, min: 0 }
             },
-            plugins: {
-                datalabels: { display: false }
+            plugins: { 
+                legend: { display: false }, 
+                datalabels: { 
+                    display: function(context) { return context.dataset.data[context.dataIndex] !== null; },
+                    anchor: 'end',
+                    align: 'top',
+                    offset: 4,
+                    formatter: (value) => '$' + Math.round(parseFloat(value)).toLocaleString(),
+                    color: '#000',
+                    font: { weight: '600', size: 12 }
+                } 
+            },
+            onHover: (event, chartElement) => { 
+                if (event.native && event.native.target) event.native.target.style.cursor = (chartElement && chartElement.length > 0) ? 'pointer' : 'default'; 
+            }, 
+            onClick: (e, activeEls) => { 
+                let idx = -1; 
+                if (activeEls && activeEls.length > 0) idx = activeEls[0].index; 
+                else if (window.yearlyChartInstance) { 
+                    const els = window.yearlyChartInstance.getElementsAtEventForMode(e, 'index', {intersect: false}, false); 
+                    if (els && els.length > 0) idx = els[0].index; 
+                } 
+                if (idx != -1 && data[idx] !== null) {
+                    const monthStr = String(idx + 1).padStart(2, '0');
+                    showMonthDetails(`${selectedYear}-${monthStr}`);
+                }
             }
         }
     });
 }
-
-function escapeHtml(unsafe) {
-    return (unsafe || "").toString()
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
+function toggleAddModal() {
+    const modal = document.getElementById('add-modal');
+    if (modal.style.display === 'block') {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+    } else {
+        modal.style.display = 'block';
+        document.body.classList.add('modal-open');
+        if (!document.getElementById('add-date').value) {
+            document.getElementById('add-date').value = toLocalDateString(new Date());
+        }
+    }
 }
+
+window.addEventListener('click', function(event) {
+    if (event.target === document.getElementById('add-modal')) toggleAddModal();
+    if (event.target === document.getElementById('edit-modal')) closeEditModal();
+    if (event.target === document.getElementById('category-modal')) toggleCategoryModal();
+});
+
+
+function toggleChatModal() {
+    const modal = document.getElementById('chat-modal');
+    modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+    if (modal.style.display === 'flex') {
+        document.getElementById('chat-input').focus();
+    }
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chat-input');
+    const message = input.value.trim();
+    if (!message) return;
+
+    const history = document.getElementById('chat-history');
+    
+    const userDiv = document.createElement('div');
+    userDiv.className = 'chat-message user-message';
+    userDiv.textContent = message;
+    history.appendChild(userDiv);
+    
+    input.value = '';
+    
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'chat-message ai-message';
+    typingDiv.innerHTML = '<i>Thinking...</i>';
+    history.appendChild(typingDiv);
+    history.scrollTop = history.scrollHeight;
+
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, expenses })
+        });
+        
+        const data = await response.json();
+        if (history.contains(typingDiv)) history.removeChild(typingDiv);
+        
+        if (data.error) throw new Error(data.error);
+        
+        const result = data.data;
+        const aiDiv = document.createElement('div');
+        aiDiv.className = 'chat-message ai-message';
+        
+        if (result.action === 'add') {
+            aiDiv.innerHTML = `Adding expense: $${result.amount} for ${result.description} (${result.category})...`;
+            history.appendChild(aiDiv);
+            
+            const { data: insertData, error } = await _supabase.from('expenses').insert([{
+                date: new Date().toISOString().split('T')[0],
+                item: result.description,
+                amount: parseFloat(result.amount),
+                category: result.category,
+                user_id: currentUser.id
+            }]).select();
+            
+            if (error) throw error;
+            
+            await fetchExpenses();
+            
+            const successDiv = document.createElement('div');
+            successDiv.className = 'chat-message ai-message';
+            successDiv.innerHTML = '✅ Added successfully!';
+            history.appendChild(successDiv);
+        } else {
+            aiDiv.innerHTML = result.message || JSON.stringify(result);
+            history.appendChild(aiDiv);
+        }
+    } catch (err) {
+        if (history.contains(typingDiv)) history.removeChild(typingDiv);
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'chat-message ai-message';
+        errorDiv.style.color = 'red';
+        errorDiv.textContent = 'Error: ' + err.message;
+        history.appendChild(errorDiv);
+    }
+    history.scrollTop = history.scrollHeight;
+}
+
+function handleChatKeyPress(event) {
+    if (event.key === 'Enter') sendChatMessage();
+}
+
 
 function showCategoryDetails(categoryName, items) {
     const container = document.getElementById('category-details-container');
@@ -215,12 +931,7 @@ function showCategoryDetails(categoryName, items) {
     
     const itemsHtml = sortedItems.map(item => `
         <div class="category-detail-item"
-             data-row="${item.row}"
-             data-item="${escapeHtml(item.item)}"
-             data-amount="${item.amount}"
-             data-category="${escapeHtml(item.category)}"
-             data-date="${escapeHtml(item.date)}"
-             onclick="openEditModalFromEvent(this)">
+             onclick="openEditModal('${item.id}', '${escapeHtml(item.item).replace(/'/g, "\\'")}', '${item.amount}', '${escapeHtml(item.category).replace(/'/g, "\\'")}', '${item.date}')">
             <div class="detail-left">
                 <span class="detail-name">${escapeHtml(item.item)}</span>
                 <span class="detail-date">${new Date(item.date).toLocaleDateString()}</span>
@@ -235,371 +946,56 @@ function showCategoryDetails(categoryName, items) {
     `;
 }
 
-function toggleSelectMode() {
-    isSelectMode = !isSelectMode;
-    const list = document.getElementById('recent-list');
-    const selectBtn = document.getElementById('select-mode-btn');
-    const deleteBtn = document.getElementById('bulk-delete-btn');
 
-    if (isSelectMode) {
-        list.classList.add('select-mode');
-        selectBtn.innerText = "Cancel";
-        deleteBtn.style.display = "block";
-        selectedRows.clear();
-    } else {
-        list.classList.remove('select-mode');
-        selectBtn.innerText = "Select";
-        deleteBtn.style.display = "none";
-        document.querySelectorAll('.expense-checkbox').forEach(cb => cb.checked = false);
-    }
+function openBulkEditModal() {
+    if (selectedIds.size === 0) return;
+    document.getElementById('bulk-edit-date').value = '';
+    document.getElementById('bulk-edit-category').value = '';
+    document.getElementById('bulk-edit-modal').style.display = 'block';
+    document.body.classList.add('modal-open');
 }
 
-function openEditModalFromEvent(el) {
-    const row = el.getAttribute('data-row');
-    const item = el.getAttribute('data-item');
-    const amount = el.getAttribute('data-amount');
-    const category = el.getAttribute('data-category');
-    const date = el.getAttribute('data-date');
-    openEditModal(row, item, amount, category, date);
+function closeBulkEditModal() {
+    document.getElementById('bulk-edit-modal').style.display = 'none';
+    document.body.classList.remove('modal-open');
 }
 
-function handleExpenseClick(el) {
-    const row = parseInt(el.getAttribute('data-row'), 10);
-    if (isSelectMode) {
-        const cb = el.querySelector('.expense-checkbox');
-        cb.checked = !cb.checked;
-        if (cb.checked) {
-            selectedRows.add(row);
-        } else {
-            selectedRows.delete(row);
-        }
-    } else {
-        openEditModalFromEvent(el);
-    }
-}
-
-function handleCheckboxClick(event, row) {
-    event.stopPropagation();
-    if (event.target.checked) {
-        selectedRows.add(row);
-    } else {
-        selectedRows.delete(row);
-    }
-}
-
-function renderRecent() {
-    const list = document.getElementById('recent-list');
-    list.innerHTML = "";
-
-    const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    sorted.forEach(exp => {
-        const d = new Date(exp.date);
-        const dateStr = !isNaN(d.getTime()) ? d.toLocaleDateString() : 'Unknown Date';
-        const amt = parseFloat(exp.amount) || 0;
-
-        list.innerHTML += `
-            <div class="expense-item"
-                 data-row="${exp.row}"
-                 data-item="${escapeHtml(exp.item)}"
-                 data-amount="${amt}"
-                 data-category="${escapeHtml(exp.category)}"
-                 data-date="${escapeHtml(exp.date)}"
-                 onclick="handleExpenseClick(this)">
-                <input type="checkbox" class="expense-checkbox" onclick="handleCheckboxClick(event, ${exp.row})">
-                <div class="expense-info">
-                    <h4>${escapeHtml(exp.item)}</h4>
-                    <p>${escapeHtml(exp.category)} &bull; ${dateStr}</p>
-                </div>
-                <div class="expense-amount">$${amt.toFixed(2)}</div>
-            </div>
-        `;
-    });
+async function saveBulkEdit() {
+    if (selectedIds.size === 0) return;
     
-    if (isSelectMode) {
-        toggleSelectMode();
-    }
-}
-
-function openEditModal(row, item, amount, category, date) {
-    document.getElementById('edit-row').value = row;
-
-    const txt = document.createElement("textarea");
-    txt.innerHTML = item;
-    document.getElementById('edit-item').value = txt.value;
-    document.getElementById('edit-amount').value = amount;
-
-    txt.innerHTML = category;
-    document.getElementById('edit-category').value = txt.value;
+    const newDate = document.getElementById('bulk-edit-date').value;
+    const newCategory = document.getElementById('bulk-edit-category').value;
     
-    let formattedDate = "";
-    if (date) {
-        const d = new Date(date);
-        if (!isNaN(d.getTime())) {
-            formattedDate = toLocalDateString(d);
-        }
-    }
-    document.getElementById('edit-date').value = formattedDate;
-    document.getElementById('edit-modal').style.display = 'flex';
-}
-
-function closeEditModal() {
-    document.getElementById('edit-modal').style.display = 'none';
-}
-
-window.onclick = function(event) {
-    const modal = document.getElementById('edit-modal');
-    if (event.target == modal) closeEditModal();
-}
-
-async function saveEdit() {
-    const row = parseInt(document.getElementById('edit-row').value, 10);
-    const item = document.getElementById('edit-item').value.trim();
-    const amount = parseFloat(document.getElementById('edit-amount').value);
-    const category = document.getElementById('edit-category').value.trim();
-    const date = document.getElementById('edit-date').value;
-    
-    if (!item || !amount || !category || !date) {
-        alert("Please fill in all fields");
+    if (!newDate && !newCategory) {
+        alert("No changes specified.");
         return;
     }
-
-    const btn = document.getElementById('save-edit-btn');
+    
+    const btn = document.getElementById('save-bulk-edit-btn');
     btn.disabled = true;
     btn.innerText = "Saving...";
-
+    
     try {
-        const response = await fetch(WEB_APP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'edit',
-                row: row,
-                item: item,
-                amount: amount,
-                category: category,
-                date: date,
-                secret: WEB_SECRET
-            })
-        });
+        const updates = {};
+        if (newDate) updates.date = newDate;
+        if (newCategory) updates.category = newCategory;
         
-        const result = await response.json();
+        const idsToEdit = Array.from(selectedIds);
         
-        if (result.success) {
-            closeEditModal();
-            await fetchExpenses();
-        } else {
-            alert("Edit failed: " + result.error);
-        }
-    } catch (error) {
-        console.error("Edit error:", error);
-        alert("Failed to edit expense.");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "Save Changes";
-    }
-}
-
-async function deleteFromEdit() {
-    const row = parseInt(document.getElementById('edit-row').value, 10);
-    if (!confirm("Are you sure you want to delete this expense?")) return;
-
-    const btn = document.getElementById('delete-edit-btn');
-    btn.disabled = true;
-    btn.innerText = "Deleting...";
-
-    try {
-        const response = await fetch(WEB_APP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'delete',
-                row: row,
-                secret: WEB_SECRET
-            })
-        });
-        const result = await response.json();
-        if (result.success) {
-            closeEditModal();
-            await fetchExpenses();
-        } else {
-            alert("Delete failed.");
-        }
-    } catch (e) {
-        alert("Delete failed.");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "Delete";
-    }
-}
-
-async function deleteSelected() {
-    if (selectedRows.size === 0) return;
-    if (!confirm(`Delete ${selectedRows.size} expenses? This cannot be undone.`)) return;
-
-    const btn = document.getElementById('bulk-delete-btn');
-    btn.disabled = true;
-    btn.innerText = "Deleting...";
-
-    const rowsToDelete = Array.from(selectedRows).sort((a, b) => b - a);
-
-    try {
-        for (const row of rowsToDelete) {
-            await fetch(WEB_APP_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({ action: 'delete', row: parseInt(row, 10), secret: WEB_SECRET })
-            });
-        }
+        const { error } = await supabaseClient
+            .from('expenses')
+            .update(updates)
+            .in('id', idsToEdit);
+            
+        if (error) throw error;
+        
+        closeBulkEditModal();
+        toggleSelectMode(); // Exit select mode
         await fetchExpenses();
     } catch (e) {
-        alert("Bulk delete encountered an error.");
+        alert("Bulk edit failed: " + e.message);
     } finally {
         btn.disabled = false;
-        btn.innerText = "Delete Selected";
-        if (isSelectMode) toggleSelectMode();
-    }
-}
-
-function toggleAddModal() {
-    const modal = document.getElementById('add-modal');
-    if (modal.style.display === 'flex') {
-        modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
-    } else {
-        modal.style.display = 'flex';
-        document.body.classList.add('modal-open');
-        if (!document.getElementById('add-date').value) {
-            const today = new Date();
-            document.getElementById('add-date').value = toLocalDateString(today);
-        }
-    }
-}
-
-async function addExpense() {
-    const date = document.getElementById('add-date').value;
-    const item = document.getElementById('add-item').value;
-    const amount = document.getElementById('add-amount').value;
-    const category = document.getElementById('add-category').value;
-    const btn = document.getElementById('add-expense-btn');
-
-    if (!date || !item || !amount || !category) {
-        alert("Please fill in all fields.");
-        return;
-    }
-
-    btn.disabled = true;
-    btn.innerText = "Adding...";
-
-    try {
-        const response = await fetch(WEB_APP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-                action: 'add',
-                date: date,
-                item: item,
-                amount: amount,
-                category: category,
-                secret: WEB_SECRET
-            })
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            document.getElementById('add-item').value = "";
-            document.getElementById('add-amount').value = "";
-            toggleAddModal();
-            await fetchExpenses();
-        } else {
-            alert("Failed to add expense.");
-        }
-    } catch (e) {
-        alert("Error adding expense.");
-    } finally {
-        btn.disabled = false;
-        btn.innerText = "Add Expense";
-    }
-}
-
-// Close modal when clicking outside
-window.addEventListener('click', function(event) {
-    const addModal = document.getElementById('add-modal');
-    if (event.target === addModal) {
-        toggleAddModal();
-    }
-    const editModal = document.getElementById('edit-modal');
-    if (event.target === editModal) {
-        closeEditModal();
-    }
-});
-
-// --- CHAT LOGIC ---
-function toggleChatModal() {
-    const modal = document.getElementById('chat-modal');
-    if (modal.style.display === 'block') {
-        modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
-    } else {
-        modal.style.display = 'block';
-        document.body.classList.add('modal-open');
-        setTimeout(() => document.getElementById('chat-input').focus(), 100);
-    }
-}
-
-function handleChatKeyPress(event) {
-    if (event.key === 'Enter') {
-        sendChatMessage();
-    }
-}
-
-function appendChatMessage(text, className) {
-    const history = document.getElementById('chat-history');
-    const msgDiv = document.createElement('div');
-    msgDiv.className = `chat-message ${className}`;
-    msgDiv.textContent = text;
-    const id = 'msg-' + Date.now() + '-' + Math.floor(Math.random() * 10000);
-    msgDiv.id = id;
-    history.appendChild(msgDiv);
-    history.scrollTop = history.scrollHeight;
-    return id;
-}
-
-async function sendChatMessage() {
-    const input = document.getElementById('chat-input');
-    const message = input.value.trim();
-    if (!message) return;
-
-    appendChatMessage(message, 'user-message');
-    input.value = '';
-
-    const loadingId = appendChatMessage('Thinking...', 'ai-message');
-
-    try {
-        const response = await fetch(WEB_APP_URL, {
-            method: 'POST',
-            body: JSON.stringify({
-                action: 'chat',
-                expenses: expenses,
-                message: message
-            })
-        });
-        const result = await response.json();
-        
-        document.getElementById(loadingId).remove();
-        
-        if (result.success) {
-            appendChatMessage(result.reply, 'ai-message');
-            if (result.refresh) {
-                fetchExpenses();
-            }
-        } else {
-            appendChatMessage('Error: ' + (result.error || 'Something went wrong.'), 'ai-message');
-        }
-    } catch (e) {
-        console.error(e);
-        document.getElementById(loadingId).remove();
-        appendChatMessage('Network error.', 'ai-message');
+        btn.innerText = "Apply Changes";
     }
 }
