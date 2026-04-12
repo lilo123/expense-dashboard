@@ -21,7 +21,7 @@ ${expensesContext}
 When the user asks about their expenses, use the data provided to summarize, calculate totals, or answer accurately. If they want to add an expense, reply with a JSON object like {"action": "add", "amount": 10, "category": "Dining Out", "description": "Pizza"}. If they are just asking a question, reply with {"action": "reply", "message": "your answer here"}. Always return valid JSON only. Categories must be one of: Housing, Utilities, Insurance, Groceries, Dining Out, Transportation, Household, Health & Care, Subscriptions, Shopping, Entertainment, Travel, Gifts, Education, Misc.`;
 
   const payload = {
-    model: "llama3-8b-8192",
+    model: "llama-3.1-8b-instant",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: message }
