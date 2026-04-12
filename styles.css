@@ -284,3 +284,30 @@ body.modal-open { overflow: hidden; }
     font-size: 14px;
     color: var(--danger);
 }
+/* Auth UX Improvements */
+.auth-card {
+    animation: fadeIn 0.3s ease-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.auth-card input:focus {
+    outline: none;
+    border-color: var(--text);
+    box-shadow: 0 0 0 2px rgba(0,0,0,0.1);
+}
+.auth-buttons button {
+    transition: all 0.2s ease;
+}
+.auth-buttons button:hover:not(:disabled) {
+    opacity: 0.85;
+    transform: translateY(-1px);
+}
+.auth-buttons button:active:not(:disabled) {
+    transform: translateY(0);
+}
+.auth-buttons button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

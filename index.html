@@ -51,6 +51,8 @@
         
         <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
             <h1>Expenses</h1>
+            
+            <button id="siri-btn" onclick="toggleSiriModal()" style="display: none; margin-right: 10px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer;">🎙�� Siri Setup</button>
             <button id="logout-btn" onclick="signOut()" style="display: none; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer;">Sign Out</button>
         </div>
 
@@ -175,6 +177,40 @@
             <ul id="category-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; max-height: 350px; overflow-y: auto;">
                 <!-- Categories injected here -->
             </ul>
+        </div>
+    </div>
+
+    
+    <!-- SIRI SETUP MODAL -->
+    <div id="siri-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close" onclick="toggleSiriModal()">&times;</span>
+            <h2>🎙️ Connect with Siri</h2>
+            <p style="color: var(--secondary-text); margin-bottom: 20px; font-size: 14px; line-height: 1.5;">
+                Generate a secure API token to allow Siri to add expenses without logging in every time. Keep this token secret!
+            </p>
+            
+            <div style="background: var(--bg); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin-top: 0; font-weight: 500; font-size: 14px;">Your Personal API Token:</p>
+                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                    <input type="text" id="siri-token-display" readonly style="flex: 1; font-family: monospace; background: var(--card-bg); border: 1px solid var(--border); padding: 8px; border-radius: 4px;" placeholder="Click Generate...">
+                    <button onclick="copySiriToken()" id="copy-siri-btn" style="padding: 8px 15px; border-radius: 4px; border: none; background: var(--primary); color: white; cursor: pointer;">Copy</button>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="generateSiriToken()" id="generate-siri-btn" style="flex: 1; padding: 10px; border-radius: 4px; border: none; background: var(--primary); color: white; cursor: pointer; font-weight: bold;">Generate New Token</button>
+            </div>
+            
+            <div style="margin-top: 25px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <h3 style="font-size: 16px; margin-bottom: 10px;">How to set up:</h3>
+                <ol style="padding-left: 20px; font-size: 14px; color: var(--secondary-text); line-height: 1.6;">
+                    <li>Generate and copy your token above.</li>
+                    <li>Download the Apple Shortcut (Link coming soon).</li>
+                    <li>When prompted, paste your token.</li>
+                    <li>Say <em>"Hey Siri, log an expense..."</em></li>
+                </ol>
+            </div>
         </div>
     </div>
 

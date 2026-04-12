@@ -39,12 +39,14 @@ function showAuth() {
     document.getElementById('auth-overlay').style.display = 'flex';
     document.getElementById('main-app').style.display = 'none';
     document.getElementById('logout-btn').style.display = 'none';
+        if (document.getElementById('siri-btn')) document.getElementById('siri-btn').style.display = 'none';
 }
 
 function showApp() {
     document.getElementById('auth-overlay').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
     document.getElementById('logout-btn').style.display = 'block';
+        if (document.getElementById('siri-btn')) document.getElementById('siri-btn').style.display = 'block';
     fetchCategories();
     fetchExpenses();
 }
@@ -1039,4 +1041,101 @@ async function saveBulkEdit() {
         btn.disabled = false;
         btn.innerText = "Apply Changes";
     }
+}
+
+
+// --- SIRI SETUP LOGIC ---
+function toggleSiriModal() {
+    const modal = document.getElementById('siri-modal');
+    if (modal.style.display === 'flex') {
+        modal.style.display = 'none';
+    } else {
+        modal.style.display = 'flex';
+        fetchExistingSiriToken();
+    }
+}
+
+async function fetchExistingSiriToken() {
+    const user = _supabase.auth.user();
+    if (!user) return;
+    
+    try {
+        const { data, error } = await _supabase
+            .from('api_tokens')
+            .select('token')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+            
+        if (error) throw error;
+        
+        const tokenInput = document.getElementById('siri-token-display');
+        if (data && data.length > 0) {
+            tokenInput.value = data[0].token;
+        } else {
+            tokenInput.value = '';
+            tokenInput.placeholder = 'No token generated yet.';
+        }
+    } catch (err) {
+        console.error('Error fetching token:', err);
+    }
+}
+
+async function generateSiriToken() {
+    const user = _supabase.auth.user();
+    if (!user) {
+        alert('You must be logged in.');
+        return;
+    }
+    
+    const btn = document.getElementById('generate-siri-btn');
+    const originalText = btn.textContent;
+    btn.textContent = 'Generating...';
+    btn.disabled = true;
+    
+    try {
+        // Generate a random token string
+        const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const token = 'exp_sk_' + randomString;
+        
+        const { data, error } = await _supabase
+            .from('api_tokens')
+            .insert([
+                { user_id: user.id, token: token }
+            ]);
+            
+        if (error) throw error;
+        
+        document.getElementById('siri-token-display').value = token;
+        alert('New token generated successfully! Old tokens are still valid until deleted.');
+    } catch (err) {
+        console.error('Error generating token:', err);
+        alert('Failed to generate token: ' + (err.message || 'Unknown error'));
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
+}
+
+function copySiriToken() {
+    const tokenInput = document.getElementById('siri-token-display');
+    if (!tokenInput.value) {
+        alert('No token to copy.');
+        return;
+    }
+    
+    tokenInput.select();
+    tokenInput.setSelectionRange(0, 99999); // For mobile devices
+    
+    navigator.clipboard.writeText(tokenInput.value).then(() => {
+        const btn = document.getElementById('copy-siri-btn');
+        const originalText = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => {
+            btn.textContent = originalText;
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy!', err);
+        alert('Failed to copy to clipboard.');
+    });
 }
