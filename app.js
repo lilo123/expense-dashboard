@@ -825,7 +825,7 @@ function renderYearlyChart() {
         options: {
             maintainAspectRatio: false,
             responsive: true, 
-            layout: { padding: { top: 35 } },
+            layout: { padding: { top: 60 } },
             interaction: { mode: 'index', intersect: false },
             scales: {
                 x: { grid: { display: false }, border: { display: false }, ticks: { color: '#000000', font: { weight: 'bold' } } },
