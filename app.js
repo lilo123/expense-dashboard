@@ -64,18 +64,36 @@ async function signIn() {
     const email = document.getElementById('signin-email').value;
     const password = document.getElementById('signin-password').value;
     const msg = document.getElementById('signin-message');
+    const btn = document.getElementById('signin-btn');
+    
     if (!email || !password) {
         msg.innerText = "Please enter email and password.";
         return;
     }
-    msg.innerText = "Signing in...";
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Signing in...";
+    }
+    msg.innerText = "";
+    
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    
     if (error) {
         msg.innerText = error.message;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Sign In";
+        }
     } else {
         msg.innerText = "Signed in successfully!";
         currentUser = data.session.user;
         showApp();
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Sign In";
+        }
+        document.getElementById('signin-password').value = '';
     }
 }
 
@@ -84,6 +102,7 @@ async function signUp() {
     const password = document.getElementById('signup-password').value;
     const confirmPassword = document.getElementById('signup-confirm-password').value;
     const msg = document.getElementById('signup-message');
+    const btn = document.getElementById('signup-btn');
     
     if (!email || !password) {
         msg.innerText = "Please enter email and password.";
@@ -93,11 +112,21 @@ async function signUp() {
         msg.innerText = "Passwords do not match.";
         return;
     }
-    msg.innerText = "Signing up...";
+    
+    if (btn) {
+        btn.disabled = true;
+        btn.innerText = "Signing up...";
+    }
+    msg.innerText = "";
     
     const { data, error } = await supabaseClient.auth.signUp({ email, password });
+    
     if (error) {
         msg.innerText = error.message;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Create Account";
+        }
     } else {
         msg.innerText = "Account created! Adding default categories...";
         const userId = data.user ? data.user.id : (data.session ? data.session.user.id : null);
@@ -111,6 +140,12 @@ async function signUp() {
             currentUser = data.session.user;
             showApp();
         }
+        if (btn) {
+            btn.disabled = false;
+            btn.innerText = "Create Account";
+        }
+        document.getElementById('signup-password').value = '';
+        document.getElementById('signup-confirm-password').value = '';
     }
 }
 

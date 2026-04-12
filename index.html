@@ -16,11 +16,13 @@
         <div class="auth-card" id="signin-card">
             <h2>Welcome Back</h2>
             <p>Please sign in to manage your expenses.</p>
+            <form onsubmit="event.preventDefault(); signIn();">
             <input type="email" id="signin-email" placeholder="Email Address" required>
             <input type="password" id="signin-password" placeholder="Password" required>
             <div class="auth-buttons">
-                <button onclick="signIn()" style="width: 100%;">Sign In</button>
+                <button type="submit" id="signin-btn" style="width: 100%;">Sign In</button>
             </div>
+        </form>
             <p style="margin-top: 15px; font-size: 0.9em; text-align: center;">
                 Don't have an account? <a href="#" onclick="toggleAuth('signup')" style="color: var(--primary); text-decoration: none; font-weight: bold;">Sign up here</a>
             </p>
@@ -30,12 +32,14 @@
         <div class="auth-card" id="signup-card" style="display: none;">
             <h2>Create Account</h2>
             <p>Sign up to start tracking your expenses.</p>
+            <form onsubmit="event.preventDefault(); signUp();">
             <input type="email" id="signup-email" placeholder="Email Address" required>
             <input type="password" id="signup-password" placeholder="Password" required>
             <input type="password" id="signup-confirm-password" placeholder="Confirm Password" required>
             <div class="auth-buttons">
-                <button onclick="signUp()" style="width: 100%;">Create Account</button>
+                <button type="submit" id="signup-btn" style="width: 100%;">Create Account</button>
             </div>
+        </form>
             <p style="margin-top: 15px; font-size: 0.9em; text-align: center;">
                 Already have an account? <a href="#" onclick="toggleAuth('signin')" style="color: var(--primary); text-decoration: none; font-weight: bold;">Sign in here</a>
             </p>
