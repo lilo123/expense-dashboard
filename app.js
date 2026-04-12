@@ -925,7 +925,7 @@ async function sendChatMessage() {
             history.appendChild(aiDiv);
             
             const { data: insertData, error } = await supabaseClient.from('expenses').insert([{
-                date: new Date().toISOString().split('T')[0],
+                date: result.date || new Date().toISOString().split('T')[0],
                 item: result.description,
                 amount: parseFloat(result.amount),
                 category: result.category,
