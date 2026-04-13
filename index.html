@@ -202,10 +202,18 @@
             <div style="margin-top: 25px; border-top: 1px solid var(--border); padding-top: 20px;">
                 <h3 style="font-size: 16px; margin-bottom: 10px;">How to set up:</h3>
                 <ol style="padding-left: 20px; font-size: 14px; color: var(--secondary-text); line-height: 1.6;">
-                    <li>Generate and copy your token above.</li>
-                    <li>Download the Apple Shortcut (Link coming soon).</li>
-                    <li>When prompted, paste your token.</li>
-                    <li>Say <em>"Hey Siri, log an expense..."</em></li>
+                    <li><strong>Generate and Copy</strong> your token above.</li>
+                    <li>Open the <strong>Shortcuts app</strong> on your iPhone and tap <strong>+</strong>. Name it "Log Expense".</li>
+                    <li>Add an <strong>Ask for Input</strong> action. Set the prompt to <em>"What did you spend?"</em></li>
+                    <li>Add a <strong>Get Contents of URL</strong> action and configure it:
+                        <ul style="padding-left: 15px; margin-top: 5px; margin-bottom: 5px; list-style-type: circle; background: var(--bg); padding: 10px 10px 10px 25px; border-radius: 6px;">
+                            <li><strong>URL:</strong> <code>https://lilo123-expense-dashboard.vercel.app/api/siri</code></li>
+                            <li><strong>Method:</strong> POST</li>
+                            <li><strong>Headers:</strong> Add new header <code>Authorization</code> with value <code>Bearer [PASTE_YOUR_TOKEN_HERE]</code></li>
+                            <li><strong>Request Body:</strong> JSON. Add new field <code>message</code> with value set to the <strong>Provided Input</strong></li>
+                        </ul>
+                    </li>
+                    <li>Save it. Now just say: <em>"Hey Siri, Log Expense!"</em></li>
                 </ol>
             </div>
         </div>
