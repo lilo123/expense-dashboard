@@ -31,7 +31,7 @@ export default async function handler(req, res) {
   
   const tokenData = await tokenRes.json();
   if (!tokenRes.ok || !tokenData.length) {
-    return res.status(401).json({ error: 'Invalid API Token' });
+    return res.status(401).json({ error: 'Invalid API Token: ' + token });
   }
   
   const userId = tokenData[0].user_id;
