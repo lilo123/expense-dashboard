@@ -1131,15 +1131,31 @@ function copySiriToken() {
     tokenInput.select();
     tokenInput.setSelectionRange(0, 99999); // For mobile devices
     
-    navigator.clipboard.writeText(tokenInput.value).then(() => {
+    const successCallback = () => {
         const btn = document.getElementById('copy-siri-btn');
         const originalText = btn.textContent;
         btn.textContent = 'Copied!';
         setTimeout(() => {
             btn.textContent = originalText;
         }, 2000);
-    }).catch(err => {
-        console.error('Failed to copy!', err);
-        alert('Failed to copy to clipboard.');
-    });
+    };
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(tokenInput.value).then(successCallback).catch(err => {
+            console.error('Failed to copy!', err);
+            tryFallbackCopy();
+        });
+    } else {
+        tryFallbackCopy();
+    }
+    
+    function tryFallbackCopy() {
+        try {
+            document.execCommand('copy');
+            successCallback();
+        } catch (err) {
+            console.error('Fallback copy failed', err);
+            alert('Failed to copy to clipboard. Please select and copy manually.');
+        }
+    }
 }
