@@ -62,7 +62,7 @@ function toggleAuth(view) {
 }
 
 
-async function signIn() {
+async function signIn(event) {
     const email = document.getElementById('signin-email').value;
     const password = document.getElementById('signin-password').value;
     const msg = document.getElementById('signin-message');
@@ -99,7 +99,7 @@ async function signIn() {
     }
 }
 
-async function signUp() {
+async function signUp(event) {
     const email = document.getElementById('signup-email').value;
     const password = document.getElementById('signup-password').value;
     const confirmPassword = document.getElementById('signup-confirm-password').value;
@@ -466,8 +466,8 @@ function renderRecent() {
         const catSafe = escapeHtml(exp.category);
         const dateSafe = escapeHtml(exp.date);
 
-        list.innerHTML += '<div class="expense-item" data-id="' + idSafe + '" data-item="' + itemSafe + '" data-amount="' + amt + '" data-category="' + catSafe + '" data-date="' + dateSafe + '" onclick="handleExpenseClick(this)">' +
-                '<input type="checkbox" class="expense-checkbox" onclick="handleCheckboxClick(event, \'' + idSafe + '\')">' +
+        list.innerHTML += '<div class="expense-item" data-id="' + idSafe + '" data-item="' + itemSafe + '" data-amount="' + amt + '" data-category="' + catSafe + '" data-date="' + dateSafe + '">' +
+                '<input type="checkbox" class="expense-checkbox">' +
                 '<div class="expense-info">' +
                     '<h4>' + itemSafe + '</h4>' +
                     '<p>' + catSafe + ' &bull; ' + dateStr + '</p>' +
@@ -755,7 +755,7 @@ function showMonthDetails(monthStr) {
     const itemsHtml = sortedItems.map(item => {
         const itemStr = escapeHtml(item.item).replace(/'/g, "\\'");
         const catStr = escapeHtml(item.category).replace(/'/g, "\\'");
-        return `<div class="category-detail-item" onclick="openEditModal('${item.id}', '${itemStr}', '${item.amount}', '${catStr}', '${item.date}')"><div class="detail-left"><span class="detail-name">${escapeHtml(item.item)} <small>(${escapeHtml(item.category)})</small></span><span class="detail-date">${new Date(item.date).toLocaleDateString()}</span></div><span class="detail-amount">$${parseFloat(item.amount).toFixed(2)}</span></div>`;
+        return `<div class="category-detail-item" data-id="${item.id}" data-item="${escapeHtml(item.item)}" data-amount="${item.amount}" data-category="${escapeHtml(item.category)}" data-date="${item.date}"><div class="detail-left"><span class="detail-name">${escapeHtml(item.item)} <small>(${escapeHtml(item.category)})</small></span><span class="detail-date">${new Date(item.date).toLocaleDateString()}</span></div><span class="detail-amount">$${parseFloat(item.amount).toFixed(2)}</span></div>`;
     }).join('');
     const [year, month] = monthStr.split('-');
     const date = new Date(year, month - 1);
@@ -991,6 +991,7 @@ function showCategoryDetails(categoryName, items) {
         <h3>${escapeHtml(categoryName)} Details</h3>
         ${itemsHtml}
     `;
+    setTimeout(() => container.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
 }
 
 
@@ -1159,3 +1160,59 @@ function copySiriToken() {
         }
     }
 }
+document.addEventListener('DOMContentLoaded', () => { document.getElementById('signin-form')?.addEventListener('submit', (e) => { e.preventDefault(); signIn(e); }); document.getElementById('signup-form')?.addEventListener('submit', (e) => { e.preventDefault(); signUp(e); }); document.getElementById('toggle-to-signup')?.addEventListener('click', (e) => { e.preventDefault(); toggleAuth('signup'); }); document.getElementById('toggle-to-signin')?.addEventListener('click', (e) => { e.preventDefault(); toggleAuth('signin'); }); });
+
+
+// --- EVENT DELEGATION (Best Practice Refactor) ---
+document.addEventListener('click', (e) => {
+    // 1. Checkbox click
+    const checkbox = e.target.closest('.expense-checkbox');
+    if (checkbox) {
+        const expenseItemDiv = checkbox.closest('.expense-item');
+        if (expenseItemDiv) {
+            const id = expenseItemDiv.getAttribute('data-id');
+            handleCheckboxClick(e, id);
+        }
+        return;
+    }
+
+    // 2. Expense Item click
+    const expenseItem = e.target.closest('.expense-item');
+    if (expenseItem) {
+        handleExpenseClick(expenseItem);
+        return;
+    }
+
+    // 3. Category Detail / History Item click
+    const categoryDetailItem = e.target.closest('.category-detail-item');
+    if (categoryDetailItem) {
+        const id = categoryDetailItem.getAttribute('data-id');
+        const item = categoryDetailItem.getAttribute('data-item');
+        const amount = categoryDetailItem.getAttribute('data-amount');
+        const category = categoryDetailItem.getAttribute('data-category');
+        const date = categoryDetailItem.getAttribute('data-date');
+        
+        // Unescape HTML entities for the modal inputs
+        const unescapeHtml = (text) => {
+            if (!text) return '';
+            const doc = new DOMParser().parseFromString(text, "text/html");
+            return doc.documentElement.textContent;
+        };
+        
+        openEditModal(id, unescapeHtml(item), amount, unescapeHtml(category), date);
+    }
+});
+
+// Expose functions to global scope for event listeners
+export { signOut, toggleCategoryModal, addCategory, addExpense, toggleSelectMode, closeEditModal, saveEdit, deleteFromEdit, deleteSelected, switchTab, applyDateFilter, clearDateFilter, renderYearlyChart, toggleAddModal, toggleChatModal, sendChatMessage, handleChatKeyPress, openBulkEditModal, closeBulkEditModal, saveBulkEdit, toggleSiriModal, generateSiriToken, copySiriToken };
+
+window.togglePasswordVisibility = function(inputId, button) {
+    const input = document.getElementById(inputId);
+    if (input.type === 'password') {
+        input.type = 'text';
+        button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+    } else {
+        input.type = 'password';
+        button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+    }
+};

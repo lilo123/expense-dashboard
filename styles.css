@@ -2,6 +2,7 @@
     --bg: #ffffff;
     --card-bg: #f8f9fa;
     --text: #000000;
+    --text-muted: #8e8e93;
     --accent: #000000;
     --accent-text: #ffffff;
     --border: #e0e0e0;
@@ -20,7 +21,7 @@ body {
 .header h1 { font-size: 28px; margin-bottom: 20px; font-weight: 800; }
 
 .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
-.tab-btn { flex: 1; padding: 12px; border: none; background: none; font-size: 16px; font-weight: 600; cursor: pointer; color: #888; transition: 0.2s; }
+.tab-btn { flex: 1; padding: 12px; border: none; background: none; font-size: 16px; font-weight: 600; cursor: pointer; color: #666; transition: 0.2s; }
 .tab-btn.active { color: var(--text); border-bottom: 2px solid var(--accent); }
 .tab-content { display: none; }
 .tab-content.active { display: block; animation: fadeIn 0.3s ease; }
@@ -60,12 +61,12 @@ h2 { font-size: 20px; margin-bottom: 15px; }
 .expense-amount { font-weight: 700; font-size: 16px; }
 
 .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
-.modal-content { background: var(--bg); padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; }
+.modal-content { background: var(--bg); padding: 25px; border-radius: 16px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; position: relative; }
 .modal-content h2 { margin-top: 0; margin-bottom: 20px; }
 .modal-content input, .modal-content select { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; font-size: 16px; background: var(--bg); color: var(--text); }
 .modal-content button { width: 100%; padding: 14px; background: var(--accent); color: var(--accent-text); border: none; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 16px; }
 .modal-content .danger-btn { background: var(--danger); color: white; margin-top: 10px; }
-.close { float: right; font-size: 28px; cursor: pointer; color: #999; line-height: 20px; }
+.close { position: absolute; top: 20px; right: 20px; z-index: 10; background: var(--bg); border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 28px; cursor: pointer; color: #999; line-height: 20px; }
 
 /* FAB Styles */
 .fab-container {
@@ -213,7 +214,7 @@ body.modal-open { overflow: hidden; }
 
 @media (max-width: 600px) {
     .chat-modal-content {
-        width: 100% !important; border: none !important; outline: none !important;
+        width: 100% !important; border: none !important; outline: transparent !important;
         left: 0 !important;
         box-sizing: border-box !important;
     }
@@ -244,12 +245,12 @@ body.modal-open { overflow: hidden; }
     padding: 30px;
     border-radius: 12px;
     width: 90%;
-    max-width: 400px;
+    max-width: 400px; max-height: 90vh; overflow-y: auto; position: relative;
     text-align: center;
     border: 1px solid var(--border);
 }
 .auth-card h2 { margin-top: 0; margin-bottom: 10px; }
-.auth-card p { margin-bottom: 20px; color: #888; }
+.auth-card p { margin-bottom: 20px; color: #666; }
 .auth-card input {
     width: 100%;
     padding: 12px;
@@ -310,4 +311,73 @@ body.modal-open { overflow: hidden; }
 .auth-buttons button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+}
+
+/* --- UX/UI Mobile & Accessibility Improvements --- */
+
+/* 1. Prevent iOS auto-zoom by enforcing 16px font-size on inputs */
+input, select, textarea {
+    font-size: 16px !important;
+}
+
+/* 2. Ensure min 44px tap targets for buttons */
+button, .tab-btn, select {
+    min-height: 44px;
+    cursor: pointer;
+}
+
+/* 3. Add tactile feedback on tap/click */
+button:active, .category-detail-item:active, .tab-btn:active {
+    transform: scale(0.97);
+    transition: transform 0.1s ease;
+}
+
+/* 4. Native-feeling modal animations */
+@keyframes modalSlideUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal, .chat-modal {
+    /* Ensure the backdrop also fades in slightly if there's a wrapper, else apply to content */
+}
+
+.modal-content, .chat-modal-content {
+    animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* 5. Handle Mobile Safe Areas (Notch / Home Bar) */
+@media (max-width: 600px) {
+    .chat-modal-content, .modal-content {
+        padding-bottom: calc(20px + env(safe-area-inset-bottom)) !important;
+    }
+}
+
+/* 6. Accessible Focus States (replacing removed outlines) */
+*:focus-visible {
+    outline: 2px solid #007aff !important; /* Standard focus blue */
+    outline-offset: 2px !important;
+}
+
+/* Auth UX Updates */
+.input-group {
+    position: relative;
+    margin-bottom: 15px;
+}
+.input-group input {
+    margin-bottom: 0 !important;
+    width: 100%;
+    padding-right: 40px !important;
+}
+.password-group .toggle-password {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2em;
+    color: #666;
+    padding: 0;
 }

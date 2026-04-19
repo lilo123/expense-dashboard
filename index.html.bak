@@ -7,12 +7,55 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>Expenses</h1>
+
+    <!-- AUTHENTICATION OVERLAY -->
+    <div id="auth-overlay" class="auth-overlay">
+        <div class="auth-card" id="signin-card">
+            <h2>Welcome Back</h2>
+            <p>Please sign in to manage your expenses.</p>
+            <form id="signin-form">
+            <input type="email" id="signin-email" placeholder="Email Address" required>
+            <input type="password" id="signin-password" placeholder="Password" required>
+            <div class="auth-buttons">
+                <button type="submit" id="signin-btn" style="width: 100%;">Sign In</button>
+            </div>
+        </form>
+            <p style="margin-top: 15px; font-size: 0.9em; text-align: center;">
+                Don't have an account? <a href="#" id="toggle-to-signup" style="color: var(--primary); text-decoration: none; font-weight: bold;">Sign up here</a>
+            </p>
+            <p id="signin-message" class="auth-message"></p>
         </div>
+
+        <div class="auth-card" id="signup-card" style="display: none;">
+            <h2>Create Account</h2>
+            <p>Sign up to start tracking your expenses.</p>
+            <form id="signup-form">
+            <input type="email" id="signup-email" placeholder="Email Address" required>
+            <input type="password" id="signup-password" placeholder="Password" required>
+            <input type="password" id="signup-confirm-password" placeholder="Confirm Password" required>
+            <div class="auth-buttons">
+                <button type="submit" id="signup-btn" style="width: 100%;">Create Account</button>
+            </div>
+        </form>
+            <p style="margin-top: 15px; font-size: 0.9em; text-align: center;">
+                Already have an account? <a href="#" id="toggle-to-signin" style="color: var(--primary); text-decoration: none; font-weight: bold;">Sign in here</a>
+            </p>
+            <p id="signup-message" class="auth-message"></p>
+        </div>
+    </div>
+
+    <div class="container" id="main-app" style="display: none;">
+        
+        <div class="header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>Expenses</h1>
+            
+            <button id="siri-btn" onclick="toggleSiriModal()" style="display: none; margin-right: 10px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer;">🎙️�� Siri Setup</button>
+            <button id="logout-btn" onclick="signOut()" style="display: none; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card-bg); color: var(--text); cursor: pointer;">Sign Out</button>
+        </div>
+
 
         <div class="tabs">
             <button class="tab-btn active" onclick="switchTab('dashboard')">Dashboard</button>
@@ -44,21 +87,45 @@
         
         <!-- YEARLY TAB -->
         <div id="tab-yearly" class="tab-content">
-            <h2>Monthly Expenses by Category</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h2 style="margin: 0;">Monthly Expenses</h2>
+                <select id="yearSelect" onchange="renderYearlyChart()" style="padding: 6px 12px; border-radius: 6px; font-size: 16px; border: 1px solid #ccc; background-color: #fff; cursor: pointer;"></select>
+            </div>
             <div class="chart-container" style="height: 500px;">
                 <canvas id="yearlyChart"></canvas>
             </div>
+            <div id="yearly-details-container" style="margin-top: 20px;"></div>
         </div>
 
         <!-- RECENT TAB -->
         <div id="tab-recent" class="tab-content">
-            <div class="recent-header-controls">
+            <div class="recent-header-controls" style="display: flex; gap: 10px; align-items: center; margin-bottom: 10px;">
                 <button id="select-mode-btn" onclick="toggleSelectMode()">Select</button>
-                <button id="bulk-delete-btn" class="danger-btn" style="display: none;" onclick="deleteSelected()">Delete Selected</button>
+                <div id="bulk-actions" style="display: none; gap: 10px;">
+                    <button id="bulk-edit-btn" onclick="openBulkEditModal()" style="background: #1a73e8; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">Edit Selected</button>
+                    <button id="bulk-delete-btn" class="danger-btn" onclick="deleteSelected()">Delete Selected</button>
+                </div>
             </div>
             <div class="recent-list" id="recent-list">
                 <!-- Recent items injected here -->
             </div>
+        </div>
+    </div>
+
+    
+    <!-- Bulk Edit Modal -->
+    <div id="bulk-edit-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeBulkEditModal()">&times;</span>
+            <h2>Bulk Edit Expenses</h2>
+            <p style="margin-bottom: 15px; color: #5f6368; font-size: 14px;">Select new values. Leave blank to keep existing.</p>
+            <label style="display:block; margin-bottom:5px; font-weight:500;">New Date:</label>
+            <input type="date" id="bulk-edit-date">
+            <label style="display:block; margin-top:10px; margin-bottom:5px; font-weight:500;">New Category:</label>
+            <select id="bulk-edit-category">
+                <option value="">-- Keep Existing Category --</option>
+            </select>
+            <button id="save-bulk-edit-btn" onclick="saveBulkEdit()" style="margin-top: 15px;">Apply Changes</button>
         </div>
     </div>
 
@@ -71,23 +138,7 @@
             <input type="date" id="edit-date">
             <input type="text" id="edit-item" placeholder="Item Name">
             <input type="number" id="edit-amount" placeholder="Amount">
-            <select id="edit-category">
-                <option value="Housing">Housing</option>
-                <option value="Utilities">Utilities</option>
-                <option value="Insurance">Insurance</option>
-                <option value="Groceries">Groceries</option>
-                <option value="Dining Out">Dining Out</option>
-                <option value="Transportation">Transportation</option>
-                <option value="Household">Household</option>
-                <option value="Health & Care">Health & Care</option>
-                <option value="Subscriptions">Subscriptions</option>
-                <option value="Shopping">Shopping</option>
-                <option value="Entertainment">Entertainment</option>
-                <option value="Travel">Travel</option>
-                <option value="Gifts">Gifts</option>
-                <option value="Education">Education</option>
-                <option value="Misc">Misc</option>
-            </select>
+            <select id="edit-category"></select>
             <button id="save-edit-btn" onclick="saveEdit()">Save Changes</button>
             <button id="delete-edit-btn" class="danger-btn" style="margin-top: 10px;" onclick="deleteFromEdit()">Delete</button>
         </div>
@@ -95,6 +146,7 @@
     
     <!-- Add Expense FAB and Modal -->
     <div class="fab-container">
+        <button class="fab secondary-fab" onclick="toggleCategoryModal()" style="bottom: 140px;" title="Manage Categories">📁</button>
         <button class="fab secondary-fab" onclick="toggleChatModal()">✨</button>
         <button id="fab" class="fab" onclick="toggleAddModal()">+</button>
     </div>
@@ -106,21 +158,73 @@
             <input type="date" id="add-date" required>
             <input type="text" id="add-item" placeholder="What did you buy?" required>
             <input type="number" id="add-amount" placeholder="Amount ($)" step="0.01" required>
-            <select id="add-category">
-                <option value="Food">Food</option>
-                <option value="Transport">Transport</option>
-                <option value="Shopping">Shopping</option>
-                <option value="Entertainment">Entertainment</option>
-                <option value="Travel">Travel</option>
-                <option value="Gifts">Gifts</option>
-                <option value="Education">Education</option>
-                <option value="Misc">Misc</option>
-            </select>
+            <select id="add-category"></select>
             <button id="add-expense-btn" onclick="addExpense()">Add Expense</button>
         </div>
     </div>
 
-    <script src="app.js"></script>
+    
+        <!-- MANAGE CATEGORIES MODAL -->
+    <div id="category-modal" class="modal">
+        <div class="modal-content" style="max-width: 400px; padding: 25px; border-radius: 12px;">
+            <span class="close" onclick="toggleCategoryModal()" style="font-size: 24px;">&times;</span>
+            <h2 style="margin-bottom: 20px; font-size: 1.5em; color: #202124;">Manage Categories</h2>
+            <div id="category-error" style="color: #d93025; font-size: 14px; margin-bottom: 12px; display: none; background: #fce8e6; padding: 8px; border-radius: 6px;"></div>
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <input type="text" id="new-category-name" placeholder="New Category Name" style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid #dadce0; font-size: 14px;">
+                <button onclick="addCategory()" style="padding: 10px 20px; border-radius: 8px; font-weight: bold; background: #1a73e8; color: white; border: none; cursor: pointer;">Add</button>
+            </div>
+            <ul id="category-list" style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; max-height: 350px; overflow-y: auto;">
+                <!-- Categories injected here -->
+            </ul>
+        </div>
+    </div>
+
+    
+    <!-- SIRI SETUP MODAL -->
+    <div id="siri-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close" onclick="toggleSiriModal()">&times;</span>
+            <h2>🎙️️ Connect with Siri</h2>
+            <p style="color: var(--secondary-text); margin-bottom: 20px; font-size: 14px; line-height: 1.5;">
+                Generate a secure API token to allow Siri to add expenses without logging in every time. Keep this token secret!
+            </p>
+            
+            <div style="background: var(--bg); padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <p style="margin-top: 0; font-weight: 500; font-size: 14px;">Your Personal API Token:</p>
+                <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                    <input type="text" id="siri-token-display" readonly onclick="copySiriToken()" style="flex: 1; min-width: 200px; font-family: monospace; background: var(--card-bg); border: 1px solid var(--border); padding: 8px; border-radius: 4px;" placeholder="Click Generate...">
+                    <button onclick="generateSiriToken()" id="generate-siri-btn" style="padding: 8px 15px; border-radius: 4px; border: none; background: #10b981; color: white; cursor: pointer; font-weight: bold;">Generate</button>
+                    <button onclick="copySiriToken()" id="copy-siri-btn" style="padding: 8px 15px; border-radius: 4px; border: none; background: var(--primary); color: white; cursor: pointer;">Copy</button>
+                </div>
+            </div>
+            
+            <div style="margin-top: 25px; border-top: 1px solid var(--border); padding-top: 20px;">
+                <h3 style="font-size: 16px; margin-bottom: 10px;">How to set up:</h3>
+                <ol style="padding-left: 20px; font-size: 14px; color: var(--secondary-text); line-height: 1.6;">
+                    <li><strong>Generate and Copy</strong> your token above.</li>
+                    <li>Open the <strong>Shortcuts app</strong> on your iPhone and tap <strong>+</strong>. Name it "Log Expense".</li>
+                    <li>Add an <strong>Ask for Input</strong> action. Set the prompt to <em>"What did you spend?"</em></li>
+                    <li>Add a <strong>Get Contents of URL</strong> action and configure it:
+                        <ul style="padding-left: 15px; margin-top: 5px; margin-bottom: 5px; list-style-type: circle; background: var(--bg); padding: 10px 10px 10px 25px; border-radius: 6px;">
+                            <li><strong>URL:</strong> <code>https://lilo123-expense-dashboard.vercel.app/api/siri</code></li>
+                            <li><strong>Method:</strong> POST</li>
+                            <li><strong>Headers:</strong> Add new header <code>Authorization</code> with value <code>Bearer [PASTE_YOUR_TOKEN_HERE]</code></li>
+                            <li><strong>Request Body:</strong> Select <strong>JSON</strong>. Tap <strong>Add new field</strong> &rarr; <strong>Text</strong>.
+                                <ul style="margin-top: 3px; padding-left: 15px; list-style-type: square; color: var(--text);">
+                                    <li>Key: <code>message</code></li>
+                                    <li>Text: Tap and select the <strong>Provided Input</strong> variable.</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                    <li>Save it. Now just say: <em>"Hey Siri, Log Expense!"</em></li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/app.js"></script>
 
     <!-- CHAT MODAL -->
     <div id="chat-modal" class="modal">
@@ -157,9 +261,31 @@
       <!-- Vercel push 14 -->
       <!-- Vercel push 15 -->
       <!-- Vercel push 16 -->
+      <!-- Vercel push 17 -->
+      <!-- Vercel push 18 -->
+      <!-- Vercel push 19 -->
+      <!-- Vercel push 20 -->
+      <!-- Vercel push 21 -->
+      <!-- Vercel push 22-->
+      <!-- Vercel push 23-->
+      <!-- Vercel push 24-->
+      <!-- Vercel push 25-->
+<!-- Vercel push 26-->
+      <!-- Vercel push 27-->
+      <!-- Vercel push 28-->
+      <!-- Vercel push 29-->
+      <!-- Vercel push 30-->
 
 
 
 
 
 
+
+
+
+
+
+
+
+<!-- Vercel cache bust AI Chat -->
