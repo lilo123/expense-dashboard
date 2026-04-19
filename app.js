@@ -1,3 +1,4 @@
+import { parseLocalDate, toLocalDateString } from './utils.js';
 import { authService, categoryService, expenseService, tokenService } from "./services.js";
 import { showAuth, toggleAuth, toggleCategoryModal, toggleSelectMode, closeEditModal, toggleAddModal, toggleChatModal, openBulkEditModal, closeBulkEditModal, toggleSiriModal, escapeHtml } from "./ui.js";
 import { renderCategories, updateCategorySelects, renderRecent, renderDashboard, renderYearlyChart } from "./render.js";
@@ -423,10 +424,6 @@ export function switchTab(tabId) {
     if(tabId === 'yearly' && typeof renderYearlyChart === 'function') setTimeout(() => renderYearlyChart(showMonthDetails), 50);
 }
 
-export function toLocalDateString(dateObj) {
-    const tzOffset = dateObj.getTimezoneOffset() * 60000;
-    return new Date(dateObj.getTime() - tzOffset).toISOString().split('T')[0];
-}
 
 export function setDefaultDateRange() {
     const today = new Date();
@@ -462,8 +459,7 @@ export function toggleCategoryExpand(label) {
 export function showMonthDetails(monthStr) {
     const container = document.getElementById('yearly-details-container');
     const monthExpenses = store.expenses.filter(exp => {
-        const dateObj = new Date(exp.date);
-        dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
+        const dateObj = parseLocalDate(exp.date);
         if (isNaN(dateObj.getTime())) return false;
         return toLocalDateString(dateObj).substring(0, 7) === monthStr;
     });
@@ -475,8 +471,12 @@ export function showMonthDetails(monthStr) {
     }).join('');
     const [year, month] = monthStr.split('-');
     const date = new Date(year, month - 1);
+    const totalAmount = monthExpenses.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
     const monthDisplay = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-    container.innerHTML = `<h3>${monthDisplay} Details</h3>${itemsHtml}`;
+    container.innerHTML = `<h3 style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--border-color, #eee); padding-bottom: 10px; margin-bottom: 15px;">
+        <span>${monthDisplay} Details</span>
+        <span style="color: #000; font-weight: bold; background: var(--bg-color, #f8f9fa); padding: 6px 14px; border-radius: 20px; font-size: 0.9em; border: 1px solid var(--border-color, #eee);">$${totalAmount.toFixed(2)}</span>
+    </h3>${itemsHtml}`;
     container.scrollIntoView({ behavior: 'smooth' });
 }
 
@@ -486,6 +486,7 @@ window.addEventListener('click', function(event) {
     if (event.target === document.getElementById('edit-modal')) closeEditModal();
     if (event.target === document.getElementById('category-modal')) toggleCategoryModal();
     if (event.target === document.getElementById('chat-modal') && typeof toggleChatModal === 'function') toggleChatModal();
+    if (event.target === document.getElementById("siri-modal")) { document.getElementById("siri-modal").style.display = "none"; }
 });
 
 
@@ -512,10 +513,11 @@ export async function sendChatMessage() {
     history.scrollTop = history.scrollHeight;
 
     try {
+        const localDate = toLocalDateString(new Date());
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, expenses: store.expenses })
+            body: JSON.stringify({ message, expenses: store.expenses, clientDate: localDate })
         });
         
         const data = await response.json();

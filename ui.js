@@ -1,5 +1,6 @@
 import { store } from "./state.js";
-import { toLocalDateString, fetchExistingSiriToken } from "./app.js";
+import { fetchExistingSiriToken } from "./app.js";
+import { toLocalDateString } from "./utils.js";
 
 export function showAuth() {
     document.getElementById('auth-overlay').style.display = 'flex';
@@ -84,6 +85,8 @@ export function toggleSiriModal() {
     } else {
         modal.style.display = 'flex';
         fetchExistingSiriToken();
+        const urlElem = document.getElementById("siri-endpoint-url");
+        if (urlElem) { urlElem.textContent = window.location.origin + "/api/siri"; }
     }
 }
 

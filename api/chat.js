@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method Not Allowed' });
 
-  const { message, expenses } = req.body;
+  const { message, expenses, clientDate } = req.body;
   const apiKey = process.env.GROQ_API_KEY;
 
   if (!apiKey) return res.status(500).json({ error: 'Missing GROQ_API_KEY environment variable' });
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
     });
   }
 
-  const today = new Date().toISOString().split('T')[0];
+  const today = clientDate || new Date().toISOString().split('T')[0];
   const systemPrompt = `You are a helpful financial assistant managing an expense tracker. Today\'s date is ${today}.
 ${expensesContext}
 

@@ -1,3 +1,4 @@
+import { parseLocalDate } from './utils.js';
 import { store } from "./state.js";
 import { escapeHtml, toggleSelectMode } from "./ui.js";
 
@@ -107,8 +108,7 @@ export function renderRecent(expenses) {
     const sorted = [...store.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     sorted.forEach(exp => {
-        const d = new Date(exp.date);
-        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+        const d = parseLocalDate(exp.date);
         const dateStr = !isNaN(d.getTime()) ? d.toLocaleDateString() : 'Unknown Date';
         const amt = parseFloat(exp.amount) || 0;
 
@@ -185,7 +185,7 @@ export function renderDashboard(expenses, onCategoryClick) {
                 datalabels: {
                     anchor: 'end',
                     align: 'right',
-                    formatter: (value) => '$' + Math.round(parseFloat(value)).toLocaleString(),
+                    formatter: (value) => '$' + Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value),
                     color: '#000',
                     font: { weight: '600', size: 13 }
                 }
@@ -207,8 +207,7 @@ export function renderDashboard(expenses, onCategoryClick) {
 export function renderYearlyChart(onMonthClick) {
     const years = new Set();
     store.expenses.forEach(exp => {
-        const d = new Date(exp.date);
-        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+        const d = parseLocalDate(exp.date);
         if (!isNaN(d.getTime())) years.add(d.getFullYear().toString());
     });
     const sortedYears = Array.from(years).sort((a,b) => b - a);
@@ -234,8 +233,7 @@ export function renderYearlyChart(onMonthClick) {
     for(let i=0; i<12; i++) byMonth[i] = null;
 
     store.expenses.forEach(exp => {
-        const d = new Date(exp.date);
-        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+        const d = parseLocalDate(exp.date);
         if (isNaN(d.getTime()) || d.getFullYear().toString() !== selectedYear) return;
         const m = d.getMonth();
         if (byMonth[m] === null) byMonth[m] = 0;
@@ -279,7 +277,7 @@ export function renderYearlyChart(onMonthClick) {
                     anchor: 'end',
                     align: 'top',
                     offset: 4,
-                    formatter: (value) => '$' + Math.round(parseFloat(value)).toLocaleString(),
+                    formatter: (value) => '$' + Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value),
                     color: '#000',
                     font: { weight: '600', size: 12 }
                 } 
