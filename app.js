@@ -546,8 +546,10 @@ export async function sendChatMessage() {
             aiDiv.innerHTML = messageHtml;
             history.appendChild(aiDiv);
             
-            const { error } = await expenseService.add(insertPayload.user_id, insertPayload.date, insertPayload.item, insertPayload.amount, insertPayload.category);
-            if (error) throw error;
+            for (const payload of insertPayload) {
+                const { error } = await expenseService.add(payload.user_id, payload.date, payload.item, payload.amount, payload.category);
+                if (error) throw error;
+            }
             
             await fetchExpenses();
             
