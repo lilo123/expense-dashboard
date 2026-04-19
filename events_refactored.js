@@ -68,3 +68,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const el_send_chat_btn = document.getElementById('send-chat-btn');
     if (el_send_chat_btn) el_send_chat_btn.addEventListener('click', (e) => { sendChatMessage() });
 });
+
+// iOS Keyboard Gap Fix using visualViewport
+if (window.visualViewport) {
+    const updateViewport = () => {
+        const modals = document.querySelectorAll('.modal-content, .chat-modal-content');
+        const offset = window.innerHeight - window.visualViewport.height;
+        modals.forEach(modal => {
+            if (modal.offsetParent !== null) { // If visible
+                modal.style.marginBottom = offset > 0 ? `${offset}px` : '0px';
+            }
+        });
+    };
+    window.visualViewport.addEventListener('resize', updateViewport);
+    window.visualViewport.addEventListener('scroll', updateViewport);
+}

@@ -183,11 +183,20 @@ h2 { font-size: 20px; margin-bottom: 15px; }
 
 /* Mobile Responsiveness */
 @media (max-width: 600px) {
+    .modal {
+        align-items: flex-end !important;
+    }
     .modal-content {
-        width: 95%;
+        width: 100% !important;
         padding: 20px;
-        max-height: 90vh;
+        max-height: 85vh;
         overflow-y: auto;
+        border-radius: 20px 20px 0 0 !important;
+        position: absolute;
+        bottom: 0;
+        margin: 0;
+        box-sizing: border-box;
+        animation: modalSlideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
     }
     .chat-modal-content {
         height: 85vh;
@@ -219,14 +228,20 @@ body.modal-open { overflow: hidden; }
         box-sizing: border-box !important;
     }
     
+    .chat-header {
+        position: relative;
+        padding-top: 25px !important;
+    }
     .chat-header::before {
         content: '';
-        display: block;
+        position: absolute;
+        top: 8px;
+        left: 50%;
+        transform: translateX(-50%);
         width: 40px;
         height: 5px;
         background: rgba(255,255,255,0.5);
         border-radius: 3px;
-        margin: 0 auto 10px auto;
     }
 }
 
