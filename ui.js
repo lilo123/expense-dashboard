@@ -21,7 +21,7 @@ export function toggleAuth(view) {
 
 export function toggleCategoryModal() {
     const modal = document.getElementById('category-modal');
-    modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+    modal.style.display = modal.style.display === 'flex' ? 'none' : 'block';
 }
 
 export function toggleSelectMode() {
@@ -45,11 +45,11 @@ export function closeEditModal() {
 
 export function toggleAddModal() {
     const modal = document.getElementById('add-modal');
-    if (modal.style.display === 'block') {
+    if (modal.style.display === 'flex') {
         modal.style.display = 'none';
         document.body.classList.remove('modal-open');
     } else {
-        modal.style.display = 'block';
+        modal.style.display = 'flex';
         document.body.classList.add('modal-open');
         if (!document.getElementById('add-date').value) {
             document.getElementById('add-date').value = toLocalDateString(new Date());
