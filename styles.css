@@ -184,14 +184,14 @@ h2 { font-size: 20px; margin-bottom: 15px; }
 /* Mobile Responsiveness */
 @media (max-width: 600px) {
     .modal {
-        align-items: flex-end !important;
+        align-items: center !important;
     }
     .modal-content {
         width: 100% !important;
         padding: 20px;
         max-height: 85vh;
         overflow-y: auto;
-        border-radius: 20px 20px 0 0 !important;
+        border-radius: 16px !important;
         
         margin: 0;
         box-sizing: border-box;
@@ -398,13 +398,13 @@ button:active, .category-detail-item:active, .tab-btn:active {
 /* iOS Specific Fixes */
 @media (max-width: 600px) {
     .chat-modal {
-        align-items: flex-end !important;
+        align-items: center !important;
     }
     .chat-modal-content {
         height: 85vh;
         height: -webkit-fill-available;
         max-height: 85vh;
-        border-radius: 20px 20px 0 0 !important;
+        border-radius: 16px !important;
         animation: modalSlideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
     }
     @keyframes modalSlideUpMobile {
