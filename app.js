@@ -1,5 +1,6 @@
 import { authService, categoryService, expenseService, tokenService } from "./services.js";
 import { showAuth, toggleAuth, toggleCategoryModal, toggleSelectMode, closeEditModal, toggleAddModal, toggleChatModal, openBulkEditModal, closeBulkEditModal, toggleSiriModal, escapeHtml } from "./ui.js";
+import { renderCategories, updateCategorySelects, renderRecent, renderDashboard, renderYearlyChart } from "./render.js";
 import { store } from "./state.js";
 
 
@@ -9,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
     checkUser();
 });
 
-async function checkUser() {
+export async function checkUser() {
     const { data: { session } } = await authService.getSession();
     if (session) {
         store.currentUser = session.user;
@@ -31,19 +32,11 @@ async function checkUser() {
 
 
 
-function showApp() {
-    document.getElementById('auth-overlay').style.display = 'none';
-    document.getElementById('main-app').style.display = 'block';
-    document.getElementById('logout-btn').style.display = 'block';
-        if (document.getElementById('siri-btn')) document.getElementById('siri-btn').style.display = 'block';
-    fetchCategories();
-    fetchExpenses();
-}
 
 
 
 
-async function signIn(event) {
+export async function signIn(event) {
     const email = document.getElementById('signin-email').value;
     const password = document.getElementById('signin-password').value;
     const msg = document.getElementById('signin-message');
@@ -80,7 +73,7 @@ async function signIn(event) {
     }
 }
 
-async function signUp(event) {
+export async function signUp(event) {
     const email = document.getElementById('signup-email').value;
     const password = document.getElementById('signup-password').value;
     const confirmPassword = document.getElementById('signup-confirm-password').value;
@@ -132,7 +125,7 @@ async function signUp(event) {
     }
 }
 
-async function signOut() {
+export async function signOut() {
     await authService.signOut();
 }
 
@@ -140,7 +133,7 @@ async function signOut() {
 
 
 
-async function fetchCategories() {
+export async function fetchCategories() {
     if (!store.currentUser) return;
     const { data, error } = await categoryService.fetchAll(store.currentUser.id);
         
@@ -158,106 +151,13 @@ async function fetchCategories() {
             store.categories.push(cat);
         }
     });
-    renderCategories();
+    renderCategories(editCategory, deleteCategory);
     updateCategorySelects();
 }
 
-function renderCategories() {
-    const list = document.getElementById('category-list');
-    if (!list) return;
-    list.innerHTML = '';
-    store.categories.forEach(cat => {
-        const li = document.createElement('li');
-        li.style.display = 'flex';
-        li.style.justifyContent = 'space-between';
-        li.style.alignItems = 'center';
-        li.style.padding = '8px 15px';
-        li.style.background = '#ffffff';
-        li.style.borderRadius = '8px';
-        li.style.marginBottom = '8px';
-        li.style.border = '1px solid #dadce0';
-        li.style.transition = 'box-shadow 0.2s';
-        li.onmouseover = () => li.style.boxShadow = '0 1px 4px rgba(0,0,0,0.1)';
-        li.onmouseout = () => li.style.boxShadow = 'none';
-        
-        const nameSpan = document.createElement('span');
-        nameSpan.innerText = cat.name;
-        nameSpan.style.fontWeight = '500';
-        nameSpan.style.color = '#3c4043';
-        nameSpan.style.flex = '1';
-        
-        const actionsDiv = document.createElement('div');
-        actionsDiv.style.display = 'flex';
-        actionsDiv.style.gap = '8px';
-        actionsDiv.style.alignItems = 'center';
 
-        const createBtn = (svgPath, color, hoverColor, onClick) => {
-            const btn = document.createElement('button');
-            btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${svgPath}</svg>`;
-            btn.style.padding = '6px';
-            btn.style.borderRadius = '50%';
-            btn.style.background = 'transparent';
-            btn.style.color = color;
-            btn.style.border = 'none';
-            btn.style.cursor = 'pointer';
-            btn.style.display = 'flex';
-            btn.style.alignItems = 'center';
-            btn.style.justifyContent = 'center';
-            btn.style.transition = 'all 0.2s';
-            btn.onmouseover = () => { btn.style.background = '#f1f3f4'; btn.style.color = hoverColor; };
-            btn.onmouseout = () => { btn.style.background = 'transparent'; btn.style.color = color; };
-            btn.onclick = onClick;
-            return btn;
-        };
 
-        const editSvg = '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>';
-        const deleteSvg = '<polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line>';
-
-        const editBtn = createBtn(editSvg, '#5f6368', '#1a73e8', () => editCategory(cat.id, cat.name));
-        const delBtn = createBtn(deleteSvg, '#5f6368', '#d93025', () => deleteCategory(cat.id));
-
-        actionsDiv.appendChild(editBtn);
-        actionsDiv.appendChild(delBtn);
-
-        li.appendChild(nameSpan);
-        li.appendChild(actionsDiv);
-        list.appendChild(li);
-    });
-}
-
-function updateCategorySelects() {
-    const addSelect = document.getElementById('add-category');
-    const editSelect = document.getElementById('edit-category');
-    if (!addSelect || !editSelect) return;
-    
-    addSelect.innerHTML = '';
-    editSelect.innerHTML = '';
-    const bulkSelect = document.getElementById('bulk-edit-category');
-    if (bulkSelect) {
-        bulkSelect.innerHTML = '<option value="">-- Keep Existing Category --</option>';
-    }
-    
-    store.categories.forEach(cat => {
-        const opt1 = document.createElement('option');
-        opt1.value = cat.name;
-        opt1.innerText = cat.name;
-        addSelect.appendChild(opt1);
-        
-        const opt2 = document.createElement('option');
-        opt2.value = cat.name;
-        opt2.innerText = cat.name;
-        editSelect.appendChild(opt2);
-        
-        if (bulkSelect) {
-            const opt3 = document.createElement('option');
-            opt3.value = cat.name;
-            opt3.innerText = cat.name;
-            bulkSelect.appendChild(opt3);
-        }
-    });
-}
-
-function showCategoryError(msg) {
+export function showCategoryError(msg) {
     const errEl = document.getElementById('category-error');
     if (errEl) {
         errEl.innerText = msg;
@@ -267,7 +167,7 @@ function showCategoryError(msg) {
     }
 }
 
-async function addCategory() {
+export async function addCategory() {
     const input = document.getElementById('new-category-name');
     const name = input.value.trim();
     showCategoryError('');
@@ -291,7 +191,7 @@ async function addCategory() {
     }
 }
 
-async function editCategory(id, oldName) {
+export async function editCategory(id, oldName) {
     const newName = prompt("Enter new category name:", oldName);
     if (!newName) return;
     const trimmedName = newName.trim();
@@ -325,7 +225,7 @@ async function editCategory(id, oldName) {
     }
 }
 
-async function deleteCategory(id) {
+export async function deleteCategory(id) {
     if (!confirm("Are you sure you want to delete this category?")) return;
     showCategoryError('');
     const { error } = await categoryService.delete(id);
@@ -339,7 +239,7 @@ async function deleteCategory(id) {
 
 // --- Expenses ---
 
-async function fetchExpenses() {
+export async function fetchExpenses() {
     if (!store.currentUser) return;
     try {
         const { data, error } = await expenseService.fetchAll(store.currentUser.id);
@@ -347,15 +247,15 @@ async function fetchExpenses() {
         if (error) throw error;
         
         store.expenses = data || [];
-        renderDashboard();
-        renderRecent();
-        if (typeof renderYearlyChart === 'function') renderYearlyChart();
+        renderDashboard(getFilteredExpenses(), showCategoryDetails);
+        renderRecent(getFilteredExpenses());
+        if (typeof renderYearlyChart === 'function') renderYearlyChart(showMonthDetails);
     } catch (e) {
         console.error("Error fetching data:", e);
     }
 }
 
-async function addExpense() {
+export async function addExpense() {
     const date = document.getElementById('add-date').value;
     const item = document.getElementById('add-item').value;
     const amount = parseFloat(document.getElementById('add-amount').value);
@@ -389,38 +289,8 @@ async function addExpense() {
 
 
 
-function renderRecent() {
-    const list = document.getElementById('recent-list');
-    if (!list) return;
-    list.innerHTML = "";
 
-    const sorted = [...store.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
-
-    sorted.forEach(exp => {
-        const d = new Date(exp.date);
-        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-        const dateStr = !isNaN(d.getTime()) ? d.toLocaleDateString() : 'Unknown Date';
-        const amt = parseFloat(exp.amount) || 0;
-
-        const idSafe = escapeHtml(exp.id);
-        const itemSafe = escapeHtml(exp.item);
-        const catSafe = escapeHtml(exp.category);
-        const dateSafe = escapeHtml(exp.date);
-
-        list.innerHTML += '<div class="expense-item" data-id="' + idSafe + '" data-item="' + itemSafe + '" data-amount="' + amt + '" data-category="' + catSafe + '" data-date="' + dateSafe + '">' +
-                '<input type="checkbox" class="expense-checkbox">' +
-                '<div class="expense-info">' +
-                    '<h4>' + itemSafe + '</h4>' +
-                    '<p>' + catSafe + ' &bull; ' + dateStr + '</p>' +
-                '</div>' +
-                '<div class="expense-amount">$' + amt.toFixed(2) + '</div>' +
-            '</div>';
-    });
-    
-    if (store.isSelectMode) toggleSelectMode();
-}
-
-function handleExpenseClick(el) {
+export function handleExpenseClick(el) {
     if (store.isSelectMode) {
         const checkbox = el.querySelector('.expense-checkbox');
         checkbox.checked = !checkbox.checked;
@@ -438,7 +308,7 @@ function handleExpenseClick(el) {
     }
 }
 
-function handleCheckboxClick(event, id) {
+export function handleCheckboxClick(event, id) {
     event.stopPropagation();
     if (event.target.checked) store.selectedIds.add(id);
     else store.selectedIds.delete(id);
@@ -446,7 +316,7 @@ function handleCheckboxClick(event, id) {
 
 
 
-function openEditModal(id, item, amount, category, date) {
+export function openEditModal(id, item, amount, category, date) {
     document.getElementById('edit-row').value = id;
 
     const txt = document.createElement("textarea");
@@ -465,7 +335,7 @@ function openEditModal(id, item, amount, category, date) {
 
 
 
-async function saveEdit() {
+export async function saveEdit() {
     const id = document.getElementById('edit-row').value;
     const item = document.getElementById('edit-item').value.trim();
     const amount = parseFloat(document.getElementById('edit-amount').value);
@@ -497,7 +367,7 @@ async function saveEdit() {
     }
 }
 
-async function deleteFromEdit() {
+export async function deleteFromEdit() {
     const id = document.getElementById('edit-row').value;
     if (!confirm("Are you sure you want to delete this expense?")) return;
 
@@ -520,7 +390,7 @@ async function deleteFromEdit() {
     }
 }
 
-async function deleteSelected() {
+export async function deleteSelected() {
     if (store.selectedIds.size === 0) return;
     if (!confirm("Delete selected store.expenses? This cannot be undone.")) return;
 
@@ -545,12 +415,12 @@ async function deleteSelected() {
 
 // --- Utilities & Standard UI ---
 
-function switchTab(tabId) {
+export function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
     document.getElementById("tab-" + tabId).classList.add('active');
     event.target.classList.add('active');
-    if(tabId === 'yearly' && typeof renderYearlyChart === 'function') setTimeout(renderYearlyChart, 50);
+    if(tabId === 'yearly' && typeof renderYearlyChart === 'function') setTimeout(() => renderYearlyChart(showMonthDetails), 50);
 }
 
 export function toLocalDateString(dateObj) {
@@ -558,14 +428,14 @@ export function toLocalDateString(dateObj) {
     return new Date(dateObj.getTime() - tzOffset).toISOString().split('T')[0];
 }
 
-function setDefaultDateRange() {
+export function setDefaultDateRange() {
     const today = new Date();
     const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
     document.getElementById('start-date').value = toLocalDateString(firstDay);
     document.getElementById('end-date').value = toLocalDateString(today);
 }
 
-function getFilteredExpenses() {
+export function getFilteredExpenses() {
     const startStr = document.getElementById('start-date').value || "0000-00-00";
     const endStr = document.getElementById('end-date').value || "9999-12-31";
 
@@ -575,92 +445,21 @@ function getFilteredExpenses() {
     });
 }
 
-function applyDateFilter() { renderDashboard(); }
-function clearDateFilter() {
+export function applyDateFilter() { renderDashboard(getFilteredExpenses(), showCategoryDetails); }
+export function clearDateFilter() {
     document.getElementById('start-date').value = "";
     document.getElementById('end-date').value = "";
-    renderDashboard();
+    renderDashboard(getFilteredExpenses(), showCategoryDetails);
 }
 
-function renderDashboard() {
-    const filtered = getFilteredExpenses();
-    const total = filtered.reduce((sum, exp) => sum + (parseFloat(exp.amount) || 0), 0);
-    document.getElementById('total-amount').innerText = "$" + total.toFixed(2);
 
-    const byCategory = {};
-    filtered.forEach(exp => {
-        if (!byCategory[exp.category]) byCategory[exp.category] = { total: 0, items: [] };
-        byCategory[exp.category].total += (parseFloat(exp.amount) || 0);
-        byCategory[exp.category].items.push(exp);
-    });
-
-    const labels = Object.keys(byCategory).sort((a,b) => byCategory[b].total - byCategory[a].total);
-    const data = labels.map(label => byCategory[label].total);
-    const bgColors = labels.map((_, i) => "hsl(" + (i * (360 / labels.length)) + ", 70%, 60%)");
-
-    document.querySelector('.chart-container').style.height = Math.max(300, labels.length * 40 + 50) + 'px';
-    const ctx = document.getElementById("expenseChart").getContext("2d");
-    Chart.register(window.ChartDataLabels);
-    if (store.chartInstance) store.chartInstance.destroy();
-
-    if (labels.length === 0) {
-        document.getElementById('category-details-container').innerHTML = "<p>No store.expenses in this range.</p>";
-        return;
-    }
-
-    store.chartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Expenses by Category',
-                data: data,
-                backgroundColor: labels.map((_, i) => `hsl(0, 0%, ${15 + (i * 65) / Math.max(1, labels.length - 1)}%)`),
-                borderRadius: 4
-            }]
-        },
-        options: { 
-            indexAxis: 'y', 
-            maintainAspectRatio: false,
-            responsive: true, 
-            interaction: { mode: "y", intersect: false },
-            layout: {
-                padding: { right: 60 }
-            },
-            scales: {
-                x: { display: false },
-                y: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: 'bold', size: 14 }, color: '#000' } }
-            },
-            plugins: { 
-                legend: { display: false },
-                datalabels: {
-                    anchor: 'end',
-                    align: 'right',
-                    formatter: (value) => '$' + Math.round(parseFloat(value)).toLocaleString(),
-                    color: '#000',
-                    font: { weight: '600', size: 13 }
-                }
-            },
-            onClick: (e, activeElements) => {
-                if (activeElements.length > 0) {
-                    const index = activeElements[0].index;
-                    const categoryName = labels[index];
-                    showCategoryDetails(categoryName, byCategory[categoryName].items);
-                }
-            }
-        }
-    });
-
-    document.getElementById("category-details-container").innerHTML = "";
-}
-
-function toggleCategoryExpand(label) {
+export function toggleCategoryExpand(label) {
     const safeLabel = label.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-]/g, '');
     const el = document.getElementById('cat-items-' + safeLabel);
     if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
 }
 
-function showMonthDetails(monthStr) {
+export function showMonthDetails(monthStr) {
     const container = document.getElementById('yearly-details-container');
     const monthExpenses = store.expenses.filter(exp => {
         const dateObj = new Date(exp.date);
@@ -680,116 +479,19 @@ function showMonthDetails(monthStr) {
     container.innerHTML = `<h3>${monthDisplay} Details</h3>${itemsHtml}`;
     container.scrollIntoView({ behavior: 'smooth' });
 }
-function renderYearlyChart() {
-    const years = new Set();
-    store.expenses.forEach(exp => {
-        const d = new Date(exp.date);
-        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-        if (!isNaN(d.getTime())) years.add(d.getFullYear().toString());
-    });
-    const sortedYears = Array.from(years).sort((a,b) => b - a);
-
-    const yearSelect = document.getElementById('yearSelect');
-    if (!yearSelect) return;
-
-    let selectedYear = yearSelect.value;
-    yearSelect.innerHTML = '';
-    sortedYears.forEach(y => {
-        const opt = document.createElement('option');
-        opt.value = y;
-        opt.textContent = y;
-        yearSelect.appendChild(opt);
-    });
-    
-    if (!selectedYear || !sortedYears.includes(selectedYear)) {
-        selectedYear = sortedYears.length > 0 ? sortedYears[0] : new Date().getFullYear().toString();
-    }
-    yearSelect.value = selectedYear;
-
-    const byMonth = {};
-    for(let i=0; i<12; i++) byMonth[i] = null;
-
-    store.expenses.forEach(exp => {
-        const d = new Date(exp.date);
-        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-        if (isNaN(d.getTime()) || d.getFullYear().toString() !== selectedYear) return;
-        const m = d.getMonth();
-        if (byMonth[m] === null) byMonth[m] = 0;
-        byMonth[m] += (parseFloat(exp.amount) || 0);
-    });
-
-    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const data = labels.map((_, i) => byMonth[i]);
-
-    const datasets = [{
-        label: 'Expenses', 
-        data: data, 
-        backgroundColor: '#b0b0b0', 
-        hoverBackgroundColor: '#808080', 
-        borderRadius: 4, 
-        borderSkipped: false, 
-        maxBarThickness: 40
-    }];
-
-    if (window.yearlyChartInstance) window.yearlyChartInstance.destroy();
-    const canvas = document.getElementById('yearlyChart');
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    window.yearlyChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: { labels, datasets },
-        options: {
-            maintainAspectRatio: false,
-            responsive: true, 
-            layout: { padding: { top: 60 } },
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-                x: { grid: { display: false }, border: { display: false }, ticks: { color: '#000000', font: { weight: 'bold' } } },
-                y: { grid: { display: false }, border: { display: false }, ticks: { display: false }, min: 0 }
-            },
-            plugins: { 
-                legend: { display: false }, 
-                datalabels: { 
-                    display: function(context) { return context.dataset.data[context.dataIndex] !== null; },
-                    anchor: 'end',
-                    align: 'top',
-                    offset: 4,
-                    formatter: (value) => '$' + Math.round(parseFloat(value)).toLocaleString(),
-                    color: '#000',
-                    font: { weight: '600', size: 12 }
-                } 
-            },
-            onHover: (event, chartElement) => { 
-                if (event.native && event.native.target) event.native.target.style.cursor = (chartElement && chartElement.length > 0) ? 'pointer' : 'default'; 
-            }, 
-            onClick: (e, activeEls) => { 
-                let idx = -1; 
-                if (activeEls && activeEls.length > 0) idx = activeEls[0].index; 
-                else if (window.yearlyChartInstance) { 
-                    const els = window.yearlyChartInstance.getElementsAtEventForMode(e, 'index', {intersect: false}, false); 
-                    if (els && els.length > 0) idx = els[0].index; 
-                } 
-                if (idx != -1 && data[idx] !== null) {
-                    const monthStr = String(idx + 1).padStart(2, '0');
-                    showMonthDetails(`${selectedYear}-${monthStr}`);
-                }
-            }
-        }
-    });
-}
 
 
 window.addEventListener('click', function(event) {
     if (event.target === document.getElementById('add-modal')) toggleAddModal();
     if (event.target === document.getElementById('edit-modal')) closeEditModal();
     if (event.target === document.getElementById('category-modal')) toggleCategoryModal();
+    if (event.target === document.getElementById('chat-modal') && typeof toggleChatModal === 'function') toggleChatModal();
 });
 
 
 
 
-async function sendChatMessage() {
+export async function sendChatMessage() {
     const input = document.getElementById('chat-input');
     const message = input.value.trim();
     if (!message) return;
@@ -866,12 +568,12 @@ async function sendChatMessage() {
     history.scrollTop = history.scrollHeight;
 }
 
-function handleChatKeyPress(event) {
+export function handleChatKeyPress(event) {
     if (event.key === 'Enter') sendChatMessage();
 }
 
 
-function showCategoryDetails(categoryName, items) {
+export function showCategoryDetails(categoryName, items) {
     const container = document.getElementById('category-details-container');
     const sortedItems = items.sort((a,b) => new Date(b.date) - new Date(a.date));
     
@@ -898,7 +600,7 @@ function showCategoryDetails(categoryName, items) {
 
 
 
-async function saveBulkEdit() {
+export async function saveBulkEdit() {
     if (store.selectedIds.size === 0) return;
     
     const newDate = document.getElementById('bulk-edit-date').value;
@@ -960,7 +662,7 @@ export async function fetchExistingSiriToken() {
     }
 }
 
-async function generateSiriToken() {
+export async function generateSiriToken() {
     const user = store.currentUser;
     if (!user) {
         alert('You must be logged in.');
@@ -992,7 +694,7 @@ async function generateSiriToken() {
     }
 }
 
-function copySiriToken() {
+export function copySiriToken() {
     const tokenInput = document.getElementById('siri-token-display');
     if (!tokenInput.value) {
         alert('No token to copy.');
@@ -1074,7 +776,6 @@ document.addEventListener('click', (e) => {
 });
 
 // Expose functions to global scope for event listeners
-export { signOut, addCategory, addExpense, saveEdit, deleteFromEdit, deleteSelected, switchTab, applyDateFilter, clearDateFilter, renderYearlyChart, sendChatMessage, handleChatKeyPress, saveBulkEdit, generateSiriToken, copySiriToken };
 
 window.togglePasswordVisibility = function(inputId, button) {
     const input = document.getElementById(inputId);
@@ -1086,3 +787,12 @@ window.togglePasswordVisibility = function(inputId, button) {
         button.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
     }
 };
+
+export function showApp() {
+    document.getElementById('auth-overlay').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    document.getElementById('logout-btn').style.display = 'block';
+        if (document.getElementById('siri-btn')) document.getElementById('siri-btn').style.display = 'block';
+    fetchCategories();
+    fetchExpenses();
+}

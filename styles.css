@@ -381,3 +381,25 @@ button:active, .category-detail-item:active, .tab-btn:active {
     color: #666;
     padding: 0;
 }
+
+/* iOS Specific Fixes */
+@media (max-width: 600px) {
+    .chat-modal {
+        align-items: flex-end !important;
+    }
+    .chat-modal-content {
+        height: 85vh;
+        height: -webkit-fill-available;
+        max-height: 85vh;
+        border-radius: 20px 20px 0 0 !important;
+        animation: modalSlideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+    }
+    @keyframes modalSlideUpMobile {
+        from { opacity: 0; transform: translateY(100%); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+}
+/* Remove touch highlights on iOS */
+* {
+    -webkit-tap-highlight-color: transparent;
+}

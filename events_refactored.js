@@ -1,5 +1,6 @@
-import { signOut, addCategory, addExpense, saveEdit, deleteFromEdit, deleteSelected, switchTab, applyDateFilter, clearDateFilter, renderYearlyChart, sendChatMessage, handleChatKeyPress, saveBulkEdit, generateSiriToken, copySiriToken } from "./app.js";
+import { signOut, showMonthDetails, addCategory, addExpense, saveEdit, deleteFromEdit, deleteSelected, switchTab, applyDateFilter, clearDateFilter, sendChatMessage, handleChatKeyPress, saveBulkEdit, generateSiriToken, copySiriToken } from "./app.js";
 import { toggleCategoryModal, toggleSelectMode, closeEditModal, toggleAddModal, toggleChatModal, openBulkEditModal, closeBulkEditModal, toggleSiriModal } from "./ui.js";
+import { renderYearlyChart } from "./render.js";
 
 
 // --- EVENT LISTENERS (Best Practice Refactor) ---
@@ -21,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const el_action_elem_4 = document.getElementById('action-elem-4');
     if (el_action_elem_4) el_action_elem_4.addEventListener('click', (e) => { clearDateFilter() });
     const el_yearSelect = document.getElementById('yearSelect');
-    if (el_yearSelect) el_yearSelect.addEventListener('change', (e) => { renderYearlyChart() });
+    if (el_yearSelect) el_yearSelect.addEventListener('change', (e) => { renderYearlyChart(showMonthDetails) });
     const el_select_mode_btn = document.getElementById('select-mode-btn');
     if (el_select_mode_btn) el_select_mode_btn.addEventListener('click', (e) => { toggleSelectMode() });
     const el_bulk_edit_btn = document.getElementById('bulk-edit-btn');
