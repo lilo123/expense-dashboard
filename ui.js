@@ -21,7 +21,7 @@ export function toggleAuth(view) {
 
 export function toggleCategoryModal() {
     const modal = document.getElementById('category-modal');
-    modal.style.display = modal.style.display === 'flex' ? 'none' : 'block';
+    modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
 }
 
 export function toggleSelectMode() {

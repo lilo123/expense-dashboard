@@ -192,8 +192,7 @@ h2 { font-size: 20px; margin-bottom: 15px; }
         max-height: 85vh;
         overflow-y: auto;
         border-radius: 20px 20px 0 0 !important;
-        position: absolute;
-        bottom: 0; left: 0;
+        
         margin: 0;
         box-sizing: border-box;
         animation: modalSlideUpMobile 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
@@ -203,8 +202,7 @@ h2 { font-size: 20px; margin-bottom: 15px; }
         width: 100%;
         max-width: 100%;
         border-radius: 20px 20px 0 0;
-        position: absolute;
-        bottom: 0; left: 0;
+        
         margin: 0;
     }
     .fab-container {
