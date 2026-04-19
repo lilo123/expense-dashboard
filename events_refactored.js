@@ -1,4 +1,5 @@
-import { signOut, toggleCategoryModal, addCategory, addExpense, toggleSelectMode, closeEditModal, saveEdit, deleteFromEdit, deleteSelected, switchTab, applyDateFilter, clearDateFilter, renderYearlyChart, toggleAddModal, toggleChatModal, sendChatMessage, handleChatKeyPress, openBulkEditModal, closeBulkEditModal, saveBulkEdit, toggleSiriModal, generateSiriToken, copySiriToken } from "./app.js";
+import { signOut, addCategory, addExpense, saveEdit, deleteFromEdit, deleteSelected, switchTab, applyDateFilter, clearDateFilter, renderYearlyChart, sendChatMessage, handleChatKeyPress, saveBulkEdit, generateSiriToken, copySiriToken } from "./app.js";
+import { toggleCategoryModal, toggleSelectMode, closeEditModal, toggleAddModal, toggleChatModal, openBulkEditModal, closeBulkEditModal, toggleSiriModal } from "./ui.js";
 
 
 // --- EVENT LISTENERS (Best Practice Refactor) ---

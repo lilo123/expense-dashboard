@@ -1,14 +1,8 @@
-// Supabase Configuration
-const supabaseUrl = 'https://zjanajeevdvhbeuyflmg.supabase.co';
-const supabaseKey = 'sb_publishable_alSzFV8OWSBkCnF8z5-0_Q_2MefRVwD';
-const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+import { authService, categoryService, expenseService, tokenService } from "./services.js";
+import { showAuth, toggleAuth, toggleCategoryModal, toggleSelectMode, closeEditModal, toggleAddModal, toggleChatModal, openBulkEditModal, closeBulkEditModal, toggleSiriModal, escapeHtml } from "./ui.js";
+import { store } from "./state.js";
 
-let currentUser = null;
-let expenses = [];
-let categories = [];
-let chartInstance = null;
-let isSelectMode = false;
-let selectedIds = new Set();
+
 
 document.addEventListener("DOMContentLoaded", () => {
     setDefaultDateRange();
@@ -16,31 +10,26 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 async function checkUser() {
-    const { data: { session } } = await supabaseClient.auth.getSession();
+    const { data: { session } } = await authService.getSession();
     if (session) {
-        currentUser = session.user;
+        store.currentUser = session.user;
         showApp();
     } else {
         showAuth();
     }
 
-    supabaseClient.auth.onAuthStateChange((event, session) => {
+    authService.onAuthStateChange((event, session) => {
         if (session) {
-            currentUser = session.user;
+            store.currentUser = session.user;
             showApp();
         } else {
-            currentUser = null;
+            store.currentUser = null;
             showAuth();
         }
     });
 }
 
-function showAuth() {
-    document.getElementById('auth-overlay').style.display = 'flex';
-    document.getElementById('main-app').style.display = 'none';
-    document.getElementById('logout-btn').style.display = 'none';
-        if (document.getElementById('siri-btn')) document.getElementById('siri-btn').style.display = 'none';
-}
+
 
 function showApp() {
     document.getElementById('auth-overlay').style.display = 'none';
@@ -51,15 +40,7 @@ function showApp() {
     fetchExpenses();
 }
 
-function toggleAuth(view) {
-    if (view === 'signup') {
-        document.getElementById('signin-card').style.display = 'none';
-        document.getElementById('signup-card').style.display = 'block';
-    } else {
-        document.getElementById('signin-card').style.display = 'block';
-        document.getElementById('signup-card').style.display = 'none';
-    }
-}
+
 
 
 async function signIn(event) {
@@ -79,7 +60,7 @@ async function signIn(event) {
     }
     msg.innerText = "";
     
-    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    const { data, error } = await authService.signIn(email, password);
     
     if (error) {
         msg.innerText = error.message;
@@ -89,7 +70,7 @@ async function signIn(event) {
         }
     } else {
         msg.innerText = "Signed in successfully!";
-        currentUser = data.session.user;
+        store.currentUser = data.session.user;
         showApp();
         if (btn) {
             btn.disabled = false;
@@ -121,7 +102,7 @@ async function signUp(event) {
     }
     msg.innerText = "";
     
-    const { data, error } = await supabaseClient.auth.signUp({ email, password });
+    const { data, error } = await authService.signUp(email, password);
     
     if (error) {
         msg.innerText = error.message;
@@ -130,16 +111,16 @@ async function signUp(event) {
             btn.innerText = "Create Account";
         }
     } else {
-        msg.innerText = "Account created! Adding default categories...";
+        msg.innerText = "Account created! Adding default store.categories...";
         const userId = data.user ? data.user.id : (data.session ? data.session.user.id : null);
         if (userId) {
             const defaults = ['Housing', 'Utilities', 'Insurance', 'Groceries', 'Dining Out', 'Transportation', 'Household', 'Health & Care', 'Subscriptions', 'Shopping', 'Entertainment', 'Travel', 'Gifts', 'Education', 'Misc'];
             const inserts = defaults.map(name => ({ name: name, user_id: userId }));
-            await supabaseClient.from('categories').insert(inserts);
+            await categoryService.createDefaults(userId, defaults);
         }
         msg.innerText = "Check your email to confirm, or you may be logged in!";
         if (data.session) {
-            currentUser = data.session.user;
+            store.currentUser = data.session.user;
             showApp();
         }
         if (btn) {
@@ -152,23 +133,16 @@ async function signUp(event) {
 }
 
 async function signOut() {
-    await supabaseClient.auth.signOut();
+    await authService.signOut();
 }
 
 // --- Categories ---
 
-function toggleCategoryModal() {
-    const modal = document.getElementById('category-modal');
-    modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
-}
+
 
 async function fetchCategories() {
-    if (!currentUser) return;
-    const { data, error } = await supabaseClient
-        .from('categories')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .order('name', { ascending: true });
+    if (!store.currentUser) return;
+    const { data, error } = await categoryService.fetchAll(store.currentUser.id);
         
     if (error) {
         console.error("Error fetching categories:", error);
@@ -176,12 +150,12 @@ async function fetchCategories() {
     }
     
     const seen = new Set();
-    categories = [];
+    store.categories = [];
     (data || []).forEach(cat => {
         const lowerName = cat.name.trim().toLowerCase();
         if (!seen.has(lowerName)) {
             seen.add(lowerName);
-            categories.push(cat);
+            store.categories.push(cat);
         }
     });
     renderCategories();
@@ -192,7 +166,7 @@ function renderCategories() {
     const list = document.getElementById('category-list');
     if (!list) return;
     list.innerHTML = '';
-    categories.forEach(cat => {
+    store.categories.forEach(cat => {
         const li = document.createElement('li');
         li.style.display = 'flex';
         li.style.justifyContent = 'space-between';
@@ -263,7 +237,7 @@ function updateCategorySelects() {
         bulkSelect.innerHTML = '<option value="">-- Keep Existing Category --</option>';
     }
     
-    categories.forEach(cat => {
+    store.categories.forEach(cat => {
         const opt1 = document.createElement('option');
         opt1.value = cat.name;
         opt1.innerText = cat.name;
@@ -301,15 +275,13 @@ async function addCategory() {
     if (!name) return;
     
     const lowerName = name.toLowerCase();
-    const exists = categories.some(cat => cat.name.trim().toLowerCase() === lowerName);
+    const exists = store.categories.some(cat => cat.name.trim().toLowerCase() === lowerName);
     if (exists) {
         showCategoryError('Category already exists.');
         return;
     }
     
-    const { data, error } = await supabaseClient
-        .from('categories')
-        .insert([{ name: name, user_id: currentUser.id }]);
+    const { data, error } = await categoryService.add(store.currentUser.id, name);
         
     if (error) {
         showCategoryError("Error adding category: " + error.message);
@@ -326,7 +298,7 @@ async function editCategory(id, oldName) {
     if (!trimmedName || trimmedName === oldName) return;
 
     const lowerName = trimmedName.toLowerCase();
-    const exists = categories.some(cat => cat.name.trim().toLowerCase() === lowerName && cat.id !== id);
+    const exists = store.categories.some(cat => cat.name.trim().toLowerCase() === lowerName && cat.id !== id);
     if (exists) {
         showCategoryError('Category already exists.');
         return;
@@ -334,21 +306,14 @@ async function editCategory(id, oldName) {
 
     showCategoryError('');
     
-    const { error: catError } = await supabaseClient
-        .from('categories')
-        .update({ name: trimmedName })
-        .eq('id', id);
+    const { error: catError } = await categoryService.update(id, trimmedName);
 
     if (catError) {
         showCategoryError("Error updating category: " + catError.message);
         return;
     }
 
-    const { error: expError } = await supabaseClient
-        .from('expenses')
-        .update({ category: trimmedName })
-        .eq('user_id', currentUser.id)
-        .eq('category', oldName);
+    const { error: expError } = await expenseService.updateCategoryName(store.currentUser.id, oldName, trimmedName);
 
     if (expError) {
         console.error("Error cascading expense update:", expError);
@@ -363,10 +328,7 @@ async function editCategory(id, oldName) {
 async function deleteCategory(id) {
     if (!confirm("Are you sure you want to delete this category?")) return;
     showCategoryError('');
-    const { error } = await supabaseClient
-        .from('categories')
-        .delete()
-        .eq('id', id);
+    const { error } = await categoryService.delete(id);
         
     if (error) {
         showCategoryError("Error deleting category: " + error.message);
@@ -378,17 +340,13 @@ async function deleteCategory(id) {
 // --- Expenses ---
 
 async function fetchExpenses() {
-    if (!currentUser) return;
+    if (!store.currentUser) return;
     try {
-        const { data, error } = await supabaseClient
-            .from('expenses')
-            .select('*')
-            .eq('user_id', currentUser.id)
-            .order('date', { ascending: false });
+        const { data, error } = await expenseService.fetchAll(store.currentUser.id);
 
         if (error) throw error;
         
-        expenses = data || [];
+        store.expenses = data || [];
         renderDashboard();
         renderRecent();
         if (typeof renderYearlyChart === 'function') renderYearlyChart();
@@ -413,15 +371,7 @@ async function addExpense() {
     btn.innerText = "Adding...";
 
     try {
-        const { error } = await supabaseClient
-            .from('expenses')
-            .insert([{
-                user_id: currentUser.id,
-                date: date,
-                item: item,
-                amount: amount,
-                category: category
-            }]);
+        const { error } = await expenseService.add(store.currentUser.id, date, item, amount, category);
 
         if (error) throw error;
 
@@ -437,23 +387,14 @@ async function addExpense() {
     }
 }
 
-function escapeHtml(unsafe) {
-    if (!unsafe) return "";
-    return unsafe
-         .toString()
-         .replace(/&/g, "&amp;")
-         .replace(/</g, "&lt;")
-         .replace(/>/g, "&gt;")
-         .replace(/"/g, "&quot;")
-         .replace(/'/g, "&#039;");
-}
+
 
 function renderRecent() {
     const list = document.getElementById('recent-list');
     if (!list) return;
     list.innerHTML = "";
 
-    const sorted = [...expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sorted = [...store.expenses].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     sorted.forEach(exp => {
         const d = new Date(exp.date);
@@ -476,16 +417,16 @@ function renderRecent() {
             '</div>';
     });
     
-    if (isSelectMode) toggleSelectMode();
+    if (store.isSelectMode) toggleSelectMode();
 }
 
 function handleExpenseClick(el) {
-    if (isSelectMode) {
+    if (store.isSelectMode) {
         const checkbox = el.querySelector('.expense-checkbox');
         checkbox.checked = !checkbox.checked;
         const id = el.getAttribute('data-id');
-        if (checkbox.checked) selectedIds.add(id);
-        else selectedIds.delete(id);
+        if (checkbox.checked) store.selectedIds.add(id);
+        else store.selectedIds.delete(id);
     } else {
         openEditModal(
             el.getAttribute('data-id'),
@@ -499,23 +440,11 @@ function handleExpenseClick(el) {
 
 function handleCheckboxClick(event, id) {
     event.stopPropagation();
-    if (event.target.checked) selectedIds.add(id);
-    else selectedIds.delete(id);
+    if (event.target.checked) store.selectedIds.add(id);
+    else store.selectedIds.delete(id);
 }
 
-function toggleSelectMode() {
-    isSelectMode = !isSelectMode;
-    const container = document.getElementById('tab-recent');
-    if(isSelectMode) {
-        container.classList.add('select-mode');
-        document.getElementById('bulk-actions').style.display = 'flex';
-        selectedIds.clear();
-        document.querySelectorAll('.expense-checkbox').forEach(cb => cb.checked = false);
-    } else {
-        container.classList.remove('select-mode');
-        document.getElementById('bulk-actions').style.display = 'none';
-    }
-}
+
 
 function openEditModal(id, item, amount, category, date) {
     document.getElementById('edit-row').value = id;
@@ -534,10 +463,7 @@ function openEditModal(id, item, amount, category, date) {
     document.body.classList.add('modal-open');
 }
 
-function closeEditModal() {
-    document.getElementById('edit-modal').style.display = "none";
-    document.body.classList.remove('modal-open');
-}
+
 
 async function saveEdit() {
     const id = document.getElementById('edit-row').value;
@@ -556,10 +482,7 @@ async function saveEdit() {
     btn.innerText = "Saving...";
 
     try {
-        const { error } = await supabaseClient
-            .from('expenses')
-            .update({ item, amount, category, date })
-            .eq('id', id);
+        const { error } = await expenseService.update(id, item, amount, category, date);
             
         if (error) throw error;
         
@@ -583,10 +506,7 @@ async function deleteFromEdit() {
     btn.innerText = "Deleting...";
 
     try {
-        const { error } = await supabaseClient
-            .from('expenses')
-            .delete()
-            .eq('id', id);
+        const { error } = await expenseService.delete(id);
             
         if (error) throw error;
         
@@ -601,19 +521,16 @@ async function deleteFromEdit() {
 }
 
 async function deleteSelected() {
-    if (selectedIds.size === 0) return;
-    if (!confirm("Delete selected expenses? This cannot be undone.")) return;
+    if (store.selectedIds.size === 0) return;
+    if (!confirm("Delete selected store.expenses? This cannot be undone.")) return;
 
     const btn = document.getElementById('bulk-delete-btn');
     btn.disabled = true;
     btn.innerText = "Deleting...";
 
     try {
-        const idsToDelete = Array.from(selectedIds);
-        const { error } = await supabaseClient
-            .from('expenses')
-            .delete()
-            .in('id', idsToDelete);
+        const idsToDelete = Array.from(store.selectedIds);
+        const { error } = await expenseService.deleteBulk(idsToDelete);
             
         if (error) throw error;
         
@@ -636,7 +553,7 @@ function switchTab(tabId) {
     if(tabId === 'yearly' && typeof renderYearlyChart === 'function') setTimeout(renderYearlyChart, 50);
 }
 
-function toLocalDateString(dateObj) {
+export function toLocalDateString(dateObj) {
     const tzOffset = dateObj.getTimezoneOffset() * 60000;
     return new Date(dateObj.getTime() - tzOffset).toISOString().split('T')[0];
 }
@@ -652,7 +569,7 @@ function getFilteredExpenses() {
     const startStr = document.getElementById('start-date').value || "0000-00-00";
     const endStr = document.getElementById('end-date').value || "9999-12-31";
 
-    return expenses.filter(exp => {
+    return store.expenses.filter(exp => {
         const eDateStr = String(exp.date || "").substring(0, 10);
         return eDateStr >= startStr && eDateStr <= endStr;
     });
@@ -684,14 +601,14 @@ function renderDashboard() {
     document.querySelector('.chart-container').style.height = Math.max(300, labels.length * 40 + 50) + 'px';
     const ctx = document.getElementById("expenseChart").getContext("2d");
     Chart.register(window.ChartDataLabels);
-    if (chartInstance) chartInstance.destroy();
+    if (store.chartInstance) store.chartInstance.destroy();
 
     if (labels.length === 0) {
-        document.getElementById('category-details-container').innerHTML = "<p>No expenses in this range.</p>";
+        document.getElementById('category-details-container').innerHTML = "<p>No store.expenses in this range.</p>";
         return;
     }
 
-    chartInstance = new Chart(ctx, {
+    store.chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -745,7 +662,7 @@ function toggleCategoryExpand(label) {
 
 function showMonthDetails(monthStr) {
     const container = document.getElementById('yearly-details-container');
-    const monthExpenses = expenses.filter(exp => {
+    const monthExpenses = store.expenses.filter(exp => {
         const dateObj = new Date(exp.date);
         dateObj.setMinutes(dateObj.getMinutes() + dateObj.getTimezoneOffset());
         if (isNaN(dateObj.getTime())) return false;
@@ -765,7 +682,7 @@ function showMonthDetails(monthStr) {
 }
 function renderYearlyChart() {
     const years = new Set();
-    expenses.forEach(exp => {
+    store.expenses.forEach(exp => {
         const d = new Date(exp.date);
         d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
         if (!isNaN(d.getTime())) years.add(d.getFullYear().toString());
@@ -792,7 +709,7 @@ function renderYearlyChart() {
     const byMonth = {};
     for(let i=0; i<12; i++) byMonth[i] = null;
 
-    expenses.forEach(exp => {
+    store.expenses.forEach(exp => {
         const d = new Date(exp.date);
         d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
         if (isNaN(d.getTime()) || d.getFullYear().toString() !== selectedYear) return;
@@ -861,19 +778,7 @@ function renderYearlyChart() {
         }
     });
 }
-function toggleAddModal() {
-    const modal = document.getElementById('add-modal');
-    if (modal.style.display === 'block') {
-        modal.style.display = 'none';
-        document.body.classList.remove('modal-open');
-    } else {
-        modal.style.display = 'block';
-        document.body.classList.add('modal-open');
-        if (!document.getElementById('add-date').value) {
-            document.getElementById('add-date').value = toLocalDateString(new Date());
-        }
-    }
-}
+
 
 window.addEventListener('click', function(event) {
     if (event.target === document.getElementById('add-modal')) toggleAddModal();
@@ -882,13 +787,7 @@ window.addEventListener('click', function(event) {
 });
 
 
-function toggleChatModal() {
-    const modal = document.getElementById('chat-modal');
-    modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-    if (modal.style.display === 'flex') {
-        document.getElementById('chat-input').focus();
-    }
-}
+
 
 async function sendChatMessage() {
     const input = document.getElementById('chat-input');
@@ -914,7 +813,7 @@ async function sendChatMessage() {
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message, expenses })
+            body: JSON.stringify({ message, expenses: store.expenses })
         });
         
         const data = await response.json();
@@ -936,14 +835,14 @@ async function sendChatMessage() {
                     item: item.description || item.item,
                     amount: parseFloat(item.amount),
                     category: item.category,
-                    user_id: currentUser.id
+                    user_id: store.currentUser.id
                 };
             });
             
             aiDiv.innerHTML = messageHtml;
             history.appendChild(aiDiv);
             
-            const { error } = await supabaseClient.from('expenses').insert(insertPayload);
+            const { error } = await expenseService.add(insertPayload.user_id, insertPayload.date, insertPayload.item, insertPayload.amount, insertPayload.category);
             if (error) throw error;
             
             await fetchExpenses();
@@ -995,21 +894,12 @@ function showCategoryDetails(categoryName, items) {
 }
 
 
-function openBulkEditModal() {
-    if (selectedIds.size === 0) return;
-    document.getElementById('bulk-edit-date').value = '';
-    document.getElementById('bulk-edit-category').value = '';
-    document.getElementById('bulk-edit-modal').style.display = 'block';
-    document.body.classList.add('modal-open');
-}
 
-function closeBulkEditModal() {
-    document.getElementById('bulk-edit-modal').style.display = 'none';
-    document.body.classList.remove('modal-open');
-}
+
+
 
 async function saveBulkEdit() {
-    if (selectedIds.size === 0) return;
+    if (store.selectedIds.size === 0) return;
     
     const newDate = document.getElementById('bulk-edit-date').value;
     const newCategory = document.getElementById('bulk-edit-category').value;
@@ -1028,12 +918,9 @@ async function saveBulkEdit() {
         if (newDate) updates.date = newDate;
         if (newCategory) updates.category = newCategory;
         
-        const idsToEdit = Array.from(selectedIds);
+        const idsToEdit = Array.from(store.selectedIds);
         
-        const { error } = await supabaseClient
-            .from('expenses')
-            .update(updates)
-            .in('id', idsToEdit);
+        const { error } = await expenseService.updateBulk(idsToEdit, updates);
             
         if (error) throw error;
         
@@ -1050,27 +937,14 @@ async function saveBulkEdit() {
 
 
 // --- SIRI SETUP LOGIC ---
-function toggleSiriModal() {
-    const modal = document.getElementById('siri-modal');
-    if (modal.style.display === 'flex') {
-        modal.style.display = 'none';
-    } else {
-        modal.style.display = 'flex';
-        fetchExistingSiriToken();
-    }
-}
 
-async function fetchExistingSiriToken() {
-    const user = currentUser;
+
+export async function fetchExistingSiriToken() {
+    const user = store.currentUser;
     if (!user) return;
     
     try {
-        const { data, error } = await supabaseClient
-            .from('api_tokens')
-            .select('token')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
+        const { data, error } = await tokenService.fetchLatest(user.id);
             
         if (error) throw error;
         
@@ -1087,7 +961,7 @@ async function fetchExistingSiriToken() {
 }
 
 async function generateSiriToken() {
-    const user = currentUser;
+    const user = store.currentUser;
     if (!user) {
         alert('You must be logged in.');
         return;
@@ -1103,11 +977,7 @@ async function generateSiriToken() {
         const randomString = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
         const token = 'exp_sk_' + randomString;
         
-        const { data, error } = await supabaseClient
-            .from('api_tokens')
-            .insert([
-                { user_id: user.id, token: token }
-            ]);
+        const { data, error } = await tokenService.create(user.id, token);
             
         if (error) throw error;
         
@@ -1204,7 +1074,7 @@ document.addEventListener('click', (e) => {
 });
 
 // Expose functions to global scope for event listeners
-export { signOut, toggleCategoryModal, addCategory, addExpense, toggleSelectMode, closeEditModal, saveEdit, deleteFromEdit, deleteSelected, switchTab, applyDateFilter, clearDateFilter, renderYearlyChart, toggleAddModal, toggleChatModal, sendChatMessage, handleChatKeyPress, openBulkEditModal, closeBulkEditModal, saveBulkEdit, toggleSiriModal, generateSiriToken, copySiriToken };
+export { signOut, addCategory, addExpense, saveEdit, deleteFromEdit, deleteSelected, switchTab, applyDateFilter, clearDateFilter, renderYearlyChart, sendChatMessage, handleChatKeyPress, saveBulkEdit, generateSiriToken, copySiriToken };
 
 window.togglePasswordVisibility = function(inputId, button) {
     const input = document.getElementById(inputId);
