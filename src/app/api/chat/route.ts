@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
+import { saveExpense } from '@/lib/expenses';
 
 export async function POST(request: Request) {
   try {
@@ -65,8 +66,11 @@ export async function POST(request: Request) {
     // Parse the JSON string from Groq to ensure it is valid
     const extractedData = JSON.parse(content);
 
-    // 4. Return extracted JSON
-    return NextResponse.json(extractedData);
+    // 4. Save to Database using the active session's user_id
+    const savedRecord = await saveExpense(Number(extractedData.amount), extractedData.category, user.id);
+
+    // 5. Return extracted JSON & saved database record
+    return NextResponse.json(savedRecord);
 
   } catch (error) {
     console.error('Error in chat API:', error);
