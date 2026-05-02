@@ -1,86 +1,75 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
 
-interface ExtractedExpense {
-  amount: number;
-  category: string;
-  description: string;
-  type: 'expense' | 'income';
-}
-
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // 1. Verify Supabase Session
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized access. Please log in.' }, { status: 401 })
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const body = await req.json()
-    const { message } = body
+    // 2. Parse request body
+    const body = await request.json();
+    const { message } = body;
 
-    if (!message || typeof message !== 'string') {
-      return NextResponse.json({ error: 'A valid message string is required.' }, { status: 400 })
+    if (!message) {
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    const apiKey = process.env.GROQ_API_KEY
-    if (!apiKey) {
-      console.error('GROQ_API_KEY is missing.')
-      return NextResponse.json({ error: 'Internal Server Error: AI configuration missing.' }, { status: 500 })
+    // 3. Call Groq API
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      console.error('GROQ_API_KEY is missing');
+      return NextResponse.json({ error: 'Internal Server Configuration Error' }, { status: 500 });
     }
 
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Bearer ${groqApiKey}`,
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama3-8b-8192',
+        model: 'llama-3.1-8b-instant',
         messages: [
           {
             role: 'system',
-            content: `You are a financial assistant. Extract the financial transaction details from the user's message.\n            Respond strictly with a JSON object containing:\n            - amount: number (positive value)\n            - category: string\n            - description: string\n            - type: "expense" or "income"\n            Do not include any formatting, markdown, or text. Just the JSON object.`
+            content: 'You are a financial intent extractor. Extract the transaction amount and category from the user\'s input. Return ONLY a valid JSON object with the keys "amount" (number) and "category" (string). Do not include markdown blocks like ```json, explanation, or any other text.'
           },
           {
             role: 'user',
             content: message
           }
         ],
-        temperature: 0.1,
-        response_format: { type: 'json_object' }
+        temperature: 0,
+        response_format: { type: "json_object" }
       })
-    })
+    });
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error('Groq API Error:', errorData)
-      return NextResponse.json({ error: 'Failed to process message with AI provider.' }, { status: 502 })
+    if (!groqResponse.ok) {
+      const errorText = await groqResponse.text();
+      console.error('Groq API error:', errorText);
+      return NextResponse.json({ error: 'Failed to process AI request' }, { status: 502 });
     }
 
-    const data = await response.json()
-    const aiMessage = data.choices[0]?.message?.content
+    const data = await groqResponse.json();
+    const content = data.choices?.[0]?.message?.content;
 
-    if (!aiMessage) {
-      return NextResponse.json({ error: 'Received an empty response from AI.' }, { status: 500 })
+    if (!content) {
+      return NextResponse.json({ error: 'Empty response from AI' }, { status: 500 });
     }
 
-    let parsedData: ExtractedExpense
-    try {
-      parsedData = JSON.parse(aiMessage)
-    } catch (e) {
-      console.error('Failed to parse AI response:', aiMessage)
-      return NextResponse.json({ error: 'AI produced an invalid data format.' }, { status: 500 })
-    }
+    // Parse the JSON string from Groq to ensure it is valid
+    const extractedData = JSON.parse(content);
 
-    return NextResponse.json({ success: true, data: parsedData })
+    // 4. Return extracted JSON
+    return NextResponse.json(extractedData);
 
   } catch (error) {
-    console.error('BFF Chat Error:', error)
-    return NextResponse.json(
-      { error: 'An unexpected error occurred while processing your request.' },
-      { status: 500 }
-    )
+    console.error('Error in chat API:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
