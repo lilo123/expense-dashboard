@@ -23,16 +23,19 @@ export async function getHistoricalExpenses(): Promise<Expense[]> {
   return data as Expense[];
 }
 
-export async function saveExpense(amount: number, category: string, user_id: string): Promise<Expense> {
+export async function saveExpense(amount: number, category: string, item: string, user_id: string): Promise<Expense> {
   const supabase = await createClient();
+  const date = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
 
   const { data, error } = await supabase
     .from('expenses')
     .insert([
       {
         user_id,
+        item,
         amount,
         category,
+        date,
       }
     ])
     .select()

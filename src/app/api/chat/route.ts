@@ -38,7 +38,7 @@ export async function POST(request: Request) {
         messages: [
           {
             role: 'system',
-            content: 'You are a financial intent extractor. Extract the transaction amount and category from the user\'s input. Return ONLY a valid JSON object with the keys "amount" (number) and "category" (string). Do not include markdown blocks like ```json, explanation, or any other text.'
+            content: `You are a financial intent extractor. Extract the transaction amount, category, and a short description (item) from the user's input. Return ONLY a valid JSON object with the keys "amount" (number), "category" (string), and "item" (string, a brief description of what was bought). Do not include markdown blocks like \`\`\`json, explanation, or any other text.`
           },
           {
             role: 'user',
@@ -67,7 +67,12 @@ export async function POST(request: Request) {
     const extractedData = JSON.parse(content);
 
     // 4. Save to Database using the active session's user_id
-    const savedRecord = await saveExpense(Number(extractedData.amount), extractedData.category, user.id);
+    const savedRecord = await saveExpense(
+      Number(extractedData.amount), 
+      extractedData.category, 
+      extractedData.item || 'Expense', // Fallback just in case
+      user.id
+    );
 
     // 5. Return extracted JSON & saved database record
     return NextResponse.json(savedRecord);
