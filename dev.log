@@ -2,14 +2,18 @@
 > tmp_next@0.1.0 dev
 > next dev
 
+⚠ Port 3000 is in use by an unknown process, using available port 3001 instead.
 ▲ Next.js 16.2.4 (Turbopack)
-- Local:         http://localhost:3000
-- Network:       http://172.24.1.71:3000
+- Local:         http://localhost:3001
+- Network:       http://172.24.1.71:3001
 - Environments: .env.local
-✓ Ready in 386ms
-⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 677ms
+⨯ Another next dev server is already running.
 
- GET / 200 in 792ms (next.js: 165ms, proxy.ts: 397ms, application-code: 230ms)
-SyntaxError: Unexpected end of JSON input
-    at JSON.parse (<anonymous>)
+- Local:        http://localhost:3000
+- PID:          651034
+- Dir:          /usr/local/google/home/duynguyenn/expense-dashboard
+- Log:          .next/dev/logs/next-development.log
+
+Run kill 651034 to stop it.
 [?25h

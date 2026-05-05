@@ -1,0 +1,576 @@
+import { NextResponse } from 'next/server';
+import { createClient } from '@/utils/supabase/server';
+import { saveExpense } from '@/lib/expenses';
+
+export async function POST(request: Request) {
+  try {
+    // 1. Verify Supabase Session
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 2. Parse request body
+    const body = await request.json();
+    const { message } = body;
+
+    if (!message) {
+      return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+    }
+
+    // 3. Fetch user categories FIRST to provide as enum
+    const { data: userCategories } = await supabase
+      .from('categories')
+      .select('id, name')
+      .eq('user_id', user.id);
+
+    const categoriesList = userCategories || [];
+    const categoryNames = categoriesList.map(c => c.name);
+
+    if (categoryNames.length === 0) {
+      return NextResponse.json({ error: 'No categories found for user. Please create a category first.' }, { status: 400 });
+    }
+
+    // 4. Call Groq API with Function Calling for Strict Outputs
+    const groqApiKey = process.env.GROQ_API_KEY;
+    if (!groqApiKey) {
+      console.error('GROQ_API_KEY is missing');
+      return NextResponse.json({ error: 'Internal Server Configuration Error' }, { status: 500 });
+    }
+
+    const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${groqApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a financial intent extractor. Extract the transaction amount, category, and a short description (item) from the user's input. You MUST map the expense to one of the provided categories. If the exact category isn't clear, map it to the closest logical match or 'Misc'/'Other'.`
+          },
+          {
+            role: 'user',
+            content: message
+          }
+        ],
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'extract_expense',
+              description: 'Extract expense details from the user message',
+              parameters: {
+                type: 'object',
+                properties: {
+                  amount: { type: 'number', description: 'The numeric amount of the expense' },
+                  category: { 
+                    type: 'string', 
+                    enum: categoryNames,
+                    description: 'The category of the expense'
+                  },
+                  item: { type: 'string', description: 'A short description of the item or service' }
+                },
+                required: ['amount', 'category', 'item']
+              }
+            }
+          }
+        ],
+        tool_choice: { type: 'function', function: { name: 'extract_expense' } },
+        temperature: 0
+      })
+    });
+
+    if (!groqResponse.ok) {
+      const errorText = await groqResponse.text();
+      console.error('Groq API error:', errorText);
+      return NextResponse.json({ error: 'Failed to process AI request' }, { status: 502 });
+    }
+
+    const data = await groqResponse.json();
+    
+    // Extract from tool call
+    const toolCalls = data.choices?.[0]?.message?.tool_calls;
+    let extractedData;
+    
+    if (toolCalls && toolCalls.length > 0 && toolCalls[0].function.arguments) {
+      try {
+        extractedData = JSON.parse(toolCalls[0].function.arguments);
+      } catch (e) {
+        return NextResponse.json({ error: 'Invalid tool call response from AI' }, { status: 500 });
+      }
+    } else {
+      // Fallback if the model somehow returned a standard JSON object message
+      const content = data.choices?.[0]?.message?.content;
+      if (content) {
+        try {
+          extractedData = JSON.parse(content);
+        } catch(e) {
+          return NextResponse.json({ error: 'Empty or invalid response from AI' }, { status: 500 });
+        }
+      } else {
+        return NextResponse.json({ error: 'Empty response from AI' }, { status: 500 });
+      }
+    }
+
+    // Extract properties case-insensitively just in case the LLM messes up
+    const amount = extractedData.amount ?? extractedData.Amount;
+    const categoryNameFromLLM = String(extractedData.category ?? extractedData.Category ?? '');
+    const item = extractedData.item ?? extractedData.Item ?? 'Expense';
+
+    // Validation check before DB insert
+    if (!categoryNameFromLLM || amount === undefined || amount === null || isNaN(Number(amount))) {
+      return NextResponse.json({ error: `I couldn't determine the category or amount from that message. Please try again.` }, { status: 400 });
+    }
+
+    // 5. Fallback Logic: Validate category against DB names
+    let finalCategoryName = categoryNameFromLLM;
+    const categoryStrLower = finalCategoryName.toLowerCase();
+    
+    let matchedCategory = categoriesList.find(c => c.name.toLowerCase() === categoryStrLower);
+    let category_id;
+
+    if (matchedCategory) {
+      category_id = matchedCategory.id;
+      finalCategoryName = matchedCategory.name;
+    } else {
+      // LLM returned something outside the enum. Fallback to a generic category instead of failing or creating a new one.
+      let genericCategory = categoriesList.find(c => 
+        c.name.toLowerCase() === 'misc' || 
+        c.name.toLowerCase() === 'miscellaneous' || 
+        c.name.toLowerCase() === 'other'
+      );
+      
+      if (genericCategory) {
+        category_id = genericCategory.id;
+        finalCategoryName = genericCategory.name;
+      } else {
+        // Absolute fallback if 'Misc' or 'Other' does not exist: use the first available category
+        category_id = categoriesList[0].id;
+        finalCategoryName = categoriesList[0].name;
+      }
+    }
+
+    // 6. Save to Database using the active session's user_id and resolved category_id
+    const savedRecord = await saveExpense(
+      Number(amount), 
+      category_id, 
+      String(item),
+      user.id
+    );
+    
+    const expenseData = Array.isArray(savedRecord) ? savedRecord[0] : savedRecord;
+
+    // 7. Return extracted JSON & saved database record with dynamic reply
+    return NextResponse.json({
+      reply: `Got it! I've added $${Number(amount).toFixed(2)} for ${item} under ${finalCategoryName}.`,
+      expense: expenseData || {
+        id: Date.now().toString(),
+        amount: Number(amount),
+        category_id: category_id,
+        categories: { name: finalCategoryName },
+        item: String(item),
+        date: new Date().toISOString().split('T')[0]
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in chat API:', error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+'use client';
+import { useExpenseStore } from '@/store/useExpenseStore';
+import { useMemo, useState, useRef } from 'react';
+import { parseLocalDate } from '@/lib/utils';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartDataLabels
+);
+
+function getCurrentMonthDates() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  const firstDay = `${y}-${m}-01`;
+  const lastDayStr = `${y}-${m}-${d}`;
+  return { firstDay, lastDayStr };
+}
+
+export default function DashboardTab() {
+  const { expenses, activeCategoryFilter, setActiveCategoryFilter } = useExpenseStore();
+  
+  const { firstDay, lastDayStr } = getCurrentMonthDates();
+  
+  const [startDate, setStartDate] = useState(firstDay);
+  const [endDate, setEndDate] = useState(lastDayStr);
+  const detailsRef = useRef<HTMLDivElement>(null);
+
+  const handleClear = () => {
+    const { firstDay, lastDayStr } = getCurrentMonthDates();
+    setStartDate(firstDay);
+    setEndDate(lastDayStr);
+  };
+
+  const filteredExpenses = useMemo(() => {
+    return expenses.filter(exp => {
+      if (!exp.date) return false;
+      const d = parseLocalDate(exp.date);
+      if (startDate && d < parseLocalDate(startDate)) return false;
+      if (endDate && d > parseLocalDate(endDate)) return false;
+      return true;
+    });
+  }, [expenses, startDate, endDate]);
+
+  const total = filteredExpenses.reduce((sum, exp) => sum + (parseFloat(exp.amount as any) || 0), 0);
+
+  const { labels, data, bgColors } = useMemo(() => {
+    const byCategory: Record<string, { total: number; items: any[] }> = {};
+    filteredExpenses.forEach(exp => {
+      const catName = exp.categories?.name || "Uncategorized";
+      if (!byCategory[catName]) byCategory[catName] = { total: 0, items: [] };
+      byCategory[catName].total += (parseFloat(exp.amount as any) || 0);
+      byCategory[catName].items.push(exp);
+    });
+
+    const sorted = Object.entries(byCategory).sort((a, b) => b[1].total - a[1].total);
+    return {
+      labels: sorted.map(s => s[0]),
+      data: sorted.map(s => s[1].total),
+      bgColors: sorted.map(() => '#000000')
+    };
+  }, [filteredExpenses]);
+
+  const chartData = {
+    labels,
+    datasets: [{
+      label: 'Amount',
+      data,
+      backgroundColor: bgColors,
+      borderRadius: 4
+    }]
+  };
+
+  const onClick = (event: any, elements: any[]) => {
+    if (elements.length > 0) {
+      const idx = elements[0].index;
+      const category = labels[idx];
+      setActiveCategoryFilter(category);
+      setTimeout(() => {
+        detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  };
+
+  const options = {
+    indexAxis: 'y' as const,
+    maintainAspectRatio: false,
+    responsive: true,
+    interaction: { mode: 'y' as const, intersect: false },
+    onClick: onClick,
+    layout: {
+      padding: { right: 80 }
+    },
+    scales: {
+      x: { 
+        display: false, 
+        ticks: {
+          callback: function(value: any) {
+            return '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          }
+        }
+      },
+      y: { grid: { display: false }, border: { display: false }, ticks: { font: { weight: 'bold' as const, size: 14 }, color: '#000' } }
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: function(context: any) {
+            return '$' + Number(context.raw).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+          }
+        }
+      },
+      datalabels: {
+        anchor: 'end' as const,
+        align: 'right' as const,
+        formatter: (value: number) => '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        color: '#000',
+        font: { weight: 600, size: 13 },
+        listeners: {
+          click: function(context: any) {
+            const idx = context.dataIndex;
+            setActiveCategoryFilter(labels[idx]);
+            setTimeout(() => {
+              detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+            return true;
+          }
+        }
+      }
+    }
+  };
+
+  const detailExpenses = useMemo(() => {
+    if (!activeCategoryFilter) return [];
+    return filteredExpenses.filter(e => (e.categories?.name || "Uncategorized") === activeCategoryFilter);
+  }, [filteredExpenses, activeCategoryFilter]);
+
+  return (
+    <div id="tab-dashboard" className="tab-content active" style={{ display: "block" }}>
+      <div className="date-filter">
+          <input type="date" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} />
+          <span>to</span>
+          <input type="date" id="end-date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+          <button id="action-elem-4" onClick={handleClear}>Clear</button>
+      </div>
+
+      <div className="summary-card total-card">
+          <h3>Total Expense</h3>
+          <p id="total-amount">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+      </div>
+
+      <h2>By Category</h2>
+      <div className="chart-container" style={{ height: Math.max(300, labels.length * 40 + 50) + 'px' }}>
+          {labels.length > 0 ? (
+            <Bar data={chartData} options={options as any} plugins={[ChartDataLabels]} />
+          ) : (
+            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              No expenses in this range.
+            </div>
+          )}
+      </div>
+      <div id="category-details-container" ref={detailsRef} style={{ marginTop: '20px' }}>
+        {activeCategoryFilter && (
+          <div className="category-details">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <h3>{activeCategoryFilter} Details</h3>
+              <button onClick={() => setActiveCategoryFilter(null)} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text)' }}>Close</button>
+            </div>
+            <div className="recent-list">
+              {detailExpenses.map(exp => (
+                <div key={exp.id} className="expense-item">
+                  <div className="expense-info">
+                    <h4>{exp.item}</h4>
+                    <p>{exp.date}</p>
+                  </div>
+                  <div className="expense-amount">${(parseFloat(exp.amount as any) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+'use client';
+import { useExpenseStore } from '@/store/useExpenseStore';
+import { useMemo, useState, useEffect, useRef } from 'react';
+import { parseLocalDate } from '@/lib/utils';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+import { Bar } from 'react-chartjs-2';
+import ChartDataLabels from 'chartjs-plugin-datalabels';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ChartDataLabels
+);
+
+export default function YearlyTab() {
+  const { expenses, activeMonthFilter, setActiveMonthFilter } = useExpenseStore();
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const detailsRef = useRef<HTMLDivElement>(null);
+
+  const years = useMemo(() => {
+    const yrSet = new Set<string>();
+    expenses.forEach(exp => {
+      if (!exp.date) return;
+      const d = parseLocalDate(exp.date);
+      if (!isNaN(d.getTime())) yrSet.add(d.getFullYear().toString());
+    });
+    const sorted = Array.from(yrSet).sort((a,b) => parseInt(b) - parseInt(a));
+    return sorted;
+  }, [expenses]);
+
+  useEffect(() => {
+    if (years.length > 0 && !years.includes(selectedYear)) {
+      setSelectedYear(years[0]);
+    }
+  }, [years, selectedYear]);
+
+  const { data } = useMemo(() => {
+    const byMonth: Record<number, number | null> = {};
+    for(let i=0; i<12; i++) byMonth[i] = null;
+
+    expenses.forEach(exp => {
+      if (!exp.date) return;
+      const d = parseLocalDate(exp.date);
+      if (isNaN(d.getTime()) || d.getFullYear().toString() !== selectedYear) return;
+      const m = d.getMonth();
+      if (byMonth[m] === null) byMonth[m] = 0;
+      byMonth[m] += (parseFloat(exp.amount as any) || 0);
+    });
+
+    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const dataVals = labels.map((_, i) => byMonth[i]);
+
+    return { data: dataVals };
+  }, [expenses, selectedYear]);
+
+  const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const chartData = {
+    labels: labels,
+    datasets: [{
+        label: 'Expenses',
+        data: data,
+        backgroundColor: '#b0b0b0',
+        hoverBackgroundColor: '#808080',
+        borderRadius: 4,
+        borderSkipped: false,
+        maxBarThickness: 40
+    }]
+  };
+
+  const onClick = (event: any, elements: any[]) => {
+    if (elements.length > 0) {
+      const idx = elements[0].index;
+      setActiveMonthFilter(idx.toString());
+      setTimeout(() => {
+        detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  };
+
+  const options = {
+    maintainAspectRatio: false,
+    responsive: true,
+    layout: { padding: { top: 60 } },
+    interaction: { mode: 'index' as const, intersect: false },
+    onClick: onClick,
+    scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: '#000000', font: { weight: 'bold' as const } } },
+        y: { 
+          grid: { display: false }, 
+          border: { display: false }, 
+          ticks: { 
+            display: false,
+            callback: function(value: any) {
+              return '$' + Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value);
+            }
+          }, 
+          min: 0 
+        }
+    },
+    plugins: {
+        legend: { display: false },
+        datalabels: {
+            display: function(context: any) { return context.dataset.data[context.dataIndex] !== null; },
+            anchor: 'end' as const,
+            align: 'top' as const,
+            offset: 4,
+            formatter: (value: number) => '$' + Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value),
+            color: '#000',
+            font: { weight: 600, size: 12 },
+            listeners: {
+              click: function(context: any) {
+                setActiveMonthFilter(context.dataIndex.toString());
+                setTimeout(() => {
+                  detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }, 100);
+                return true;
+              }
+            }
+        }
+    }
+  };
+
+  const detailExpenses = useMemo(() => {
+    if (activeMonthFilter === null) return [];
+    const monthIdx = parseInt(activeMonthFilter, 10);
+    return expenses.filter(exp => {
+      if (!exp.date) return false;
+      const d = parseLocalDate(exp.date);
+      return d.getFullYear().toString() === selectedYear && d.getMonth() === monthIdx;
+    });
+  }, [expenses, activeMonthFilter, selectedYear]);
+
+  return (
+    <div id="tab-yearly" className="tab-content active" style={{ display: "block" }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+            <h2 style={{ margin: 0 }}>Monthly Expenses</h2>
+            <select 
+              id="yearSelect" 
+              value={selectedYear} 
+              onChange={e => setSelectedYear(e.target.value)}
+              style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '16px', border: '1px solid var(--border)', backgroundColor: 'var(--bg)', cursor: 'pointer' }}
+            >
+              {years.map(y => <option key={y} value={y}>{y}</option>)}
+            </select>
+        </div>
+        <div className="chart-container" style={{ height: '300px', maxHeight: '40vh' }}>
+            <Bar data={chartData} options={options as any} plugins={[ChartDataLabels]} />
+        </div>
+        <div id="yearly-details-container" ref={detailsRef} style={{ marginTop: '20px' }}>
+          {activeMonthFilter !== null && (
+            <div className="month-details">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <h3>{labels[parseInt(activeMonthFilter, 10)]} {selectedYear} Details</h3>
+                <button onClick={() => setActiveMonthFilter(null)} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text)' }}>Close</button>
+              </div>
+              {detailExpenses.length > 0 ? (
+                <div className="recent-list">
+                  {detailExpenses.map(exp => (
+                    <div key={exp.id} className="expense-item">
+                      <div className="expense-info">
+                        <h4>{exp.item}</h4>
+                        <p>{exp.categories?.name || "Uncategorized"} &bull; {exp.date}</p>
+                      </div>
+                      <div className="expense-amount">${(parseFloat(exp.amount as any) || 0).toFixed(2)}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p>No expenses for this month.</p>
+              )}
+            </div>
+          )}
+        </div>
+    </div>
+  );
+}

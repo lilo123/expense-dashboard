@@ -1,7 +1,7 @@
 import { createClient } from '@/utils/supabase/server';
 import { Expense } from '@/types/database';
 
-export async function getHistoricalExpenses(): Promise<Expense[]> {
+export async function getHistoricalExpenses(startDateUTC?: string, endDateUTC?: string): Promise<Expense[]> {
   const supabase = await createClient();
   
   const { data: { user } } = await supabase.auth.getUser();
@@ -9,11 +9,21 @@ export async function getHistoricalExpenses(): Promise<Expense[]> {
     throw new Error('Unauthorized');
   }
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('expenses')
-    .select('*')
+    .select('*, categories(name)')
     .eq('user_id', user.id)
+    .order('date', { ascending: false })
     .order('created_at', { ascending: false });
+
+  if (startDateUTC) {
+    query = query.gte('date', startDateUTC);
+  }
+  if (endDateUTC) {
+    query = query.lte('date', endDateUTC);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Error fetching expenses:', error);
@@ -23,9 +33,8 @@ export async function getHistoricalExpenses(): Promise<Expense[]> {
   return data as Expense[];
 }
 
-export async function saveExpense(amount: number, category: string, item: string, user_id: string): Promise<Expense> {
+export async function saveExpense(amount: number, category_id: string, item: string, user_id: string, dateUTC: string = new Date().toISOString()): Promise<Expense> {
   const supabase = await createClient();
-  const date = new Date().toISOString().split('T')[0]; // Current date in YYYY-MM-DD format
 
   const { data, error } = await supabase
     .from('expenses')
@@ -34,11 +43,11 @@ export async function saveExpense(amount: number, category: string, item: string
         user_id,
         item,
         amount,
-        category,
-        date,
+        category_id,
+        date: dateUTC,
       }
     ])
-    .select()
+    .select('*, categories(name)')
     .single();
 
   if (error) {
