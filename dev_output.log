@@ -8,13 +8,13 @@
 - Local:         http://localhost:3001
 - Network:       http://172.24.1.71:3001
 - Environments: .env.local
-✓ Ready in 657ms
+✓ Ready in 662ms
 ⨯ Another next dev server is already running.
 
 - Local:        http://localhost:3000
-- PID:          58791
+- PID:          56703
 - Dir:          /usr/local/google/home/duynguyenn/expense-dashboard
 - Log:          .next/dev/logs/next-development.log
 
-Run kill 58791 to stop it.
+Run kill 56703 to stop it.
 [?25h
