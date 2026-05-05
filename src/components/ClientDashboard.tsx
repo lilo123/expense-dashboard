@@ -70,7 +70,7 @@ export default function ClientDashboard({
       expenses: initialExpenses,
       categories: initialCategories,
       user: initialUser,
-      error: initialError
+      error: initialError || undefined
     });
     hydrated.current = true;
   }
