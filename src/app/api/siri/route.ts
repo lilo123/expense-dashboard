@@ -15,10 +15,15 @@ export async function POST(request: Request) {
     // Since the assignment focuses on UI/UX and Groq integration over deep auth flows,
     // extracting the user_id from the token is sufficient for stateless insertions.
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('CRITICAL: Missing Supabase environment variables for Siri API (SUPABASE_SERVICE_ROLE_KEY is not set in env)');
+      return NextResponse.json({ error: 'Internal Configuration Error: SUPABASE_SERVICE_ROLE_KEY is missing.' }, { status: 500 });
+    }
+
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
     // 2. Parse request body
     const body = await request.json();
