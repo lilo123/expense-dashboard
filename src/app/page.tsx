@@ -1,47 +1,47 @@
-import { createClient } from '@/utils/supabase/server';
-import { redirect } from 'next/navigation';
-import ClientDashboard from '@/components/ClientDashboard';
+import Link from "next/link";
+import Logo from "@/components/Logo";
+import AnyenOrb from "@/components/marketing/AnyenOrb";
 
-export default async function Page() {
-  const supabase = await createClient();
-  let globalError = null;
-  let expenses: any[] = [];
-  let categories: any[] = [];
-  let user = null;
-
-  try {
-    const { data: authData, error: authError } = await supabase.auth.getUser();
-    if (authError || !authData?.user) {
-      redirect('/login');
-    }
-    user = { id: authData.user.id, email: authData.user.email };
-
-    const { data: expensesData, error: expensesError } = await supabase
-      .from('expenses')
-      .select('*, categories(name)')
-      .order('date', { ascending: false });
-    
-    if (expensesError) throw expensesError;
-    expenses = expensesData || [];
-
-    const { data: categoriesData, error: categoriesError } = await supabase
-      .from('categories')
-      .select('id, name');
-    
-    if (categoriesError) throw categoriesError;
-    categories = categoriesData || [];
-
-  } catch (err: any) {
-    console.error('Error fetching dashboard data:', err);
-    globalError = err.message || 'Failed to load data';
-  }
-
+export default function LandingPage() {
   return (
-    <ClientDashboard 
-      initialExpenses={expenses}
-      initialCategories={categories}
-      initialUser={user}
-      initialError={globalError}
-    />
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Top Navigation */}
+      <nav className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20">
+        <div className="flex items-center gap-2">
+          <Logo className="w-12 h-12 sm:w-16 sm:h-16 text-zen-charcoal transition-all" />
+          <span className="font-bold text-xl sm:text-2xl text-zen-charcoal tracking-tight">An-yen</span>
+        </div>
+      </nav>
+
+      {/* Hero Section */}
+      <div className="flex flex-col items-center z-10 relative mt-12">
+        {/* The Animated Morphing Orb sits behind the text */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 w-72 h-72 opacity-50 blur-xl">
+           <AnyenOrb className="w-full h-full" />
+        </div>
+
+        <h1 className="text-6xl sm:text-7xl font-extrabold text-zen-charcoal mb-6 tracking-tight text-center">
+          An-yen
+        </h1>
+        <p className="text-xl text-zen-charcoal/80 mb-10 max-w-lg text-center leading-relaxed">
+          Mindful wealth tracking. Align your daily expenses with your inner values.
+        </p>
+        
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <Link 
+            href="/dashboard" 
+            className="px-8 py-4 bg-zen-charcoal text-zen-base rounded-2xl font-bold text-lg text-center hover:scale-[1.02] hover:bg-zen-charcoal/90 transition-all shadow-lg"
+          >
+            Enter App
+          </Link>
+          <Link 
+            href="/education" 
+            className="px-8 py-4 bg-white/40 backdrop-blur-md text-zen-charcoal rounded-2xl font-bold text-lg text-center border border-white/30 hover:bg-white/60 transition-all"
+          >
+            Education Hub
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
