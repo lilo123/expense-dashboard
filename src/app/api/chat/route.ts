@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         messages: [
           {
             role: 'system',
-            content: `You are a helpful financial assistant. If the user mentions spending money, buying something, or an expense, use the 'extract_expense' tool to log it, mapping to categories: [${categoryNames.join(', ')}]. If the user is just chatting, saying hello, or expressing emotion, respond normally with a conversational message. DO NOT extract an expense for casual chatter.`
+            content: `You are a helpful financial assistant. If the user mentions spending money, buying something, or an expense, use the 'extract_expense' tool to log it, mapping to categories: [${categoryNames.join(', ')}]. If you return JSON, it MUST be raw JSON without any markdown wrapping (do not use \`\`\`json or \`\`\`). Interpret bare numbers (without currency symbols like $) as currency. If the user is just chatting, saying hello, or expressing emotion, respond normally with a conversational message. DO NOT extract an expense for casual chatter.`
           },
           {
             role: 'user',
@@ -97,9 +97,14 @@ export async function POST(request: Request) {
     const toolCalls = data.choices?.[0]?.message?.tool_calls;
     let extractedData;
     
+    const cleanJsonString = (str: string) => {
+      return str.replace(/^\s*```(?:json)?\s*|\s*```\s*$/g, '').trim();
+    };
+
     if (toolCalls && toolCalls.length > 0 && toolCalls[0].function.arguments) {
       try {
-        extractedData = JSON.parse(toolCalls[0].function.arguments);
+        const sanitizedArgs = cleanJsonString(toolCalls[0].function.arguments);
+        extractedData = JSON.parse(sanitizedArgs);
       } catch (e) {
         return NextResponse.json({ error: 'Invalid tool call response from AI' }, { status: 500 });
       }
@@ -108,7 +113,8 @@ export async function POST(request: Request) {
       const content = data.choices?.[0]?.message?.content;
       if (content) {
         try {
-          extractedData = JSON.parse(content);
+          const sanitizedContent = cleanJsonString(content);
+          extractedData = JSON.parse(sanitizedContent);
         } catch(e) {
           return NextResponse.json({ reply: content });
         }

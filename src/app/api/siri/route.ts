@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
-import { saveExpense } from '@/lib/expenses';
+import { createClient } from '@supabase/supabase-js';
 
 export async function POST(request: Request) {
   try {
@@ -10,13 +9,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Unauthorized or invalid token format' }, { status: 401 });
     }
 
-    const token = authHeader.replace('Bearer ', '').trim();
+    const token = authHeader.replace(/^Bearer\s+/i, '').trim();
     const userId = token;
     // Security Note: In a real prod app, you'd verify the token secret against the DB. 
     // Since the assignment focuses on UI/UX and Groq integration over deep auth flows,
     // extracting the user_id from the token is sufficient for stateless insertions.
 
-    const supabase = await createClient();
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
     
     // 2. Parse request body
     const body = await request.json();
@@ -163,14 +165,24 @@ export async function POST(request: Request) {
 
     // 6. Save to Database using the active session's user_id and resolved category_id
     // Using new Date().toISOString() ensures we store in UTC as mandated
-    const savedRecord = await saveExpense(
-      Number(amount), 
-      category_id, 
-      String(item),
-      userId
-    );
-    
-    const expenseData = Array.isArray(savedRecord) ? savedRecord[0] : savedRecord;
+    const { data: savedRecord, error: insertError } = await supabase
+      .from('expenses')
+      .insert([
+        {
+          user_id: userId,
+          item: String(item),
+          amount: Number(amount),
+          category_id: category_id,
+          date: new Date().toISOString(),
+        }
+      ])
+      .select('*, categories(name)')
+      .single();
+
+    if (insertError) {
+      console.error('Error saving expense via Siri:', insertError);
+      return NextResponse.json({ error: 'Failed to save expense' }, { status: 500 });
+    }
 
     // 7. Return plain text response tailored for Siri's spoken feedback
     return new NextResponse(`I've logged $${Number(amount).toFixed(2)} for ${item} under ${finalCategoryName}.`);
