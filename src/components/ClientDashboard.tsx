@@ -78,7 +78,7 @@ export default function ClientDashboard({
   return (
     <>
       <div className="container">
-        <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h1>Expenses</h1>
           <div style={{ display: 'flex', gap: '10px' }}>
             <button id="siri-btn" style={{ display: "flex", alignItems: "center", padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: 'pointer' }} onClick={toggleSiriModal}>

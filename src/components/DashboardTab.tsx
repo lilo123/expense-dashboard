@@ -12,7 +12,7 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
-import { formatUTCToLocal } from '@/lib/utils';
+import { formatUTCToLocal, formatFriendlyDate, wrapLabel } from '@/lib/utils';
 
 ChartJS.register(
   CategoryScale,
@@ -77,7 +77,7 @@ export default function DashboardTab() {
   }, [filteredExpenses]);
 
   const chartData = {
-    labels,
+    labels: labels.map(l => wrapLabel(l, 12)),
     datasets: [{
       label: 'Amount',
       data,
@@ -112,7 +112,16 @@ export default function DashboardTab() {
       y: { 
         grid: { display: false }, 
         border: { display: false }, 
-        ticks: { font: { weight: 'bold' as const, size: 14 }, color: '#000' } 
+        ticks: { 
+          font: (context: any) => {
+            const width = context.chart?.width || 0;
+            return {
+              size: width < 350 ? 10 : 13,
+              weight: 'bold' as const
+            };
+          },
+          color: '#000' 
+        } 
       }
     },
     plugins: {
@@ -134,7 +143,13 @@ export default function DashboardTab() {
         align: 'right' as const,
         formatter: (value: number) => '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
         color: '#000',
-        font: { weight: 600, size: 13 },
+        font: (context: any) => {
+          const width = context.chart?.width || 0;
+          return {
+            size: width < 350 ? 10 : 13,
+            weight: 600
+          };
+        },
         listeners: {
           click: function(context: any) {
             const idx = context.dataIndex;
@@ -156,11 +171,66 @@ export default function DashboardTab() {
 
   return (
     <div id="tab-dashboard" className="tab-content active" style={{ display: "block" }}>
-      <div className="filter-container" style={{ display: 'flex', flexDirection: 'row', alignItems: 'stretch', gap: '8px', width: '100%', overflowX: 'auto', flexWrap: 'nowrap', marginBottom: '20px', paddingBottom: '8px' }}>
-        <input type="month" id="start-date" value={startDate} onChange={e => setStartDate(e.target.value)} style={{ flex: '1', minWidth: '130px', height: '42px', padding: '8px 12px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} />
-        <span style={{ color: 'var(--text-muted, #6b7280)', fontWeight: 500, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>to</span>
-        <input type="month" id="end-date" value={endDate} onChange={e => setEndDate(e.target.value)} style={{ flex: '1', minWidth: '130px', height: '42px', padding: '8px 12px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} />
-        <button type="button" onClick={handleClear} style={{ flexShrink: 0, height: '42px', padding: '0 20px', backgroundColor: 'var(--surface, #f3f4f6)', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text, #374151)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}>
+      {/* MOBILE DATE FILTER (Vertical Stack with Labels) */}
+      <div className="filter-container-mobile flex flex-col gap-2 w-full mb-5 sm:hidden" style={{ boxSizing: 'border-box' }}>
+        <div className="flex items-center gap-2 w-full" style={{ height: '44px' }}>
+          <span style={{ width: '50px', fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)', flexShrink: 0 }}>From</span>
+          <input 
+            type="month" 
+            value={startDate} 
+            onChange={e => setStartDate(e.target.value)} 
+            style={{ flex: 1, height: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', color: 'var(--text)', backgroundColor: 'var(--bg)', boxSizing: 'border-box' }} 
+          />
+        </div>
+        <div className="flex items-center gap-2 w-full" style={{ height: '44px' }}>
+          <span style={{ width: '50px', fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)', flexShrink: 0 }}>To</span>
+          <input 
+            type="month" 
+            value={endDate} 
+            onChange={e => setEndDate(e.target.value)} 
+            style={{ flex: 1, height: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', color: 'var(--text)', backgroundColor: 'var(--bg)', boxSizing: 'border-box' }} 
+          />
+        </div>
+        <button 
+          type="button" 
+          onClick={handleClear} 
+          className="flex items-center justify-center"
+          style={{ height: '44px', width: '100%', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', boxSizing: 'border-box' }}
+        >
+          Clear
+        </button>
+      </div>
+
+      {/* DESKTOP DATE FILTER (Horizontal Single Line) */}
+      <div className="filter-container-desktop hidden sm:flex sm:flex-row sm:items-stretch gap-2 w-full mb-5 pb-2" style={{ boxSizing: 'border-box' }}>
+        <input 
+          type="month" 
+          id="start-date" 
+          value={startDate} 
+          onChange={e => setStartDate(e.target.value)} 
+          className="sm:flex-1 sm:min-w-[130px]"
+          style={{ height: '42px', padding: '8px 12px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} 
+        />
+        <span 
+          className="sm:flex sm:items-center sm:justify-center sm:px-2"
+          style={{ color: 'var(--text-muted, #6b7280)', fontWeight: 500 }}
+        >
+          to
+        </span>
+        <input 
+          type="month" 
+          id="end-date" 
+          value={endDate} 
+          onChange={e => setEndDate(e.target.value)} 
+          className="sm:flex-1 sm:min-w-[130px]"
+          style={{ height: '42px', padding: '8px 12px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} 
+        />
+        <button 
+          type="button" 
+          onClick={handleClear} 
+          className="sm:flex-shrink-0 sm:col-auto flex items-center justify-center"
+          style={{ height: '42px', padding: '0 20px', backgroundColor: 'var(--surface, #f3f4f6)', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text, #374151)', cursor: 'pointer', boxSizing: 'border-box' }}
+        >
           Clear
         </button>
       </div>
@@ -170,7 +240,7 @@ export default function DashboardTab() {
           <p id="total-amount">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
       </div>
 
-      <h2>By Category</h2>
+      <h2 className="font-bold">By Category</h2>
       <div className="chart-container" style={{ height: Math.max(300, labels.length * 40 + 50) + 'px' }}>
           {labels.length > 0 ? (
             <Bar data={chartData} options={options as any} plugins={[ChartDataLabels]} />
@@ -192,7 +262,7 @@ export default function DashboardTab() {
                 <div key={exp.id} className="expense-item">
                   <div className="expense-info">
                     <h4>{exp.item}</h4>
-                    <p>{formatUTCToLocal(exp.date)}</p>
+                    <p>{formatFriendlyDate(exp.date)}</p>
                   </div>
                   <div className="expense-amount">${(parseFloat(exp.amount as any) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                 </div>

@@ -14,6 +14,9 @@ export default function CategoryModal() {
   const [fallbackCategoryId, setFallbackCategoryId] = useState<string>('');
   const [isDeletingEmpty, setIsDeletingEmpty] = useState<boolean>(false);
 
+  const otherCategories = categoryToDelete ? categories.filter(c => c.id !== categoryToDelete.id) : [];
+  const hasOtherCategories = otherCategories.length > 0;
+
   if (!isCategoryModalOpen) return null;
 
   const handleAdd = async () => {
@@ -142,15 +145,18 @@ export default function CategoryModal() {
           if ((e.target as HTMLElement).classList.contains('modal')) setCategoryToDelete(null);
         }}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2>{isDeletingEmpty ? 'Confirm Deletion' : 'Reassign Expenses'}</h2>
+            <h2>{isDeletingEmpty ? 'Confirm Deletion' : (hasOtherCategories ? 'Reassign Expenses' : 'Cannot Delete')}</h2>
             <p>
               {isDeletingEmpty 
                 ? <>Are you sure you want to delete <strong>{categoryToDelete.name}</strong>?</>
-                : <><strong>{categoryToDelete.name}</strong> contains expenses. Please select a category to reassign them to before deleting.</>
+                : (hasOtherCategories 
+                    ? <><strong>{categoryToDelete.name}</strong> contains expenses. Please select a category to reassign them to before deleting.</>
+                    : <><strong>{categoryToDelete.name}</strong> contains expenses. You cannot delete this category because there are no other categories to reassign the expenses to.</>
+                  )
               }
             </p>
             
-            {!isDeletingEmpty && (
+            {!isDeletingEmpty && hasOtherCategories && (
             <div style={{ margin: '20px 0' }}>
               <select 
                 value={fallbackCategoryId} 
@@ -158,11 +164,17 @@ export default function CategoryModal() {
                 style={{ width: '100%', padding: '8px', borderRadius: '4px', border: '1px solid var(--border)' }}
               >
                 <option value="" disabled>Select a new category</option>
-                {categories.filter(c => c.id !== categoryToDelete.id).map(c => (
+                {otherCategories.map(c => (
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
             </div>
+            )}
+
+            {!isDeletingEmpty && !hasOtherCategories && (
+              <div style={{ margin: '15px 0', padding: '12px', background: '#ffebee', color: '#d32f2f', borderRadius: '8px', fontSize: '0.9em', border: '1px solid #ffcdd2' }}>
+                <strong>Warning:</strong> Please create at least one other category first before you can delete this one.
+              </div>
             )}
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
@@ -174,8 +186,8 @@ export default function CategoryModal() {
               </button>
               <button 
                 onClick={() => confirmDelete(categoryToDelete.id, isDeletingEmpty ? undefined : fallbackCategoryId)}
-                disabled={!isDeletingEmpty && !fallbackCategoryId}
-                style={{ backgroundColor: '#f44336', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', opacity: (!isDeletingEmpty && !fallbackCategoryId) ? 0.5 : 1 }}
+                disabled={!isDeletingEmpty && (!fallbackCategoryId || !hasOtherCategories)}
+                style={{ backgroundColor: '#f44336', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '4px', cursor: 'pointer', opacity: (!isDeletingEmpty && (!fallbackCategoryId || !hasOtherCategories)) ? 0.5 : 1 }}
               >
                 Confirm Delete
               </button>

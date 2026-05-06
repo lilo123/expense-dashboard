@@ -61,14 +61,14 @@ export default function ChatBox() {
     }}>
         <div className="modal-content chat-modal-content" style={{ maxWidth: '450px', width: '100%', height: '85vh', padding: 0, borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--card-bg)', border: '1px solid var(--border)', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
             
-            <div className="chat-header" style={{ padding: '15px', background: '#000', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-                <div style={{ position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)', width: '40px', height: '5px', background: 'rgba(255,255,255,0.5)', borderRadius: '3px' }} />
+            <div className="chat-header" style={{ padding: '15px', background: 'var(--card-bg)', color: 'var(--text)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
+                <div style={{ position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)', width: '40px', height: '5px', background: 'var(--text)', opacity: 0.2, borderRadius: '3px' }} />
                 
                 <h2 style={{ margin: 0, fontSize: '1.2rem', textAlign: 'left', flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path><path d="M5 3v4"></path><path d="M19 17v4"></path><path d="M3 5h4"></path><path d="M17 19h4"></path></svg> 
                   AI Assistant
                 </h2>
-                <span id="action-elem-13" className="close" onClick={toggleChatModal} style={{ position: 'relative', top: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(255,255,255,0.2)', color: 'white', cursor: 'pointer', fontSize: '24px', lineHeight: 0, padding: 0, margin: 0, boxSizing: 'border-box', transition: 'background 0.2s' }}>&times;</span>
+                <span id="action-elem-13" className="close" onClick={toggleChatModal} style={{ position: 'relative', top: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0,0,0,0.05)', color: 'var(--text)', cursor: 'pointer', fontSize: '24px', lineHeight: 0, padding: 0, margin: 0, boxSizing: 'border-box', transition: 'background 0.2s' }}>&times;</span>
             </div>
 
             <div id="chat-history" ref={chatHistoryRef} className="chat-history" style={{ flex: 1, padding: '20px', overflowY: 'auto', background: 'var(--bg)', display: 'flex', flexDirection: 'column', gap: '10px' }}>

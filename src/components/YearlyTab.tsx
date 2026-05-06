@@ -1,7 +1,7 @@
 'use client';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { formatUTCToLocal, parseLocalDate } from '@/lib/utils';
+import { formatUTCToLocal, parseLocalDate, formatFriendlyDate } from '@/lib/utils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -102,8 +102,8 @@ export default function YearlyTab() {
             let label = context.dataset.label || '';
             if (label) { label += ': '; }
             if (context.parsed.y !== null) { label += '$' + (Number(context.parsed.y) / 1000).toFixed(1) + 'K'; }
-              return label;
-            }
+            return label;
+          }
           }
         },
         datalabels: {
@@ -157,7 +157,7 @@ const detailExpenses = useMemo(() => {
                     <div key={exp.id} className="expense-item">
                       <div className="expense-info">
                         <h4>{exp.item}</h4>
-                        <p>{exp.categories?.name || "Uncategorized"} &bull; {formatUTCToLocal(exp.date)}</p>
+                        <p>{exp.categories?.name || "Uncategorized"} &bull; {formatFriendlyDate(exp.date)}</p>
                       </div>
                       <div className="expense-amount">${(parseFloat(exp.amount as any) || 0).toFixed(2)}</div>
                     </div>

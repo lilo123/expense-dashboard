@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { bulkDeleteAction } from '@/app/actions';
 import { Expense } from '@/types/database';
-import { formatUTCToLocal } from '@/lib/utils';
+import { formatFriendlyDate } from '@/lib/utils';
 
 export default function ExpenseList() {
   const { 
@@ -37,25 +37,6 @@ export default function ExpenseList() {
     }
   };
 
-  const formatDateLabel = (dateStr: string) => {
-    if (!dateStr) return 'Unknown Date';
-    const localDateStr = formatUTCToLocal(dateStr); // returns YYYY-MM-DD in local time
-    if (!localDateStr) return dateStr;
-    
-    // Create a date object representing midnight in the local timezone
-    const [year, month, day] = localDateStr.split('-');
-    const d = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    
-    if (isNaN(d.getTime())) return dateStr;
-    
-    const today = new Date();
-    const isToday = d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
-    const isThisYear = d.getFullYear() === today.getFullYear();
-    
-    if (isToday) return "Today, " + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    if (isThisYear) return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-  };
 
   return (
     <div id="tab-recent" className={`tab-content active ${isSelectMode ? "select-mode" : ""}`} style={{ display: "block" }}>
@@ -84,12 +65,16 @@ export default function ExpenseList() {
         <div className="recent-list" id="recent-list">
             {expenses.map((exp: Expense) => {
               const amt = parseFloat(exp.amount as any) || 0;
-              const dateStr = formatDateLabel(exp.date);
+              const dateStr = formatFriendlyDate(exp.date);
               
               return (
                 <div 
                   key={exp.id} 
-                  className={`expense-item ${selectedIds.has(exp.id) ? 'selected' : ''}`} 
+                  className={`expense-item transition-colors duration-200 ${
+                    selectedIds.has(exp.id) 
+                      ? 'bg-black/[0.04] dark:bg-white/[0.04] border-black dark:border-white' 
+                      : 'bg-[var(--card-bg)] border-[var(--border)]'
+                  }`}
                   data-id={exp.id} 
                   data-item={exp.item} 
                   data-amount={amt} 

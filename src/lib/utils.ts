@@ -44,3 +44,36 @@ export function getLocalMonthBoundariesUTC(year: number, month: number): { start
     endDateUTC: endLocal.toISOString()
   };
 }
+
+export function formatFriendlyDate(dateStr: string): string {
+  if (!dateStr) return 'Unknown Date';
+  const d = parseLocalDate(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  
+  const today = new Date();
+  const isToday = d.getDate() === today.getDate() && d.getMonth() === today.getMonth() && d.getFullYear() === today.getFullYear();
+  const isThisYear = d.getFullYear() === today.getFullYear();
+  
+  if (isToday) return "Today, " + d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  if (isThisYear) return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export function wrapLabel(label: string, maxLength: number = 15): string | string[] {
+  if (!label) return '';
+  if (label.length <= maxLength) return label;
+  const words = label.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+  
+  words.forEach(word => {
+    if ((currentLine + ' ' + word).trim().length <= maxLength) {
+      currentLine = (currentLine + ' ' + word).trim();
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  });
+  if (currentLine) lines.push(currentLine);
+  return lines.length > 1 ? lines : label;
+}
