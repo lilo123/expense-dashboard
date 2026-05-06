@@ -171,48 +171,17 @@ export default function DashboardTab() {
 
   return (
     <div id="tab-dashboard" className="tab-content active" style={{ display: "block" }}>
-      {/* MOBILE DATE FILTER (Vertical Stack with Labels) */}
-      <div className="filter-container-mobile flex flex-col gap-2 w-full mb-5 sm:hidden" style={{ boxSizing: 'border-box' }}>
-        <div className="flex items-center gap-2 w-full" style={{ height: '44px' }}>
-          <span style={{ width: '50px', fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)', flexShrink: 0 }}>From</span>
-          <input 
-            type="month" 
-            value={startDate} 
-            onChange={e => setStartDate(e.target.value)} 
-            style={{ flex: 1, height: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', color: 'var(--text)', backgroundColor: 'var(--bg)', boxSizing: 'border-box' }} 
-          />
-        </div>
-        <div className="flex items-center gap-2 w-full" style={{ height: '44px' }}>
-          <span style={{ width: '50px', fontSize: '14px', fontWeight: 600, color: 'var(--text-muted)', flexShrink: 0 }}>To</span>
-          <input 
-            type="month" 
-            value={endDate} 
-            onChange={e => setEndDate(e.target.value)} 
-            style={{ flex: 1, height: '100%', padding: '8px 12px', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', color: 'var(--text)', backgroundColor: 'var(--bg)', boxSizing: 'border-box' }} 
-          />
-        </div>
-        <button 
-          type="button" 
-          onClick={handleClear} 
-          className="flex items-center justify-center"
-          style={{ height: '44px', width: '100%', backgroundColor: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text)', cursor: 'pointer', boxSizing: 'border-box' }}
-        >
-          Clear
-        </button>
-      </div>
-
-      {/* DESKTOP DATE FILTER (Horizontal Single Line) */}
-      <div className="filter-container-desktop hidden sm:flex sm:flex-row sm:items-stretch gap-2 w-full mb-5 pb-2" style={{ boxSizing: 'border-box' }}>
+      <div className="filter-container flex flex-col sm:flex-row sm:items-stretch gap-2 w-full mb-5 pb-2" style={{ boxSizing: 'border-box' }}>
         <input 
           type="month" 
           id="start-date" 
           value={startDate} 
           onChange={e => setStartDate(e.target.value)} 
-          className="sm:flex-1 sm:min-w-[130px]"
+          className="w-full sm:flex-1 sm:min-w-[130px]"
           style={{ height: '42px', padding: '8px 12px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} 
         />
         <span 
-          className="sm:flex sm:items-center sm:justify-center sm:px-2"
+          className="flex items-center justify-center py-1 sm:py-0 sm:px-2 sm:flex-shrink-0"
           style={{ color: 'var(--text-muted, #6b7280)', fontWeight: 500 }}
         >
           to
@@ -222,13 +191,13 @@ export default function DashboardTab() {
           id="end-date" 
           value={endDate} 
           onChange={e => setEndDate(e.target.value)} 
-          className="sm:flex-1 sm:min-w-[130px]"
+          className="w-full sm:flex-1 sm:min-w-[130px]"
           style={{ height: '42px', padding: '8px 12px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} 
         />
         <button 
           type="button" 
           onClick={handleClear} 
-          className="sm:flex-shrink-0 sm:col-auto flex items-center justify-center"
+          className="w-full sm:w-auto sm:flex-shrink-0 flex items-center justify-center"
           style={{ height: '42px', padding: '0 20px', backgroundColor: 'var(--surface, #f3f4f6)', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text, #374151)', cursor: 'pointer', boxSizing: 'border-box' }}
         >
           Clear
