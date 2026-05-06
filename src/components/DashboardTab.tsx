@@ -87,7 +87,7 @@ export default function DashboardTab() {
     }]
   };
 
-  const onClick = (event: any, elements: any[]) => {
+  const onClick = (event: any, elements: any[], chart: any) => {
     if (elements.length > 0) {
       const idx = elements[0].index;
       const category = labels[idx];
@@ -95,13 +95,29 @@ export default function DashboardTab() {
       setTimeout(() => {
         detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
+    } else if (chart) {
+      const yScale = chart.scales.y;
+      const x = event.x;
+      const y = event.y;
+      
+      // Check if click was on the Y-axis tick area
+      if (x >= yScale.left && x <= yScale.right) {
+        const idx = Math.round(yScale.getValueForPixel(y));
+        if (idx >= 0 && idx < labels.length) {
+          const category = labels[idx];
+          setActiveCategoryFilter(category);
+          setTimeout(() => {
+            detailsRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
+        }
+      }
     }
   };
 
   const options = {
     maintainAspectRatio: false,
     indexAxis: 'y' as const,
-    interaction: { mode: 'index' as const, intersect: false },
+    interaction: { mode: 'index' as const, intersect: false, axis: 'y' as const },
     onClick: onClick,
     layout: {
       padding: { right: 80 }
