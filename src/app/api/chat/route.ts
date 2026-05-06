@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         messages: [
           {
             role: 'system',
-            content: `You are a helpful financial assistant. If the user mentions spending money, buying something, or an expense, use the 'extract_expense' tool to log it, mapping to categories: [${categoryNames.join(', ')}]. If you return JSON, it MUST be raw JSON without any markdown wrapping (do not use \`\`\`json or \`\`\`). Interpret bare numbers (without currency symbols like $) as currency. If the user is just chatting, saying hello, or expressing emotion, respond normally with a conversational message. DO NOT extract an expense for casual chatter.`
+            content: `You are a helpful financial assistant. Help the user log their expenses into these categories: [${categoryNames.join(', ')}]. If you return JSON, it MUST be raw JSON without any markdown wrapping (do not use \`\`\`json or \`\`\`). Interpret bare numbers (without currency symbols like $) as currency. If the user is just chatting, saying hello, or expressing emotion, respond normally with a conversational message. DO NOT log an expense for casual chatter.`
           },
           {
             role: 'user',
