@@ -82,7 +82,8 @@ export default function DashboardTab() {
       label: 'Amount',
       data,
       backgroundColor: bgColors,
-      borderRadius: 4
+      borderRadius: 4,
+      minBarLength: 15
     }]
   };
 
@@ -171,17 +172,17 @@ export default function DashboardTab() {
 
   return (
     <div id="tab-dashboard" className="tab-content active" style={{ display: "block" }}>
-      <div className="filter-container flex flex-col sm:flex-row sm:items-stretch gap-2 w-full mb-5 pb-2" style={{ boxSizing: 'border-box' }}>
+      <div className="filter-container grid grid-cols-[1fr_auto_1fr] sm:flex sm:flex-row sm:items-stretch gap-2 w-full mb-5 pb-2" style={{ boxSizing: 'border-box' }}>
         <input 
           type="month" 
           id="start-date" 
           value={startDate} 
           onChange={e => setStartDate(e.target.value)} 
-          className="w-full sm:flex-1 sm:min-w-[130px]"
-          style={{ height: '42px', padding: '8px 12px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} 
+          className="col-span-1 sm:flex-1 sm:min-w-[130px]"
+          style={{ height: '42px', padding: '8px 6px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} 
         />
         <span 
-          className="flex items-center justify-center py-1 sm:py-0 sm:px-2 sm:flex-shrink-0"
+          className="col-span-1 flex items-center justify-center px-1 sm:flex-shrink-0 sm:px-2"
           style={{ color: 'var(--text-muted, #6b7280)', fontWeight: 500 }}
         >
           to
@@ -191,13 +192,13 @@ export default function DashboardTab() {
           id="end-date" 
           value={endDate} 
           onChange={e => setEndDate(e.target.value)} 
-          className="w-full sm:flex-1 sm:min-w-[130px]"
-          style={{ height: '42px', padding: '8px 12px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} 
+          className="col-span-1 sm:flex-1 sm:min-w-[130px]"
+          style={{ height: '42px', padding: '8px 6px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} 
         />
         <button 
           type="button" 
           onClick={handleClear} 
-          className="w-full sm:w-auto sm:flex-shrink-0 flex items-center justify-center"
+          className="col-span-3 sm:flex-shrink-0 sm:col-auto flex items-center justify-center"
           style={{ height: '42px', padding: '0 20px', backgroundColor: 'var(--surface, #f3f4f6)', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text, #374151)', cursor: 'pointer', boxSizing: 'border-box' }}
         >
           Clear
