@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       .eq('user_id', user.id);
 
     const categoriesList = userCategories || [];
-    const categoryNames = categoriesList.map(c => c.name);
+    const categoryNames = categoriesList.map((c: any) => c.name);
 
     if (categoryNames.length === 0) {
       return NextResponse.json({ error: 'No categories found for user. Please create a category first.' }, { status: 400 });
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         messages: [
           {
             role: 'system',
-            content: `You are a financial intent extractor. Extract the transaction amount, category, and a short description (item) from the user's input. You MUST map the expense to one of the provided categories: [${categoryNames.join(', ')}]. If the exact category isn\'t clear, map it to the closest logical match or 'Misc'/'Other'.`
+            content: `You are a helpful financial assistant. If the user mentions spending money, buying something, or an expense, use the 'extract_expense' tool to log it, mapping to categories: [${categoryNames.join(', ')}]. If the user is just chatting, saying hello, or expressing emotion, respond normally with a conversational message. DO NOT extract an expense for casual chatter.`
           },
           {
             role: 'user',
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
             }
           }
         ],
-        tool_choice: { type: 'function', function: { name: 'extract_expense' } },
+        tool_choice: 'auto',
         temperature: 0
       })
     });
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
         try {
           extractedData = JSON.parse(content);
         } catch(e) {
-          return NextResponse.json({ error: 'Empty or invalid response from AI' }, { status: 500 });
+          return NextResponse.json({ reply: content });
         }
       } else {
         return NextResponse.json({ error: 'Empty response from AI' }, { status: 500 });
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
     let finalCategoryName = categoryNameFromLLM;
     const categoryStrLower = finalCategoryName.toLowerCase();
     
-    let matchedCategory = categoriesList.find(c => c.name.toLowerCase() === categoryStrLower);
+    let matchedCategory = categoriesList.find((c: any) => c.name.toLowerCase() === categoryStrLower);
     let category_id;
 
     if (matchedCategory) {
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
       finalCategoryName = matchedCategory.name;
     } else {
       // LLM returned something outside the enum. Fallback to a generic category instead of failing or creating a new one.
-      let genericCategory = categoriesList.find(c => 
+      let genericCategory = categoriesList.find((c: any) => 
         c.name.toLowerCase() === 'misc' || 
         c.name.toLowerCase() === 'miscellaneous' || 
         c.name.toLowerCase() === 'other'
