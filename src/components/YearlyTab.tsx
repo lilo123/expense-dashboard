@@ -1,7 +1,7 @@
 'use client';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { formatUTCToLocal } from '@/lib/utils';
+import { formatUTCToLocal, parseLocalDate } from '@/lib/utils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -33,7 +33,7 @@ export default function YearlyTab() {
     const yrSet = new Set<string>();
     expenses.forEach(exp => {
       if (!exp.date) return;
-      const d = new Date(exp.date);
+      const d = parseLocalDate(exp.date);
       if (!isNaN(d.getTime())) yrSet.add(d.getFullYear().toString());
     });
     const sorted = Array.from(yrSet).sort((a,b) => parseInt(b) - parseInt(a));
@@ -52,7 +52,7 @@ export default function YearlyTab() {
 
     expenses.forEach(exp => {
       if (!exp.date) return;
-      const d = new Date(exp.date);
+      const d = parseLocalDate(exp.date);
       if (isNaN(d.getTime()) || d.getFullYear().toString() !== selectedYear) return;
       const m = d.getMonth();
       if (byMonth[m] === null) byMonth[m] = 0;
@@ -123,7 +123,7 @@ const detailExpenses = useMemo(() => {
     const monthIdx = parseInt(activeMonthFilter, 10);
     return expenses.filter(exp => {
       if (!exp.date) return false;
-      const d = new Date(exp.date);
+      const d = parseLocalDate(exp.date);
       return d.getFullYear().toString() === selectedYear && d.getMonth() === monthIdx;
     });
   }, [expenses, activeMonthFilter, selectedYear]);
