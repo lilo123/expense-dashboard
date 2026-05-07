@@ -28,6 +28,10 @@ export default function YearlyTab() {
   const { expenses, activeMonthFilter, setActiveMonthFilter } = useExpenseStore();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const detailsRef = useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const years = useMemo(() => {
     const yrSet = new Set<string>();
@@ -72,7 +76,7 @@ export default function YearlyTab() {
     datasets: [
       {
         data,
-        backgroundColor: 'var(--primary)',
+        backgroundColor: '#AEC3B0',
         borderRadius: 4,
         barPercentage: 0.6
       }
@@ -91,7 +95,7 @@ export default function YearlyTab() {
     }
   },
   scales: {
-      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#000000', font: { weight: 'bold' as const } } },
+      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#2D3748', font: { weight: 'bold' as const } } },
       y: { grid: { display: false }, border: { display: false }, ticks: { display: false }, min: 0 }
   },
   plugins: {
@@ -112,7 +116,7 @@ export default function YearlyTab() {
             align: 'top' as const,
             offset: 4,
             formatter: (value: number) => '$' + (Number(value) / 1000).toFixed(1) + 'K',
-            color: '#000',
+            color: '#2D3748',
             font: { weight: 600, size: 12 }
         }
     }
@@ -130,26 +134,30 @@ const detailExpenses = useMemo(() => {
 
   return (
     <div id="tab-yearly" className="tab-content active" style={{ display: "block" }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-            <h2 style={{ margin: 0 }}>Monthly Expenses</h2>
+        <div className="flex justify-between items-center mb-4">
+            <h2 className="margin-0 text-zen-charcoal font-bold">Monthly Expenses</h2>
             <select 
               id="yearSelect" 
               value={selectedYear} 
               onChange={e => setSelectedYear(e.target.value)}
-              style={{ padding: '6px 12px', borderRadius: '6px', fontSize: '16px', border: '1px solid var(--border)', backgroundColor: 'var(--bg)', cursor: 'pointer' }}
+              className="px-4 py-2 bg-white/50 border border-zen-lavender/60 rounded-full text-zen-charcoal text-base outline-none cursor-pointer h-9 flex items-center"
             >
               {years.map(y => <option key={y} value={y}>{y}</option>)}
             </select>
         </div>
-        <div className="chart-container" style={{ height: '300px', maxHeight: '40vh' }}>
-            <Bar data={chartData} options={options as any} plugins={[ChartDataLabels]} />
+        <div className="chart-container" style={{ height: '300px', maxHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {isMounted ? (
+              <Bar data={chartData} options={options as any} plugins={[ChartDataLabels]} />
+            ) : (
+              <div className="text-zen-charcoal/60">Loading Chart...</div>
+            )}
         </div>
         <div id="yearly-details-container" ref={detailsRef} style={{ marginTop: '20px' }}>
           {activeMonthFilter !== null && (
-            <div className="month-details">
+            <div className="month-details p-5 bg-white/40 backdrop-blur-md border border-white/20 rounded-3xl mb-5 shadow-sm text-left">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h3>{labels[parseInt(activeMonthFilter, 10)]} {selectedYear} Details</h3>
-                <button onClick={() => setActiveMonthFilter(null)} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text)' }}>Close</button>
+                <h3 className="font-bold text-zen-charcoal">{labels[parseInt(activeMonthFilter, 10)]} {selectedYear} Details</h3>
+                <button onClick={() => setActiveMonthFilter(null)} className="px-3 py-1 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-colors text-sm cursor-pointer border-none">Close</button>
               </div>
               {detailExpenses.length > 0 ? (
                 <div className="recent-list">

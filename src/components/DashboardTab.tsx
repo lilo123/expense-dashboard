@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import {
   Chart as ChartJS,
@@ -41,6 +41,10 @@ export default function DashboardTab() {
   const [startDate, setStartDate] = useState(firstDay);
   const [endDate, setEndDate] = useState(todayStr);
   const detailsRef = useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleClear = () => {
     setStartDate('');
@@ -68,11 +72,12 @@ export default function DashboardTab() {
       byCategory[catName].items.push(exp);
     });
 
+    const brandColors = ['#AEC3B0', '#D8D2E1', '#F9E4D4'];
     const sorted = Object.entries(byCategory).sort((a, b) => b[1].total - a[1].total);
     return {
       labels: sorted.map(s => s[0]),
       data: sorted.map(s => s[1].total),
-      bgColors: sorted.map((_, i) => `hsl(0, 0%, ${15 + (i * 65) / Math.max(1, sorted.length - 1)}%)`)
+      bgColors: sorted.map((_, i) => brandColors[i % brandColors.length])
     };
   }, [filteredExpenses]);
 
@@ -137,7 +142,7 @@ export default function DashboardTab() {
               weight: 'bold' as const
             };
           },
-          color: '#000' 
+          color: '#2D3748' 
         } 
       }
     },
@@ -159,7 +164,7 @@ export default function DashboardTab() {
         anchor: 'end' as const,
         align: 'right' as const,
         formatter: (value: number) => '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-        color: '#000',
+        color: '#2D3748',
         font: (context: any) => {
           const width = context.chart?.width || 0;
           return {
@@ -188,60 +193,62 @@ export default function DashboardTab() {
 
   return (
     <div id="tab-dashboard" className="tab-content active" style={{ display: "block" }}>
-      <div className="filter-container grid grid-cols-[1fr_auto_1fr] sm:flex sm:flex-row sm:items-stretch gap-2 w-full mb-5 pb-2" style={{ boxSizing: 'border-box' }}>
-        <input 
-          type="month" 
-          id="start-date" 
-          value={startDate} 
-          onChange={e => setStartDate(e.target.value)} 
-          className="col-span-1 sm:flex-1 sm:min-w-[130px]"
-          style={{ height: '42px', padding: '8px 6px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} 
-        />
-        <span 
-          className="col-span-1 flex items-center justify-center px-1 sm:flex-shrink-0 sm:px-2"
-          style={{ color: 'var(--text-muted, #6b7280)', fontWeight: 500 }}
-        >
-          to
-        </span>
-        <input 
-          type="month" 
-          id="end-date" 
-          value={endDate} 
-          onChange={e => setEndDate(e.target.value)} 
-          className="col-span-1 sm:flex-1 sm:min-w-[130px]"
-          style={{ height: '42px', padding: '8px 6px', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', color: 'var(--text, #374151)', backgroundColor: 'var(--bg, #ffffff)', boxSizing: 'border-box' }} 
-        />
-        <button 
-          type="button" 
-          onClick={handleClear} 
-          className="col-span-3 sm:flex-shrink-0 sm:col-auto flex items-center justify-center"
-          style={{ height: '42px', padding: '0 20px', backgroundColor: 'var(--surface, #f3f4f6)', border: '1px solid var(--border, #e5e7eb)', borderRadius: '8px', fontSize: '14px', fontWeight: 600, color: 'var(--text, #374151)', cursor: 'pointer', boxSizing: 'border-box' }}
-        >
-          Clear
-        </button>
+      <div className="filter-container flex flex-col gap-3 w-full mb-5">
+        {/* Row 1: Full-Width Flex-Grow Inputs */}
+        <div className="flex flex-row items-center justify-between gap-3 w-full">
+          <input 
+            type="month" 
+            id="start-date" 
+            value={startDate} 
+            onChange={e => setStartDate(e.target.value)} 
+            className="flex-1 min-w-0 rounded-full bg-white/50 border border-zen-lavender/60 px-4 py-2 text-sm text-zen-charcoal focus:outline-none focus:ring-2 focus:ring-zen-sage outline-none h-9 text-center"
+          />
+          <span className="flex-shrink-0 text-zen-charcoal/60 font-medium px-1">
+            to
+          </span>
+          <input 
+            type="month" 
+            id="end-date" 
+            value={endDate} 
+            onChange={e => setEndDate(e.target.value)} 
+            className="flex-1 min-w-0 rounded-full bg-white/50 border border-zen-lavender/60 px-4 py-2 text-sm text-zen-charcoal focus:outline-none focus:ring-2 focus:ring-zen-sage outline-none h-9 text-center"
+          />
+        </div>
+        
+        {/* Row 2: Centered Clear Button */}
+        <div className="flex justify-center w-full">
+          <button 
+            type="button" 
+            onClick={handleClear} 
+            className="px-6 py-2 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-all text-xs cursor-pointer border-none h-8 flex items-center justify-center"
+            style={{ minWidth: '80px' }}
+          >
+            Clear Filter
+          </button>
+        </div>
       </div>
 
-      <div className="summary-card total-card">
-          <h3>Total Expense</h3>
-          <p id="total-amount">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+      <div className="bg-white/40 backdrop-blur-md border border-white/20 shadow-sm text-zen-charcoal p-6 rounded-2xl text-center mb-6">
+          <h3 className="text-zen-charcoal/70 font-medium text-sm mb-2">Total Expense</h3>
+          <p id="total-amount" className="text-zen-charcoal text-4xl font-extrabold">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
       </div>
 
       <h2 className="font-bold">By Category</h2>
       <div className="chart-container" style={{ height: Math.max(300, labels.length * 40 + 50) + 'px' }}>
-          {labels.length > 0 ? (
+          {isMounted && labels.length > 0 ? (
             <Bar data={chartData} options={options as any} plugins={[ChartDataLabels]} />
           ) : (
             <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              No expenses in this range.
+              {isMounted ? 'No expenses in this range.' : 'Loading Chart...'}
             </div>
           )}
       </div>
       <div id="category-details-container" ref={detailsRef} style={{ marginTop: '20px' }}>
         {activeCategoryFilter && (
-          <div className="category-details">
+          <div className="category-details p-5 bg-white/40 backdrop-blur-md border border-white/20 rounded-3xl mb-5 shadow-sm text-left">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <h3>{activeCategoryFilter} Details</h3>
-              <button onClick={() => setActiveCategoryFilter(null)} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid var(--border)', background: 'transparent', cursor: 'pointer', color: 'var(--text)' }}>Close</button>
+              <h3 className="font-bold text-zen-charcoal">{activeCategoryFilter} Details</h3>
+              <button onClick={() => setActiveCategoryFilter(null)} className="px-3 py-1 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-colors text-sm cursor-pointer border-none">Close</button>
             </div>
             <div className="recent-list">
               {detailExpenses.map(exp => (

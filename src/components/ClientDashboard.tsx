@@ -1,8 +1,9 @@
 'use client';
-import { useRef, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
-import { useExpenseStore } from '@/store/useExpenseStore';
+import { useExpenseStore, StoreProvider } from '@/store/useExpenseStore';
 import { Category } from '@/types/database';
 import { Expense, User } from '@/types/database';
 import Tabs from './Tabs';
@@ -15,6 +16,7 @@ import EditExpenseModal from './EditExpenseModal';
 import CategoryModal from './CategoryModal';
 import BulkEditModal from './BulkEditModal';
 import SiriModal from './SiriModal';
+import Logo from './Logo';
 
 interface ClientDashboardProps {
   initialExpenses: Expense[];
@@ -29,13 +31,21 @@ export default function ClientDashboard({
   initialUser,
   initialError
 }: ClientDashboardProps) {
+  return (
+    <StoreProvider initialData={{ expenses: initialExpenses, categories: initialCategories, user: initialUser, globalError: initialError }}>
+      <ClientDashboardContent />
+    </StoreProvider>
+  );
+}
+
+function ClientDashboardContent() {
   const { 
-    hydrate, globalError, activeTab, 
+    globalError, activeTab, 
     toggleAddModal, toggleCategoryModal, toggleChatModal, toggleSiriModal, 
     isCategoryModalOpen, isChatModalOpen, isAddModalOpen,
     reset 
-  } = useExpenseStore();
-  const hydrated = useRef(false);
+  } = useExpenseStore(state => state);
+  
   const router = useRouter();
   const supabase = createClient();
 
@@ -65,39 +75,31 @@ export default function ClientDashboard({
     }
   }, []);
 
-  if (!hydrated.current) {
-    hydrate({
-      expenses: initialExpenses,
-      categories: initialCategories,
-      user: initialUser,
-      error: initialError || undefined
-    });
-    hydrated.current = true;
-  }
-
   return (
     <>
       <div className="container">
         <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-          <h1>Expenses</h1>
+          <Link href="/" className="cursor-pointer hover:opacity-80 transition-all no-underline">
+            <Logo className="w-24 h-8 text-zen-charcoal flex items-center" />
+          </Link>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button id="siri-btn" style={{ display: "flex", alignItems: "center", padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: 'pointer' }} onClick={toggleSiriModal}>
+            <button id="siri-btn" className="flex items-center gap-2 px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold transition-all text-sm cursor-pointer" onClick={toggleSiriModal}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                 <line x1="12" y1="19" x2="12" y2="23"></line>
                 <line x1="8" y1="23" x2="16" y2="23"></line>
               </svg> 
-              <span style={{ marginLeft: '6px' }}>Siri Setup</span>
+              <span>Siri Setup</span>
             </button>
-            <button id="logout-btn" style={{ display: "block", padding: '8px 12px', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--card-bg)', color: 'var(--text)', cursor: 'pointer' }} onClick={handleSignOut}>
+            <button id="logout-btn" className="px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold transition-all text-sm cursor-pointer" onClick={handleSignOut}>
               Sign Out
             </button>
           </div>
         </div>
 
         {globalError && (
-          <div style={{ color: 'red', padding: '10px', background: '#ffebee', borderRadius: '4px', marginBottom: '10px' }}>
+          <div className="my-4 p-3 bg-zen-peach/20 border border-zen-peach/50 text-zen-charcoal rounded-full text-sm text-center font-semibold">
             Error: {globalError}
           </div>
         )}
@@ -124,11 +126,7 @@ export default function ClientDashboard({
       <div className="fab-container">
         <button 
           id="action-elem-7" 
-          className={`fab secondary-fab ${isCategoryModalOpen ? 'active' : ''}`} 
-          style={{ 
-            background: isCategoryModalOpen ? 'var(--accent)' : 'var(--card-bg)',
-            color: isCategoryModalOpen ? 'white' : 'var(--text)'
-          }} 
+          className={`fab secondary-fab transition-all duration-200 rounded-full ${isCategoryModalOpen ? 'bg-zen-sage text-zen-charcoal shadow-md border-none' : 'bg-white/60 text-zen-charcoal/60 border border-zen-lavender/30 hover:bg-white/80'}`}
           title="Manage Categories" 
           onClick={toggleCategoryModal}
         >
@@ -136,19 +134,14 @@ export default function ClientDashboard({
         </button>
         <button 
           id="action-elem-8" 
-          className={`fab secondary-fab ${isChatModalOpen ? 'active' : ''}`} 
-          style={{ 
-            background: isChatModalOpen ? 'var(--accent)' : 'var(--card-bg)',
-            color: isChatModalOpen ? 'white' : 'var(--text)'
-          }}
+          className={`fab secondary-fab transition-all duration-200 rounded-full ${isChatModalOpen ? 'bg-zen-sage text-zen-charcoal shadow-md border-none' : 'bg-white/60 text-zen-charcoal/60 border border-zen-lavender/30 hover:bg-white/80'}`}
           onClick={toggleChatModal}
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path></svg>
         </button>
         <button 
           id="fab" 
-          className={`fab ${isAddModalOpen ? 'active' : ''}`}
-          style={{ transform: isAddModalOpen ? 'rotate(45deg)' : 'none', transition: 'transform 0.2s' }}
+          className={`fab transition-all duration-200 rounded-full shadow-md border-none cursor-pointer ${isAddModalOpen ? 'bg-zen-sage text-zen-charcoal rotate-45' : 'bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90'}`}
           onClick={toggleAddModal}
         >
           +

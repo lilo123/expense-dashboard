@@ -1,28 +1,42 @@
+import Link from 'next/link';
+import { getAllPosts } from '@/lib/content';
+
 export default function EducationPage() {
+  const posts = getAllPosts();
+  
+  // In-memory sorting by date descending
+  const sortedPosts = [...posts].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   return (
-    <div style={{ maxWidth: '700px', margin: '0 auto', padding: '40px 20px' }}>
-      <a href="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', textDecoration: 'none', color: 'var(--text-muted)', marginBottom: '30px', fontSize: '14px', fontWeight: 500 }}>
+    <div className="max-w-[700px] mx-auto px-5 py-10 text-zen-charcoal text-left">
+      <a href="/" className="inline-flex items-center gap-2 text-zen-charcoal/60 hover:text-zen-charcoal transition-colors mb-8 text-sm font-semibold no-underline">
         &larr; Back to Home
       </a>
-      <h1 style={{ fontSize: '2.5rem', marginBottom: '20px' }}>Education Hub</h1>
-      <p style={{ fontSize: '1.1rem', lineHeight: '1.7', color: 'var(--text-muted)', marginBottom: '40px' }}>
-        Welcome to the An-yen Mindful Wealth guide. Here you will find resources to cultivate financial clarity and align your spending with your true values.
+      <h1 className="text-4xl font-extrabold mb-5">Flow Hub</h1>
+      <p className="text-lg text-zen-charcoal/80 leading-relaxed mb-10">
+        Welcome to the An-yen Mindful Wealth guide. Cultivate financial clarity and align spending with joint values.
       </p>
       
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
-        <article style={{ padding: '20px', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '12px' }}>
-          <h2 style={{ marginTop: 0, marginBottom: '10px' }}>1. What is Mindful Wealth?</h2>
-          <p style={{ margin: 0, lineHeight: '1.6', color: 'var(--text-muted)' }}>
-            Mindful wealth is the practice of bringing conscious awareness to your financial flows, viewing money not just as currency, but as energy aligned with your values.
-          </p>
-        </article>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {sortedPosts.map((post) => (
+          <Link key={post.slug} href={`/education/${post.slug}`} className="group block no-underline">
+            <article className="h-full p-6 bg-white/40 backdrop-blur-md border border-white/20 rounded-3xl shadow-sm hover:bg-white/60 transition-all duration-200 flex flex-col justify-between">
+              <div>
+                <div className="flex justify-between items-center text-xs font-semibold text-zen-charcoal/50 mb-2">
+                  <span>{post.date}</span>
+                  {post.category && <span className="px-2.5 py-0.5 rounded-full bg-zen-peach/20 border border-zen-peach/30 text-zen-charcoal">{post.category}</span>}
+                </div>
+                <h2 className="text-xl font-bold mt-2 mb-3 group-hover:text-zen-sage-dark transition-colors">{post.title}</h2>
+                <p className="leading-relaxed text-zen-charcoal/80 text-sm mb-4">{post.excerpt}</p>
+              </div>
+              <span className="text-xs font-bold text-zen-charcoal group-hover:underline">Flow &rarr;</span>
+            </article>
+          </Link>
+        ))}
         
-        <article style={{ padding: '20px', background: 'var(--card-bg)', border: '1px solid var(--border)', borderRadius: '12px' }}>
-          <h2 style={{ marginTop: 0, marginBottom: '10px' }}>2. The 3 Pillars of Conscious Budgeting</h2>
-          <p style={{ margin: 0, lineHeight: '1.6', color: 'var(--text-muted)' }}>
-            Learn how to structure your daily record-keeping around core intent, category mapping, and dynamic balance, using our AI extraction features for ultimate simplicity.
-          </p>
-        </article>
+        {sortedPosts.length === 0 && (
+          <p className="col-span-2 text-center py-10 text-zen-charcoal/60 font-medium">No articles published yet.</p>
+        )}
       </div>
     </div>
   );

@@ -5,7 +5,7 @@ import { bulkUpdateAction, bulkDeleteAction } from '@/app/actions';
 import { formatUTCToLocal, toUTCISOString } from '@/lib/utils';
 
 export default function EditExpenseModal() {
-  const { isEditModalOpen, toggleEditModal, editingExpenseId, expenses, categories, updateBulkExpenses } = useExpenseStore();
+  const { isEditModalOpen, toggleEditModal, editingExpenseId, expenses, categories, updateBulkExpenses, deleteExpense } = useExpenseStore();
   const [date, setDate] = useState('');
   const [item, setItem] = useState('');
   const [amount, setAmount] = useState('');
@@ -53,9 +53,7 @@ export default function EditExpenseModal() {
       try {
         await bulkDeleteAction([editingExpenseId]);
         // Instantly remove from local Zustand state
-        useExpenseStore.setState((state) => ({
-          expenses: state.expenses.filter(e => e.id !== editingExpenseId)
-        }));
+        deleteExpense(editingExpenseId);
         toggleEditModal();
       } catch (error) {
         console.error('Failed to delete expense', error);
@@ -68,21 +66,26 @@ export default function EditExpenseModal() {
     <div id="edit-modal" className="modal" style={{ display: 'flex' }} onClick={(e) => {
       if ((e.target as HTMLElement).classList.contains('modal')) toggleEditModal();
     }}>
-        <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <span id="action-elem-6" className="close" onClick={() => toggleEditModal()}>&times;</span>
-            <h2>Edit Expense</h2>
-            <input type="hidden" id="edit-row" />
-            <input type="date" id="edit-date" style={{ colorScheme: 'dark' }} value={date} onChange={e => setDate(e.target.value)} />
-            <input type="text" id="edit-item" placeholder="Item Name" style={{ colorScheme: 'dark' }} value={item} onChange={e => setItem(e.target.value)} />
-            <input type="number" id="edit-amount" placeholder="Amount" style={{ colorScheme: 'dark' }} value={amount} onChange={e => setAmount(e.target.value)} />
-            <select id="edit-category" style={{ colorScheme: 'dark' }} value={categoryId} onChange={e => setCategoryId(e.target.value)}>
-              <option value="" disabled>Select category</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
-            <button id="save-edit-btn" onClick={handleSave}>Save Changes</button>
-            <button id="delete-edit-btn" className="danger-btn" style={{ marginTop: '10px' }} onClick={handleDelete}>Delete</button>
+        <div className="modal-content bg-white/40 backdrop-blur-md border border-white/20 shadow-xl text-zen-charcoal rounded-3xl" style={{ maxWidth: '400px', padding: '25px', maxHeight: '90dvh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <span id="action-elem-6" className="close" style={{ fontSize: '24px' }} onClick={() => toggleEditModal()}>&times;</span>
+            <h2 style={{ marginBottom: '20px', fontSize: '1.5em' }}>Edit Expense</h2>
+            <div className="flex flex-col gap-4">
+                <input type="hidden" id="edit-row" />
+                <input type="date" id="edit-date" className="w-full px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 text-base appearance-none box-border" value={date} onChange={e => setDate(e.target.value)} />
+                <input type="text" id="edit-item" placeholder="Item Name" className="w-full px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 text-base appearance-none box-border" value={item} onChange={e => setItem(e.target.value)} />
+                <div className="flex items-center bg-white/50 border border-zen-lavender/60 rounded-full px-4 h-12 box-border overflow-hidden">
+                    <span className="text-zen-charcoal/60 text-base mr-2 flex items-center">$</span>
+                    <input type="number" id="edit-amount" placeholder="Amount" className="flex-1 border-none bg-transparent text-zen-charcoal p-0 m-0 text-base outline-none focus:ring-0 appearance-none h-full" value={amount} onChange={e => setAmount(e.target.value)} />
+                </div>
+                <select id="edit-category" className="w-full px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal text-base appearance-none h-12 box-border" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+                  <option value="" disabled>Select category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+                <button id="save-edit-btn" onClick={handleSave} className="w-full py-4 mt-2 bg-zen-charcoal text-zen-base rounded-full font-bold hover:bg-zen-charcoal/90 transition-all text-lg cursor-pointer border-none">Save Changes</button>
+                <button id="delete-edit-btn" onClick={handleDelete} className="w-full py-4 bg-zen-peach text-zen-charcoal rounded-full font-bold hover:bg-zen-peach/90 transition-all text-lg cursor-pointer border-none">Delete</button>
+            </div>
         </div>
     </div>
   );

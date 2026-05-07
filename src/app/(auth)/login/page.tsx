@@ -100,7 +100,7 @@ export default function LoginPage() {
               required 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-5 py-4 rounded-xl bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
+              className="w-full px-5 py-4 rounded-full bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
             />
           </div>
           
@@ -112,7 +112,7 @@ export default function LoginPage() {
               required 
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-5 py-4 rounded-xl bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
+              className="w-full px-5 py-4 rounded-full bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
             />
             <button 
               type="button" 
@@ -132,7 +132,7 @@ export default function LoginPage() {
                 required 
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-5 py-4 rounded-xl bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
+                className="w-full px-5 py-4 rounded-full bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
               />
               <button 
                 type="button" 
@@ -158,7 +158,7 @@ export default function LoginPage() {
 
           <button 
             type="submit" 
-            className="w-full py-4 mt-4 rounded-xl bg-zen-charcoal text-zen-base font-bold text-lg hover:bg-zen-charcoal/90 hover:scale-[0.99] transition-all shadow-md"
+            className="w-full py-4 mt-4 rounded-full bg-zen-charcoal text-zen-base font-bold text-lg hover:bg-zen-charcoal/90 hover:scale-[0.99] transition-all shadow-md border-none cursor-pointer"
           >
             {isSignUp ? 'Create Account' : 'Sign In'}
           </button>

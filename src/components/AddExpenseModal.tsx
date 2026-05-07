@@ -55,23 +55,23 @@ export default function AddExpenseModal() {
     <div id="add-modal" className="modal" style={{ display: 'flex' }} onClick={(e) => {
       if ((e.target as HTMLElement).classList.contains('modal')) toggleAddModal();
     }}>
-        <div className="modal-content" style={{ maxWidth: '400px', padding: '25px', borderRadius: '12px', maxHeight: '90dvh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+        <div className="modal-content bg-white/40 backdrop-blur-md border border-white/20 shadow-xl text-zen-charcoal rounded-3xl" style={{ maxWidth: '400px', padding: '25px', maxHeight: '90dvh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <span id="action-elem-9" className="close" style={{ fontSize: '24px' }} onClick={toggleAddModal}>&times;</span>
-            <h2 style={{ marginBottom: '20px', fontSize: '1.5em', color: 'var(--text)' }}>Add Expense</h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                <input type="date" id="add-date" required value={date} onChange={e => setDate(e.target.value)} style={{ colorScheme: 'dark', WebkitAppearance: 'none', appearance: 'none', display: 'block', maxWidth: '100%', margin: 0, padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '16px', width: '100%', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text)' }} />
-                <input type="text" id="add-item" placeholder="What did you buy?" required value={item} onChange={e => setItem(e.target.value)} style={{ colorScheme: 'dark', WebkitAppearance: 'none', appearance: 'none', display: 'block', maxWidth: '100%', margin: 0, padding: '12px', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '16px', width: '100%', boxSizing: 'border-box', background: 'var(--bg)', color: 'var(--text)' }} />
-                <div style={{ display: 'flex', alignItems: 'center', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '8px', padding: '0 12px', overflow: 'hidden', boxSizing: 'border-box', height: '46px' }}>
-                    <span style={{ color: '#666', fontSize: '16px', marginRight: '6px', display: 'flex', alignItems: 'center', lineHeight: 1, height: '100%', marginTop: '2px' }}>$</span>
-                    <input type="number" id="add-amount" placeholder="0.00" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} style={{ flex: 1, border: 'none', background: 'transparent', color: 'var(--text)', padding: 0, margin: 0, fontSize: '16px', boxSizing: 'border-box', outline: 'none', colorScheme: 'dark', WebkitAppearance: 'none', height: '100%', lineHeight: '44px', display: 'flex', alignItems: 'center' }} />
+            <h2 style={{ marginBottom: '20px', fontSize: '1.5em' }}>Add Expense</h2>
+            <div className="flex flex-col gap-4">
+                <input type="date" id="add-date" required value={date} onChange={e => setDate(e.target.value)} className="w-full px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 text-base appearance-none box-border" />
+                <input type="text" id="add-item" placeholder="What did you buy?" required value={item} onChange={e => setItem(e.target.value)} className="w-full px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 text-base appearance-none box-border" />
+                <div className="flex items-center bg-white/50 border border-zen-lavender/60 rounded-full px-4 h-12 box-border overflow-hidden">
+                    <span className="text-zen-charcoal/60 text-base mr-2 flex items-center">$</span>
+                    <input type="number" id="add-amount" placeholder="0.00" step="0.01" required value={amount} onChange={e => setAmount(e.target.value)} className="flex-1 border-none bg-transparent text-zen-charcoal p-0 m-0 text-base outline-none focus:ring-0 appearance-none h-full" />
                 </div>
                 
-                <div style={{ display: 'flex', gap: '10px', width: '100%', marginBottom: '15px', height: '44px' }}>
+                <div className="flex gap-2 w-full mb-3 h-11">
                   <select 
                     id="add-category" 
                     value={category_id} 
                     onChange={e => setCategoryId(e.target.value)}
-                    style={{ flex: 1, padding: '0 10px', borderRadius: '8px', border: '1px solid var(--border)', boxSizing: 'border-box', height: '100%', backgroundColor: 'transparent', color: 'inherit' }}
+                    className="flex-1 px-4 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal text-base appearance-none h-full"
                   >
                     <option value="" disabled>Select category</option>
                     {categories.map((cat) => (
@@ -83,13 +83,13 @@ export default function AddExpenseModal() {
                     type="button"
                     onClick={() => toggleCategoryModal()}
                     title="Manage Categories"
-                    style={{ width: '44px', height: '44px', borderRadius: '8px', border: '1px solid var(--border)', backgroundColor: '#f3f4f6', cursor: 'pointer', boxSizing: 'border-box', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0', transition: 'background 0.2s' }}
+                    className="w-11 h-11 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal/60 hover:text-zen-charcoal cursor-pointer flex items-center justify-center p-0 transition-colors"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
                   </button>
                 </div>
 
-                <button id="add-expense-btn" onClick={handleAdd} style={{ padding: '14px', borderRadius: '8px', fontWeight: 'bold', background: 'var(--accent)', color: 'white', border: 'none', cursor: 'pointer', marginTop: '5px', fontSize: '16px', transition: 'opacity 0.2s' }}>Add Expense</button>
+                <button id="add-expense-btn" onClick={handleAdd} className="w-full py-4 mt-2 bg-zen-charcoal text-zen-base rounded-full font-bold hover:bg-zen-charcoal/90 transition-all text-lg cursor-pointer border-none">Add Expense</button>
             </div>
         </div>
     </div>

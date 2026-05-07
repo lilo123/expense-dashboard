@@ -29,15 +29,15 @@ export default function LandingPage() {
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
           <Link 
             href="/dashboard" 
-            className="px-8 py-4 bg-zen-charcoal text-zen-base rounded-2xl font-bold text-lg text-center hover:scale-[1.02] hover:bg-zen-charcoal/90 transition-all shadow-lg"
+            className="px-8 py-4 bg-zen-charcoal text-zen-base rounded-full font-bold text-lg text-center hover:scale-[1.02] hover:bg-zen-charcoal/90 transition-all shadow-lg"
           >
             Enter App
           </Link>
           <Link 
             href="/education" 
-            className="px-8 py-4 bg-white/40 backdrop-blur-md text-zen-charcoal rounded-2xl font-bold text-lg text-center border border-white/30 hover:bg-white/60 transition-all"
+            className="px-8 py-4 bg-white/40 backdrop-blur-md text-zen-charcoal rounded-full font-bold text-lg text-center border border-white/30 hover:bg-white/60 transition-all"
           >
-            Education Hub
+            Flow Hub
           </Link>
         </div>
       </div>

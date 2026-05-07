@@ -54,7 +54,7 @@ export default function ResetPasswordForm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative" id="auth-screen">
-      <div className="w-full max-w-md bg-white/30 backdrop-blur-md border border-white/20 shadow-xl rounded-3xl p-8">
+      <div className="w-full max-w-md bg-white/40 backdrop-blur-md border border-white/20 shadow-xl rounded-3xl p-8">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-zen-charcoal mb-2">New Password</h2>
           <p className="text-zen-charcoal/70">

@@ -59,10 +59,10 @@ export default function ChatBox() {
     <div className="modal" style={{ display: 'flex' }} onClick={(e) => {
       if ((e.target as HTMLElement).classList.contains('modal')) toggleChatModal();
     }}>
-        <div className="modal-content chat-modal-content" style={{ maxWidth: '450px', width: '100%', height: '85vh', padding: 0, borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column', background: 'var(--card-bg)', border: '1px solid var(--border)', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }} onClick={e => e.stopPropagation()}>
+        <div className="modal-content chat-modal-content bg-white/40 backdrop-blur-md border border-white/20 shadow-xl text-zen-charcoal rounded-3xl" style={{ maxWidth: '450px', width: '100%', height: '85vh', padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
             
-            <div className="chat-header" style={{ padding: '15px', background: 'var(--card-bg)', color: 'var(--text)', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
-                <div style={{ position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)', width: '40px', height: '5px', background: 'var(--text)', opacity: 0.2, borderRadius: '3px' }} />
+            <div className="chat-header bg-white/60 text-zen-charcoal border-b border-zen-lavender/30" style={{ padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
+                <div className="bg-zen-charcoal/20 rounded-full" style={{ position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)', width: '40px', height: '5px' }} />
                 
                 <h2 style={{ margin: 0, fontSize: '1.2rem', textAlign: 'left', flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path><path d="M5 3v4"></path><path d="M19 17v4"></path><path d="M3 5h4"></path><path d="M17 19h4"></path></svg> 
@@ -71,32 +71,27 @@ export default function ChatBox() {
                 <span id="action-elem-13" className="close" onClick={toggleChatModal} style={{ position: 'relative', top: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0,0,0,0.05)', color: 'var(--text)', cursor: 'pointer', fontSize: '24px', lineHeight: 0, padding: 0, margin: 0, boxSizing: 'border-box', transition: 'background 0.2s' }}>&times;</span>
             </div>
 
-            <div id="chat-history" ref={chatHistoryRef} className="chat-history" style={{ flex: 1, padding: '20px', overflowY: 'auto', background: 'var(--bg)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div id="chat-history" ref={chatHistoryRef} className="chat-history bg-transparent" style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 {messages.map((msg, idx) => (
-                  <div key={idx} className={`chat-message ${msg.role === 'ai' ? 'ai-message' : 'user-message'}`} style={{
-                    background: msg.role === 'ai' ? 'var(--card-bg)' : 'var(--accent)',
-                    border: msg.role === 'ai' ? '1px solid var(--border)' : 'none',
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    borderTopLeftRadius: msg.role === 'ai' ? '2px' : '12px',
-                    borderTopRightRadius: msg.role === 'user' ? '2px' : '12px',
-                    alignSelf: msg.role === 'ai' ? 'flex-start' : 'flex-end',
-                    maxWidth: '85%',
-                    fontSize: '15px',
-                    color: msg.role === 'ai' ? 'var(--text)' : 'white',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                  }}>
+                  <div 
+                    key={idx} 
+                    className={`chat-message px-4 py-3 max-w-[85%] text-[15px] shadow-sm transition-all duration-200 ${
+                      msg.role === 'ai' 
+                        ? 'bg-white/60 border border-white/30 text-zen-charcoal rounded-2xl rounded-tl-none self-start' 
+                        : 'bg-zen-charcoal text-zen-base rounded-2xl rounded-tr-none self-end'
+                    }`}
+                  >
                     {msg.content}
                   </div>
                 ))}
                 {isLoading && (
-                  <div className="chat-message ai-message" style={{ background: 'var(--card-bg)', border: '1px solid var(--border)', padding: '12px 16px', borderRadius: '12px', borderTopLeftRadius: '2px', alignSelf: 'flex-start', maxWidth: '85%', fontSize: '15px', color: 'var(--text)', boxShadow: '0 1px 2px rgba(0,0,0,0.05)' }}>
+                  <div className="chat-message px-4 py-3 max-w-[85%] text-[15px] shadow-sm bg-white/60 border border-white/30 text-zen-charcoal rounded-2xl rounded-tl-none self-start">
                     Thinking...
                   </div>
                 )}
             </div>
 
-            <div className="chat-input-area" style={{ padding: '15px', background: 'var(--card-bg)', borderTop: '1px solid var(--border)', display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div className="chat-input-area bg-white/60 border-t border-zen-lavender/30 flex gap-2 items-center" style={{ padding: '15px' }}>
                 <input 
                   type="text" 
                   id="chat-input" 
@@ -104,13 +99,13 @@ export default function ChatBox() {
                   value={input}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSend()}
-                  style={{ flex: 1, padding: '12px 16px', borderRadius: '24px', border: '1px solid var(--border)', fontSize: '15px', background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} 
+                  className="flex-1 px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 text-[15px] outline-none"
                 />
                 <button 
                   id="send-chat-btn" 
                   onClick={handleSend}
                   disabled={isLoading}
-                  style={{ background: 'var(--accent)', color: 'white', border: 'none', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', transition: 'transform 0.1s', boxShadow: '0 2px 5px rgba(0,0,0,0.1)', opacity: isLoading ? 0.7 : 1 }}
+                  className="w-11 h-11 rounded-full bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90 flex justify-center items-center cursor-pointer transition-transform duration-100 shadow-sm border-none disabled:opacity-70 disabled:cursor-not-allowed"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>
