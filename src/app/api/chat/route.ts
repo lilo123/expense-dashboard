@@ -34,6 +34,7 @@ export async function POST(request: Request) {
     }
 
     // 4. Call Groq API with Function Calling for Strict Outputs
+    const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
     const groqApiKey = process.env.GROQ_API_KEY;
     if (!groqApiKey) {
       console.error('GROQ_API_KEY is missing');
@@ -51,7 +52,7 @@ export async function POST(request: Request) {
         messages: [
           {
             role: 'system',
-            content: `You are a helpful financial assistant. Help the user log their expenses into these categories: [${categoryNames.join(', ')}]. If you return JSON, it MUST be raw JSON without any markdown wrapping (do not use \`\`\`json or \`\`\`). Interpret bare numbers (without currency symbols like $) as currency. If the user is just chatting, saying hello, or expressing emotion, respond normally with a conversational message. DO NOT log an expense for casual chatter.`
+            content: `You are a helpful financial assistant. Today's reference date is ${todayStr}. Help the user log their expenses into these categories: [${categoryNames.join(', ')}]. If you return JSON, it MUST be raw JSON without any markdown wrapping (do not use \`\`\`json or \`\`\`). Interpret bare numbers (without currency symbols like $) as currency. If the user is just chatting, saying hello, or expressing emotion, respond normally with a conversational message. DO NOT log an expense for casual chatter.`
           },
           {
             role: 'user',
@@ -73,7 +74,11 @@ export async function POST(request: Request) {
                     enum: categoryNames,
                     description: 'The category of the expense'
                   },
-                  item: { type: 'string', description: 'A short description of the item or service' }
+                  item: { type: 'string', description: 'A short description of the item or service' },
+                  date: {
+                    type: 'string',
+                    description: "The date the expense occurred, strictly formatted as YYYY-MM-DD. You MUST mathematically calculate relative descriptors like 'yesterday' (today's reference date minus 1 day), '2 days ago' (today minus 2 days), or 'last Friday' relative to today's reference date and return the resolved date in YYYY-MM-DD format. Do NOT return relative words like 'yesterday' or 'today'—always return a YYYY-MM-DD string. If no date is mentioned, strictly return today's reference date."
+                  }
                 },
                 required: ['amount', 'category', 'item']
               }
@@ -127,6 +132,19 @@ export async function POST(request: Request) {
     const amount = extractedData.amount ?? extractedData.Amount;
     const categoryNameFromLLM = String(extractedData.category ?? extractedData.Category ?? '');
     const item = extractedData.item ?? extractedData.Item ?? 'Expense';
+    let resolvedDate = extractedData.date ?? extractedData.Date ?? todayStr;
+    
+    // Programmatic failsafe in case the LLM returns the literal relative words
+    const dateStrLower = String(resolvedDate).toLowerCase().trim();
+    if (dateStrLower === 'yesterday') {
+      const d = new Date();
+      d.setDate(d.getDate() - 1);
+      resolvedDate = d.toISOString().split('T')[0];
+    } else if (dateStrLower === 'today') {
+      resolvedDate = todayStr;
+    }
+    
+    const dateToInsert = new Date(resolvedDate).toISOString();
 
     // Validation check before DB insert
     if (!categoryNameFromLLM || amount === undefined || amount === null || isNaN(Number(amount))) {
@@ -167,7 +185,8 @@ export async function POST(request: Request) {
       Number(amount), 
       category_id, 
       String(item),
-      user.id
+      user.id,
+      dateToInsert
     );
     
     const expenseData = Array.isArray(savedRecord) ? savedRecord[0] : savedRecord;
@@ -181,7 +200,7 @@ export async function POST(request: Request) {
         category_id: category_id,
         categories: { name: finalCategoryName },
         item: String(item),
-        date: new Date().toISOString()
+        date: dateToInsert
       }
     });
 
