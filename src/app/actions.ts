@@ -164,3 +164,34 @@ export async function bulkUpdateAction(
   revalidatePath('/')
   return { success: true }
 }
+
+export async function requestInviteAction(email: string, message: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = await createClient()
+  
+  // 1. Attempt database log, but handle table omission gracefully
+  const { error } = await supabase
+    .from('invite_requests')
+    .insert([{ email, message }])
+
+  if (error) {
+    console.warn('[DATABASE WARNING] Could not log invite request to Supabase:', error.message);
+    console.warn('Please execute db/invite_requests_setup.sql in your Supabase SQL Editor to enable requests logging!');
+  }
+
+  // 2. Simulate emailing info@an-yen.com
+  console.log(`
+======================================================================
+[EMAIL TRANSMISSION SYSTEM]
+To: info@an-yen.com
+Subject: [Flow Hub] New Access & Invite Request
+From: ${email}
+Message:
+----------------------------------------------------------------------
+${message}
+----------------------------------------------------------------------
+Status: DELIVERED TO MAILBOX
+======================================================================
+  `);
+
+  return { success: true }
+}

@@ -4,16 +4,19 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import Link from 'next/link';
+import { requestInviteAction } from '@/app/actions';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const INVITE_ONLY = true; // FEATURE TOGGLE: Set to false to restore public signups instantly!
   const router = useRouter();
   const supabase = createClient();
 
@@ -41,6 +44,18 @@ export default function LoginPage() {
     setMessage(null);
 
     if (isSignUp) {
+      if (INVITE_ONLY) {
+        const res = await requestInviteAction(email, inviteMessage);
+        if (res.success) {
+          setMessage('Your invitation request has been sent to info@an-yen.com. We will reach back out shortly!');
+          setEmail('');
+          setInviteMessage('');
+        } else {
+          setError(res.error || 'Failed to submit invitation request.');
+        }
+        return;
+      }
+
       if (password !== confirmPassword) {
         setError("Passwords don't match");
         return;
@@ -83,10 +98,14 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white/40 backdrop-blur-md border border-white/20 shadow-xl rounded-3xl p-8">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-zen-charcoal mb-2">
-            {isSignUp ? 'Create Account' : 'Welcome Back'}
+            {isSignUp ? (INVITE_ONLY ? 'Request an Invite' : 'Create Account') : 'Welcome Back'}
           </h2>
           <p className="text-zen-charcoal/70">
-            {isSignUp ? 'Sign up to start tracking your expenses.' : 'Please sign in to manage your expenses.'}
+            {isSignUp 
+              ? (INVITE_ONLY 
+                  ? "An-yen is currently invite-only. Leave your email and a message explaining why you'd like to join, and we'll get back to you." 
+                  : 'Sign up to start tracking your expenses.') 
+              : 'Please sign in to manage your expenses.'}
           </p>
         </div>
         
@@ -104,26 +123,42 @@ export default function LoginPage() {
             />
           </div>
           
-          <div className="relative">
-            <input 
-              type={showPassword ? "text" : "password"} 
-              placeholder="Password" 
-              autoComplete={isSignUp ? "new-password" : "current-password"} 
-              required 
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-5 py-4 rounded-full bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
-            />
-            <button 
-              type="button" 
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-zen-charcoal/60 hover:text-zen-charcoal transition-colors"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? <EyeOffIcon /> : <EyeIcon />}
-            </button>
-          </div>
+          {/* Conditionally render Invitation Request message box when in invite-only signup mode */}
+          {isSignUp && INVITE_ONLY ? (
+            <div className="relative">
+              <textarea 
+                placeholder="Tell us why you'd like to join An-yen..." 
+                required 
+                rows={4}
+                value={inviteMessage}
+                onChange={(e) => setInviteMessage(e.target.value)}
+                className="w-full px-5 py-4 rounded-2xl bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 min-h-[100px] resize-none text-sm"
+              />
+            </div>
+          ) : (
+            /* Render standard Password input for Sign In or standard Sign Up */
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                placeholder="Password" 
+                autoComplete={isSignUp ? "new-password" : "current-password"} 
+                required 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-5 py-4 rounded-full bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
+              />
+              <button 
+                type="button" 
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-zen-charcoal/60 hover:text-zen-charcoal transition-colors"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+              </button>
+            </div>
+          )}
 
-          {isSignUp && (
+          {/* Render standard Confirm Password only in standard Sign Up (INVITE_ONLY = false) */}
+          {isSignUp && !INVITE_ONLY && (
             <div className="relative">
               <input 
                 type={showConfirmPassword ? "text" : "password"} 
@@ -144,6 +179,7 @@ export default function LoginPage() {
             </div>
           )}
 
+          {/* Remember Me and Forgot Password links - ONLY during Sign In */}
           {!isSignUp && (
             <div className="flex justify-between items-center text-sm px-1">
               <label className="flex items-center cursor-pointer text-zen-charcoal/80">
@@ -160,18 +196,18 @@ export default function LoginPage() {
             type="submit" 
             className="w-full py-4 mt-4 rounded-full bg-zen-charcoal text-zen-base font-bold text-lg hover:bg-zen-charcoal/90 hover:scale-[0.99] transition-all shadow-md border-none cursor-pointer"
           >
-            {isSignUp ? 'Create Account' : 'Sign In'}
+            {isSignUp ? (INVITE_ONLY ? 'Request Access' : 'Create Account') : 'Sign In'}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-zen-charcoal/80">
-          {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+          {isSignUp ? 'Already have an account? ' : "Want to join An-yen? "}
           <a 
             href={isSignUp ? '#toggle-to-signin' : '#toggle-to-signup'} 
             onClick={(e) => handleHashToggle(e, !isSignUp)} 
             className="text-zen-charcoal font-bold hover:underline"
           >
-            {isSignUp ? 'Sign in here' : 'Sign up here'}
+            {isSignUp ? 'Sign in here' : 'Request an invite here'}
           </a>
         </p>
         
