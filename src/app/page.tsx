@@ -8,8 +8,7 @@ export default function LandingPage() {
       {/* Top Navigation */}
       <nav className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20">
         <div className="flex items-center gap-2">
-          <Logo className="w-12 h-12 sm:w-16 sm:h-16 text-zen-charcoal transition-all" />
-          <span className="font-bold text-xl sm:text-2xl text-zen-charcoal tracking-tight">An-yen</span>
+          <Logo className="w-20 h-20 sm:w-28 sm:h-28 text-zen-charcoal transition-all" />
         </div>
       </nav>
 
