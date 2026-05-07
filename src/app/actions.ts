@@ -2,6 +2,8 @@
 
 import { createClient } from '@/utils/supabase/server'
 import { revalidatePath } from 'next/cache'
+import fs from 'fs';
+import path from 'path';
 import { Expense } from '@/types/database'
 
 export async function addExpenseAction(data: {
@@ -178,20 +180,25 @@ export async function requestInviteAction(email: string, message: string): Promi
     console.warn('Please execute db/invite_requests_setup.sql in your Supabase SQL Editor to enable requests logging!');
   }
 
-  // 2. Simulate emailing info@an-yen.com
-  console.log(`
-======================================================================
-[EMAIL TRANSMISSION SYSTEM]
-To: info@an-yen.com
-Subject: [Flow Hub] New Access & Invite Request
+  // 2. Log to dedicated invite_requests.log file in the project root
+  try {
+    const logDir = process.cwd();
+    const logFilePath = path.join(logDir, 'invite_requests.log');
+    
+    const logEntry = `======================================================================
+[ACCESS REQUEST] Date: ${new Date().toISOString()}
 From: ${email}
 Message:
 ----------------------------------------------------------------------
 ${message}
 ----------------------------------------------------------------------
-Status: DELIVERED TO MAILBOX
-======================================================================
-  `);
+`;
+    
+    fs.appendFileSync(logFilePath, logEntry, 'utf-8');
+    console.log('[INVITE LOGGED SUCCESS] Appended to invite_requests.log');
+  } catch (fileError: any) {
+    console.error('[INVITE LOG ERROR] Could not write to invite_requests.log:', fileError.message);
+  }
 
   return { success: true }
 }

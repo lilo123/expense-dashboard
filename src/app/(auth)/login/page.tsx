@@ -1,12 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import Link from 'next/link';
 import { requestInviteAction } from '@/app/actions';
 
+// Wrap in Suspense to meet Next.js 16 strict query-params static rendering rules
 export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zen-base via-zen-peach to-zen-lavender text-zen-charcoal/60 font-semibold">
+        Loading An-yen Auth...
+      </div>
+    }>
+      <LoginCard />
+    </Suspense>
+  );
+}
+
+function LoginCard() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,9 +29,16 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const INVITE_ONLY = true; // FEATURE TOGGLE: Set to false to restore public signups instantly!
+  
   const router = useRouter();
   const supabase = createClient();
+  const searchParams = useSearchParams();
+
+  // Configurable invite block and secret bypass parameters
+  const INVITE_ONLY = true; 
+  const secretKey = searchParams.get('secret');
+  const isSecretAllowed = secretKey === 'flow-vip'; // Secret key to bypass block
+  const isInviteFormActive = INVITE_ONLY && !isSecretAllowed;
 
   // Handle URL hash on load for deep linking
   useEffect(() => {
@@ -35,7 +55,10 @@ export default function LoginPage() {
     setIsSignUp(toSignUp);
     setError(null);
     setMessage(null);
-    window.history.pushState(null, '', toSignUp ? '#toggle-to-signup' : '#toggle-to-signin');
+    
+    // Maintain secret parameter inside URL hash toggles
+    const secretParam = secretKey ? `?secret=${secretKey}` : '';
+    window.history.pushState(null, '', `${secretParam}${toSignUp ? '#toggle-to-signup' : '#toggle-to-signin'}`);
   };
 
   const handleAuth = async (e: React.FormEvent) => {
@@ -44,10 +67,11 @@ export default function LoginPage() {
     setMessage(null);
 
     if (isSignUp) {
-      if (INVITE_ONLY) {
+      // Invite request flow active (Public block)
+      if (isInviteFormActive) {
         const res = await requestInviteAction(email, inviteMessage);
         if (res.success) {
-          setMessage('Your invitation request has been sent to info@an-yen.com. We will reach back out shortly!');
+          setMessage('Your invitation request has been received. We will reach back out shortly!');
           setEmail('');
           setInviteMessage('');
         } else {
@@ -56,6 +80,7 @@ export default function LoginPage() {
         return;
       }
 
+      // Standard sign-up flow active (Secret bypass)
       if (password !== confirmPassword) {
         setError("Passwords don't match");
         return;
@@ -64,6 +89,7 @@ export default function LoginPage() {
       if (error) setError(error.message);
       else setMessage('Check your email for the confirmation link.');
     } else {
+      // Standard sign-in flow
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
       else window.location.href = '/dashboard';
@@ -88,7 +114,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4 relative" id="auth-screen">
       <Link 
         href="/" 
-        className="absolute top-6 left-6 flex items-center gap-2 text-zen-charcoal/60 hover:text-zen-charcoal font-semibold transition-colors z-50"
+        className="absolute top-6 left-6 flex items-center gap-2 text-zen-charcoal/60 hover:text-zen-charcoal font-semibold transition-colors z-50 no-underline"
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <path d="m15 18-6-6 6-6"/>
@@ -98,11 +124,11 @@ export default function LoginPage() {
       <div className="w-full max-w-md bg-white/40 backdrop-blur-md border border-white/20 shadow-xl rounded-3xl p-8">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-zen-charcoal mb-2">
-            {isSignUp ? (INVITE_ONLY ? 'Request an Invite' : 'Create Account') : 'Welcome Back'}
+            {isSignUp ? (isInviteFormActive ? 'Request an Invite' : 'Create Account') : 'Welcome Back'}
           </h2>
           <p className="text-zen-charcoal/70">
             {isSignUp 
-              ? (INVITE_ONLY 
+              ? (isInviteFormActive 
                   ? "An-yen is currently invite-only. Leave your email and a message explaining why you'd like to join, and we'll get back to you." 
                   : 'Sign up to start tracking your expenses.') 
               : 'Please sign in to manage your expenses.'}
@@ -124,7 +150,7 @@ export default function LoginPage() {
           </div>
           
           {/* Conditionally render Invitation Request message box when in invite-only signup mode */}
-          {isSignUp && INVITE_ONLY ? (
+          {isSignUp && isInviteFormActive ? (
             <div className="relative">
               <textarea 
                 placeholder="Tell us why you'd like to join An-yen..." 
@@ -157,8 +183,8 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Render standard Confirm Password only in standard Sign Up (INVITE_ONLY = false) */}
-          {isSignUp && !INVITE_ONLY && (
+          {/* Render standard Confirm Password only in standard Sign Up (isInviteFormActive = false) */}
+          {isSignUp && !isInviteFormActive && (
             <div className="relative">
               <input 
                 type={showConfirmPassword ? "text" : "password"} 
@@ -196,18 +222,18 @@ export default function LoginPage() {
             type="submit" 
             className="w-full py-4 mt-4 rounded-full bg-zen-charcoal text-zen-base font-bold text-lg hover:bg-zen-charcoal/90 hover:scale-[0.99] transition-all shadow-md border-none cursor-pointer"
           >
-            {isSignUp ? (INVITE_ONLY ? 'Request Access' : 'Create Account') : 'Sign In'}
+            {isSignUp ? (isInviteFormActive ? 'Request Access' : 'Create Account') : 'Sign In'}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-zen-charcoal/80">
-          {isSignUp ? 'Already have an account? ' : "Want to join An-yen? "}
+          {isSignUp ? 'Already have an account? ' : (isInviteFormActive ? "Want to join An-yen? " : "Don't have an account? ")}
           <a 
             href={isSignUp ? '#toggle-to-signin' : '#toggle-to-signup'} 
             onClick={(e) => handleHashToggle(e, !isSignUp)} 
             className="text-zen-charcoal font-bold hover:underline"
           >
-            {isSignUp ? 'Sign in here' : 'Request an invite here'}
+            {isSignUp ? 'Sign in here' : (isInviteFormActive ? 'Request an invite here' : 'Sign up here')}
           </a>
         </p>
         
