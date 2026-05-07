@@ -150,9 +150,9 @@ export default function LoginPage() {
                 <input type="checkbox" id="remember-me" defaultChecked className="mr-2 accent-zen-sage" /> 
                 Remember me
               </label>
-              <a href="#" onClick={e => e.preventDefault()} className="text-zen-charcoal font-semibold hover:underline">
+              <Link href="/forgot-password" className="text-zen-charcoal font-semibold hover:underline">
                 Forgot Password?
-              </a>
+              </Link>
             </div>
           )}
 
@@ -175,8 +175,8 @@ export default function LoginPage() {
           </a>
         </p>
         
-        {error && <p className="mt-4 text-center text-sm font-semibold text-red-500 bg-red-50/50 p-2 rounded-lg">{error}</p>}
-        {message && <p className="mt-4 text-center text-sm font-semibold text-green-600 bg-green-50/50 p-2 rounded-lg">{message}</p>}
+        {error && <p className="mt-4 text-center text-sm font-semibold text-zen-charcoal bg-zen-peach/20 border border-zen-peach/50 p-3 rounded-full">{error}</p>}
+        {message && <p className="mt-4 text-center text-sm font-semibold text-zen-charcoal bg-zen-sage/20 border border-zen-sage/50 p-3 rounded-full">{message}</p>}
       </div>
     </div>
   );
