@@ -38,6 +38,18 @@
 
 ## 5. Future Roadmap
 * **Phase 1.6: Automated Testing (Jest + Playwright):** Lock down the newly refactored React logic with unit and E2E tests before proceeding to new features.
+* **Phase 1.7: User Settings & Profile Management:**
+  * **Database Schema Requirements:**
+    * Table Name: `profiles`
+    * Foreign Key: `id` references `auth.users.id` (1-to-1 relationship).
+    * Columns: `display_name` (text), `avatar_url` (text), `base_currency` (text, max length 3).
+    * Security: RLS enabled. Users can only select and update where `auth.uid() = id`.
+    * Automation: Postgres trigger required to insert a default row into `profiles` automatically upon new user signup in `auth.users`.
+  * **Frontend Requirements:**
+    * Route: `src/app/(dashboard)/settings/page.tsx` (Protected route).
+    * UI Components: Profile editing form, Password update form.
+    * Styling: Must utilize standard An-yen glassmorphism (`bg-white/40 backdrop-blur-md border border-white/20`).
+    * Data Fetching: Utilize Next.js Server Actions. `updateProfile(data)` mapping to `profiles` table; `updatePassword(newPassword)` reusing `supabase.auth.updateUser()`.
 * **Phase 3:**
   * **Budget Rollover Functionality:** Allowing unspent budget to carry over to the next month (deferred from MVP v2 to keep initial launch simple).
   * **Advanced Gamification:** Leveling up Savings Avatars, unlocking new tiers.
