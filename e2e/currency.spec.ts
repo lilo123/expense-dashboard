@@ -74,7 +74,7 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
   });
 
   test('should swap Display Currency, convert totals dynamically, and format large numbers', async ({ page }) => {
-    const totalLabel = page.locator('#total-amount');
+    const totalLabel = page.locator('#total-amount-desktop');
     await expect(totalLabel).toBeVisible();
     
     // Initial display is default base: CAD (C$)
@@ -97,7 +97,7 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
   });
 
   test('should remember Display Currency preference via LocalStorage across reloads (Hydration-Safe)', async ({ page }) => {
-    const totalLabel = page.locator('#total-amount');
+    const totalLabel = page.locator('#total-amount-desktop');
     const headerCurrencyDropdown = page.locator('nav select, div.header select');
     await expect(headerCurrencyDropdown).toBeVisible();
 

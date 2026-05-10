@@ -237,7 +237,10 @@ export default function DashboardTab() {
 
       <div className="bg-white/40 backdrop-blur-md border border-white/20 shadow-sm text-zen-charcoal p-6 rounded-2xl text-center mb-6">
           <h3 className="text-zen-charcoal/70 font-medium text-sm mb-2">Total Expense</h3>
-          <p id="total-amount" className="text-zen-charcoal text-4xl font-extrabold">{formatFriendlyCurrency(total, displayCurrency)}</p>
+          <div id="total-amount" className="text-zen-charcoal text-4xl font-extrabold flex justify-center items-center">
+            <span id="total-amount-mobile" className="block md:hidden">{formatChartFriendlyCurrency(total, displayCurrency)}</span>
+            <span id="total-amount-desktop" className="hidden md:block">{formatFriendlyCurrency(total, displayCurrency)}</span>
+          </div>
       </div>
 
       <h2 className="font-bold">By Category</h2>
