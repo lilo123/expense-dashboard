@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Phase 1.65: Trigger Seeding & Currency System E2E', () => {
+test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', () => {
   const TEST_EMAIL = 'test-user@example.com';
   const TEST_PASSWORD = 'password123';
 
@@ -17,7 +17,6 @@ test.describe('Phase 1.65: Trigger Seeding & Currency System E2E', () => {
   });
 
   test('should verify the Postgres trigger auto-seeded the 16 default categories', async ({ page }) => {
-    // Open Add modal to check the categories select dropdown
     await page.click('#fab');
     await expect(page.locator('#add-modal')).toBeVisible();
 
@@ -29,7 +28,6 @@ test.describe('Phase 1.65: Trigger Seeding & Currency System E2E', () => {
       return Array.from(select.options).map(opt => opt.text);
     });
 
-    // Our 16 default categories (+ disabled first option)
     const expectedCategories = [
       'Select category',
       'Housing', 'Utilities', 'Insurance', 'Groceries', 'Dining Out', 
@@ -39,25 +37,22 @@ test.describe('Phase 1.65: Trigger Seeding & Currency System E2E', () => {
 
     expect(options.length).toBe(expectedCategories.length);
     
-    // Verify the list contains exactly the PRD specified categories
     expectedCategories.forEach(cat => {
       expect(options).toContain(cat);
     });
 
-    // Close modal
     await page.click('#add-modal .close');
   });
 
-  test('should log expense in foreign currency (VND), convert to base USD, and display compressed pill format in list', async ({ page }) => {
-    await page.click('#action-elem-2'); // Go to Recent Tab to verify addition
+  test('should log in foreign VND, convert to base CAD (C$), and display compressed pill format in Recent list', async ({ page }) => {
+    await page.click('#action-elem-2'); // Go to Recent Tab
 
-    // 1. Log the foreign expense
     await page.click('#fab');
     await expect(page.locator('#add-modal')).toBeVisible();
 
     await page.fill('#add-item', 'VND Pho Noodles 🍜');
     
-    // Select VND from amount currency dropdown
+    // Select VND from accessible Currency combobox dropdown (first items are CAD/VND!)
     const currencyDropdown = page.getByRole('combobox', { name: 'Currency' });
     await currencyDropdown.selectOption('VND');
     
@@ -70,38 +65,52 @@ test.describe('Phase 1.65: Trigger Seeding & Currency System E2E', () => {
     await page.click('#add-expense-btn');
     await expect(page.locator('#add-modal')).not.toBeVisible();
 
-    // 2. Assert display in Recent List
-    // Should display in the original currency logged (VND) since preferred display currency is still USD (base)
+    // Verify list rendering displays original logged currency in compressed form (100K ₫)
     const loggedItem = page.locator('.expense-item', { hasText: 'VND Pho Noodles 🍜' }).first();
     await expect(loggedItem).toBeVisible();
     
-    // Should be formatted in compressed format: 100K ₫
     const loggedAmountText = await loggedItem.locator('.expense-amount').innerText();
     expect(loggedAmountText).toBe('100K ₫');
   });
 
-  test('should swap Display Currency, convert totals dynamically, and shorten large VND numbers', async ({ page }) => {
-    // Verify total is initially in USD
+  test('should swap Display Currency, convert totals dynamically, and format large numbers', async ({ page }) => {
     const totalLabel = page.locator('#total-amount');
     await expect(totalLabel).toBeVisible();
     
+    // Initial display is default base: CAD (C$)
     const initialTotalText = await totalLabel.innerText();
-    expect(initialTotalText).toContain('$'); // Default base display is USD
+    expect(initialTotalText).toContain('C$'); 
 
-    // Swap top header Display Currency to VND
-    const headerCurrencyDropdown = page.locator('nav select, div.header select'); // Select dropdown in header
+    // Swap Display Currency in header to VND (CAD and VND are at the very top!)
+    const headerCurrencyDropdown = page.locator('nav select, div.header select');
     await expect(headerCurrencyDropdown).toBeVisible();
     await headerCurrencyDropdown.selectOption('VND');
 
-    // Total Expense amount should update dynamically to VND
-    // We seeded 35 random expenses with amounts between $2.25 and $130.00 (converted to VND in display)
-    // The total will be large (e.g., several Million VND). It should be shortened to 'M ₫'!
-    await expect(totalLabel).toContainText('M ₫'); // Verify compressed Millions glyph format is used for totals
+    // Total Expense amount updates dynamically to VND Millions compressed
+    await expect(totalLabel).toContainText('M ₫'); 
 
-    // Swapping to EUR should show standard decimal Euro formatting
+    // Swap to EUR shows standard decimal Euro prefix format
     await headerCurrencyDropdown.selectOption('EUR');
     await expect(totalLabel).toContainText('€');
-    await expect(totalLabel).not.toContainText('K'); // Standard decimal format
+    await expect(totalLabel).not.toContainText('K');
     await expect(totalLabel).not.toContainText('M');
+  });
+
+  test('should remember Display Currency preference via LocalStorage across reloads (Hydration-Safe)', async ({ page }) => {
+    const totalLabel = page.locator('#total-amount');
+    const headerCurrencyDropdown = page.locator('nav select, div.header select');
+    await expect(headerCurrencyDropdown).toBeVisible();
+
+    // 1. Select VND
+    await headerCurrencyDropdown.selectOption('VND');
+    await expect(totalLabel).toContainText('M ₫');
+
+    // 2. Reload page
+    await page.reload();
+    await page.waitForSelector('#hydrated-marker', { state: 'attached' });
+
+    // 3. Assert selection is remembered and total remains in VND!
+    await expect(headerCurrencyDropdown).toHaveValue('VND');
+    await expect(totalLabel).toContainText('M ₫');
   });
 });

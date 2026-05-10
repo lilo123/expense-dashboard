@@ -1,7 +1,7 @@
 'use client';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { formatUTCToLocal, parseLocalDate, formatFriendlyDate } from '@/lib/utils';
+import { formatUTCToLocal, parseLocalDate, formatFriendlyDate, convertAmount, formatFriendlyCurrency } from '@/lib/utils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -25,7 +25,10 @@ ChartJS.register(
 );
 
 export default function YearlyTab() {
-  const { expenses, activeMonthFilter, setActiveMonthFilter } = useExpenseStore();
+  const { 
+    expenses, activeMonthFilter, setActiveMonthFilter,
+    displayCurrency, baseCurrency, exchangeRates
+  } = useExpenseStore();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const detailsRef = useRef<HTMLDivElement>(null);
   const [isMounted, setIsMounted] = useState(false);
@@ -60,14 +63,18 @@ export default function YearlyTab() {
       if (isNaN(d.getTime()) || d.getFullYear().toString() !== selectedYear) return;
       const m = d.getMonth();
       if (byMonth[m] === null) byMonth[m] = 0;
-      byMonth[m] += (parseFloat(exp.amount as any) || 0);
+      
+      // Convert stored amount (base) dynamically to display currency before summing
+      const amtBase = parseFloat(exp.amount as any) || 0;
+      const amtDisplay = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
+      byMonth[m] += amtDisplay;
     });
 
     const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const dataVals = labels.map((_, i) => byMonth[i]);
 
     return { data: dataVals };
-  }, [expenses, selectedYear]);
+  }, [expenses, selectedYear, displayCurrency, baseCurrency, exchangeRates]);
 
   const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -84,30 +91,32 @@ export default function YearlyTab() {
   };
 
   const options = {
-  responsive: true,
-  maintainAspectRatio: false,
-  layout: { padding: { top: 30 } },
-  onClick: (event: any, elements: any[]) => {
-    if (elements.length > 0) {
-      const idx = elements[0].index;
-      setActiveMonthFilter(idx.toString());
-      setTimeout(() => { detailsRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 100);
-    }
-  },
-  scales: {
-      x: { grid: { display: false }, border: { display: false }, ticks: { color: '#2D3748', font: { weight: 'bold' as const } } },
-      y: { grid: { display: false }, border: { display: false }, ticks: { display: false }, min: 0 }
-  },
-  plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: function(context: any) {
-            let label = context.dataset.label || '';
-            if (label) { label += ': '; }
-            if (context.parsed.y !== null) { label += '$' + (Number(context.parsed.y) / 1000).toFixed(1) + 'K'; }
-            return label;
-          }
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: { padding: { top: 30 } },
+    onClick: (event: any, elements: any[]) => {
+      if (elements.length > 0) {
+        const idx = elements[0].index;
+        setActiveMonthFilter(idx.toString());
+        setTimeout(() => { detailsRef.current?.scrollIntoView({ behavior: 'smooth' }); }, 100);
+      }
+    },
+    scales: {
+        x: { grid: { display: false }, border: { display: false }, ticks: { color: '#2D3748', font: { weight: 'bold' as const } } },
+        y: { grid: { display: false }, border: { display: false }, ticks: { display: false }, min: 0 }
+    },
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context: any) {
+              let label = context.dataset.label || '';
+              if (label) { label += ': '; }
+              if (context.parsed.y !== null) { 
+                label += formatFriendlyCurrency(context.parsed.y, displayCurrency); 
+              }
+              return label;
+            }
           }
         },
         datalabels: {
@@ -115,14 +124,14 @@ export default function YearlyTab() {
             anchor: 'end' as const,
             align: 'top' as const,
             offset: 4,
-            formatter: (value: number) => '$' + (Number(value) / 1000).toFixed(1) + 'K',
+            formatter: (value: number) => formatFriendlyCurrency(value, displayCurrency),
             color: '#2D3748',
             font: { weight: 600, size: 12 }
         }
     }
-};
+  };
 
-const detailExpenses = useMemo(() => {
+  const detailExpenses = useMemo(() => {
     if (activeMonthFilter === null) return [];
     const monthIdx = parseInt(activeMonthFilter, 10);
     return expenses.filter(exp => {
@@ -167,7 +176,12 @@ const detailExpenses = useMemo(() => {
                         <h4>{exp.item}</h4>
                         <p>{exp.categories?.name || "Uncategorized"} &bull; {formatFriendlyDate(exp.date)}</p>
                       </div>
-                      <div className="expense-amount">${(parseFloat(exp.amount as any) || 0).toFixed(2)}</div>
+                      <div className="expense-amount">
+                        {formatFriendlyCurrency(
+                          convertAmount(parseFloat(exp.amount as any) || 0, baseCurrency, displayCurrency, exchangeRates),
+                          displayCurrency
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>

@@ -33,14 +33,17 @@ test.describe('AI Orb & Mindful Chat Flows', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          reply: "Got it! I've allocated $6.50 for Matcha Tea ☕ under Food. Mindful choice!",
+          reply: "Got it! I've allocated C$6.50 for Matcha Tea ☕ under Dining Out. Mindful choice!",
           expense: {
             id: 'exp-mock-99',
             item: 'Matcha Tea',
-            amount: 6.50,
-            category_id: 'cat-1', // Assuming Food category has some ID
+            amount: 6.50, // CAD base
+            original_amount: 6.50,
+            original_currency: 'CAD',
+            currency: 'CAD',
+            category_id: 'cat-1', 
             date: '2026-05-10',
-            categories: { name: 'Food' }
+            categories: { name: 'Dining Out' }
           }
         }),
       });
@@ -65,7 +68,7 @@ test.describe('AI Orb & Mindful Chat Flows', () => {
     await expect(page.locator('.chat-message', { hasText: 'Thinking...' })).toBeVisible();
 
     // 6. Verify Mocked AI response with empathetic confirmation
-    const aiMessage = page.locator('.chat-message', { hasText: "Got it! I've allocated $6.50 for Matcha Tea" });
+    const aiMessage = page.locator('.chat-message', { hasText: "Got it! I've allocated C$6.50 for Matcha Tea" });
     await expect(aiMessage).toBeVisible();
     await expect(page.locator('.chat-message', { hasText: 'Thinking...' })).not.toBeVisible();
 
@@ -77,6 +80,6 @@ test.describe('AI Orb & Mindful Chat Flows', () => {
     await page.click('#action-elem-2'); // Recent Tab
     const loggedItem = page.locator('.expense-item', { hasText: 'Matcha Tea' });
     await expect(loggedItem).toBeVisible();
-    await expect(loggedItem.locator('.expense-amount')).toContainText('$6.50');
+    await expect(loggedItem.locator('.expense-amount')).toContainText('C$6.50');
   });
 });

@@ -2,17 +2,18 @@
 
 import { createClient } from '@/utils/supabase/server';
 
-// 6 Core Currencies backed by local conversion map
-const CORE_CURRENCIES = ['USD', 'EUR', 'JPY', 'GBP', 'SGD', 'VND'];
+// 7 Core Currencies backed by local conversion map
+const CORE_CURRENCIES = ['CAD', 'VND', 'USD', 'EUR', 'JPY', 'GBP', 'SGD'];
 
-// Static fallback rates in case the public API fails or is offline
+// Static fallback rates in case the public API fails or is offline (Base: CAD = 1.0)
 const FALLBACK_RATES: Record<string, number> = {
-  USD: 1.0,
-  EUR: 0.92,
-  JPY: 155.8,
-  GBP: 0.79,
-  SGD: 1.35,
-  VND: 25400.0,
+  CAD: 1.0,
+  VND: 18500.0,
+  USD: 0.73,
+  EUR: 0.68,
+  JPY: 114.0,
+  GBP: 0.58,
+  SGD: 0.99,
 };
 
 export async function syncExchangeRates(): Promise<Record<string, number>> {
@@ -23,7 +24,7 @@ export async function syncExchangeRates(): Promise<Record<string, number>> {
     const { data: cached, error: fetchError } = await supabase
       .from('exchange_rates')
       .select('*')
-      .eq('base_currency', 'USD')
+      .eq('base_currency', 'CAD')
       .order('updated_at', { ascending: false })
       .limit(1)
       .single();
@@ -38,10 +39,10 @@ export async function syncExchangeRates(): Promise<Record<string, number>> {
       }
     }
 
-    console.log('[FX CACHE MISS] Fetching live rates from public API...');
+    console.log('[FX CACHE MISS] Fetching live rates from public API (Base: CAD)...');
 
-    // 2. Fetch live rates from public ExchangeRate-API
-    const res = await fetch('https://open.er-api.com/v6/latest/USD', {
+    // 2. Fetch live rates from public ExchangeRate-API (Baseline CAD)
+    const res = await fetch('https://open.er-api.com/v6/latest/CAD', {
       next: { revalidate: 86400 }, // Next.js fetch cache for 1 day
     });
 
@@ -52,7 +53,7 @@ export async function syncExchangeRates(): Promise<Record<string, number>> {
 
     if (!apiRates) throw new Error('Invalid API response payload');
 
-    // 3. Filter for our 6 core currencies
+    // 3. Filter for our 7 core currencies
     const filteredRates: Record<string, number> = {};
     CORE_CURRENCIES.forEach((curr) => {
       filteredRates[curr] = apiRates[curr] || FALLBACK_RATES[curr];
@@ -63,7 +64,7 @@ export async function syncExchangeRates(): Promise<Record<string, number>> {
       .from('exchange_rates')
       .insert([
         {
-          base_currency: 'USD',
+          base_currency: 'CAD',
           rates: filteredRates,
           updated_at: new Date().toISOString(),
         },
@@ -73,10 +74,10 @@ export async function syncExchangeRates(): Promise<Record<string, number>> {
       console.warn('[FX CACHE ERROR] Failed to write rates to database:', upsertError.message);
     }
 
-    console.log('[FX SYNC SUCCESS] Live exchange rates cached successfully.');
+    console.log('[FX SYNC SUCCESS] Live exchange rates cached successfully (CAD baseline).');
     return filteredRates;
   } catch (err: any) {
-    console.error('[FX SYNC FAILURE] Falling back to hardcoded rates:', err.message || err);
+    console.error('[FX SYNC FAILURE] Falling back to hardcoded CAD rates:', err.message || err);
     return FALLBACK_RATES;
   }
 }

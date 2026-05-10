@@ -69,6 +69,17 @@ function ClientDashboardContent() {
     setIsMounted(true);
   }, []);
 
+  // Hydration-Safe Restore preferred display currency
+  useEffect(() => {
+    if (isMounted) {
+      const stored = localStorage.getItem('displayCurrency');
+      if (stored) {
+        console.log('[FX STORAGE HIT] Restoring preferred display currency:', stored);
+        setDisplayCurrency(stored as any);
+      }
+    }
+  }, [isMounted, setDisplayCurrency]);
+
   const handleSignOut = async () => {
     await supabase.auth.signOut();
     reset();
@@ -103,18 +114,25 @@ function ClientDashboardContent() {
             <Logo className="w-24 h-8 text-zen-charcoal flex items-center" />
           </Link>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <select 
-              value={displayCurrency} 
-              onChange={e => setDisplayCurrency(e.target.value as any)}
-              className="px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold text-sm cursor-pointer outline-none transition-colors"
-            >
-              <option value="USD">USD ($)</option>
-              <option value="EUR">EUR (€)</option>
-              <option value="JPY">JPY (¥)</option>
-              <option value="GBP">GBP (£)</option>
-              <option value="SGD">SGD (S$)</option>
-              <option value="VND">VND (₫)</option>
-            </select>
+            {isMounted ? (
+              <select 
+                value={displayCurrency} 
+                onChange={e => setDisplayCurrency(e.target.value as any)}
+                className="px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold text-sm cursor-pointer outline-none transition-colors"
+              >
+                <option value="CAD">CAD (C$)</option>
+                <option value="VND">VND (₫)</option>
+                <option value="USD">USD ($)</option>
+                <option value="EUR">EUR (€)</option>
+                <option value="JPY">JPY (¥)</option>
+                <option value="GBP">GBP (£)</option>
+                <option value="SGD">SGD (S$)</option>
+              </select>
+            ) : (
+              <div className="px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/40 text-zen-charcoal/50 text-sm font-semibold select-none h-9 flex items-center justify-center min-w-[85px]">
+                Loading...
+              </div>
+            )}
             <button id="siri-btn" className="flex items-center gap-2 px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold transition-all text-sm cursor-pointer" onClick={toggleSiriModal}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>

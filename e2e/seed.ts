@@ -122,20 +122,20 @@ async function seed() {
       categoryMap.set(cat.name, cat.id);
     });
 
-    // 3.5 Seed fixed mock exchange rates for E2E testing
-    console.log('Seeding E2E mock exchange rates (VND: 25000)...');
+    console.log('Seeding E2E mock exchange rates (Base: CAD)...');
     const { error: ratesError } = await supabase
       .from('exchange_rates')
       .insert([
         {
-          base_currency: 'USD',
+          base_currency: 'CAD',
           rates: {
-            USD: 1.0,
-            EUR: 0.92,
-            JPY: 150.0,
-            GBP: 0.8,
-            SGD: 1.35,
-            VND: 25000.0
+            CAD: 1.0,
+            VND: 18500.0,
+            USD: 0.73,
+            EUR: 0.68,
+            JPY: 114.0,
+            GBP: 0.58,
+            SGD: 0.99
           },
           updated_at: new Date().toISOString()
         }
@@ -166,10 +166,10 @@ async function seed() {
       expensesToInsert.push({
         user_id: userId,
         item: desc.item,
-        amount, // Base USD value
+        amount, // Base CAD value
         original_amount: amount,
-        original_currency: 'USD',
-        currency: 'USD',
+        original_currency: 'CAD',
+        currency: 'CAD',
         category_id: categoryId,
         date: new Date(date).toISOString(), // Convert local date to ISO UTC
         created_at: new Date(date).toISOString()

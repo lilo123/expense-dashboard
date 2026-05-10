@@ -74,9 +74,9 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     categories: initialState.categories || [],
     user: initialState.user || null,
     globalError: initialState.globalError || null,
-    displayCurrency: initialState.displayCurrency || 'USD',
-    baseCurrency: initialState.baseCurrency || 'USD',
-    exchangeRates: initialState.exchangeRates || { USD: 1.0 },
+    displayCurrency: initialState.displayCurrency || 'CAD',
+    baseCurrency: initialState.baseCurrency || 'CAD',
+    exchangeRates: initialState.exchangeRates || { CAD: 1.0 },
     isAddModalOpen: false,
     isEditModalOpen: false,
     isCategoryModalOpen: false,
@@ -93,7 +93,12 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     setActiveCategoryFilter: (cat) => set({ activeCategoryFilter: cat }),
     setActiveMonthFilter: (month) => set({ activeMonthFilter: month }),
     
-    setDisplayCurrency: (curr) => set({ displayCurrency: curr }),
+    setDisplayCurrency: (curr) => set(() => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('displayCurrency', curr);
+      }
+      return { displayCurrency: curr };
+    }),
     setBaseCurrency: (curr) => set({ baseCurrency: curr }),
     setExchangeRates: (rates) => set({ exchangeRates: rates }),
     
@@ -119,9 +124,9 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       categories: [], 
       user: null, 
       globalError: null, 
-      displayCurrency: 'USD',
-      baseCurrency: 'USD',
-      exchangeRates: { USD: 1.0 },
+      displayCurrency: 'CAD',
+      baseCurrency: 'CAD',
+      exchangeRates: { CAD: 1.0 },
       isAddModalOpen: false, 
       isEditModalOpen: false, 
       isCategoryModalOpen: false, 

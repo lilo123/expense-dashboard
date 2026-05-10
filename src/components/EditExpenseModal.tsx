@@ -95,12 +95,13 @@ export default function EditExpenseModal() {
                       className="bg-transparent border-none text-zen-charcoal font-semibold text-base outline-none focus:ring-0 cursor-pointer pr-1 h-full appearance-none"
                       style={{ padding: '0 20px 0 0', backgroundPosition: 'right center' }}
                     >
+                      <option value="CAD">C$</option>
+                      <option value="VND">₫</option>
                       <option value="USD">$</option>
                       <option value="EUR">€</option>
                       <option value="JPY">¥</option>
                       <option value="GBP">£</option>
                       <option value="SGD">S$</option>
-                      <option value="VND">₫</option>
                     </select>
                     <input type="number" id="edit-amount" placeholder="Amount" className="flex-1 border-none bg-transparent text-zen-charcoal p-0 m-0 text-base outline-none focus:ring-0 appearance-none h-full" value={amount} onChange={e => setAmount(e.target.value)} />
                 </div>

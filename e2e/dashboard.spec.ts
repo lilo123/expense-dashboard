@@ -50,7 +50,7 @@ test.describe('Dashboard Core Flows', () => {
     await expect(page.locator('#add-modal')).not.toBeVisible();
     const expenseItem = page.locator('.expense-item', { hasText: 'E2E Test Expense' }).first();
     await expect(expenseItem).toBeVisible();
-    await expect(expenseItem.locator('.expense-amount')).toContainText('$12.75');
+    await expect(expenseItem.locator('.expense-amount')).toContainText('C$12.75');
 
     // Verify Glassmorphism class on added item
     await expect(expenseItem).toHaveClass(/bg-white\/40/);

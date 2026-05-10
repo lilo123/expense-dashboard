@@ -79,8 +79,23 @@ export function wrapLabel(label: string, maxLength: number = 15): string | strin
 }
 
 /**
+ * Centralized configuration for all supported currencies.
+ * Easily extensible in the future by simply adding a new row.
+ */
+export const CURRENCY_CONFIG: Record<string, { symbol: string, position: 'prefix' | 'suffix', compression: boolean }> = {
+  CAD: { symbol: 'C$', position: 'prefix', compression: false },
+  VND: { symbol: '₫', position: 'suffix', compression: true },
+  USD: { symbol: '$', position: 'prefix', compression: false },
+  EUR: { symbol: '€', position: 'prefix', compression: false },
+  JPY: { symbol: '¥', position: 'prefix', compression: false },
+  GBP: { symbol: '£', position: 'prefix', compression: false },
+  SGD: { symbol: 'S$', position: 'prefix', compression: false }
+};
+
+/**
  * Converts an amount from one currency to another using a cached rates map.
- * The rates map is expected to have USD as base (rates['USD'] = 1).
+ * Uses base-neutral intermediate conversion and clamps to 2 decimal places
+ * to prevent Javascript float tail growth.
  */
 export function convertAmount(
   amount: number,
@@ -88,56 +103,53 @@ export function convertAmount(
   to: string,
   rates: Record<string, number>
 ): number {
-  if (!from || !to || from === to) return amount;
+  if (!from || !to) return amount;
   const fromRate = rates[from] || 1;
   const toRate = rates[to] || 1;
-  // Convert via USD base
-  return amount * (toRate / fromRate);
+  
+  // Safeguard: skip FX division on identical pairs, but always execute rounding clamp
+  const converted = from === to ? amount : amount * (toRate / fromRate);
+  return Math.round((converted + Number.EPSILON) * 100) / 100;
 }
 
 /**
- * Returns the glyph/symbol for standard supported currencies.
+ * Returns the glyph/symbol for standard supported currencies from CURRENCY_CONFIG.
  */
 export function getCurrencySymbol(currency: string): string {
-  const symbols: Record<string, string> = {
-    USD: '$',
-    EUR: '€',
-    JPY: '¥',
-    GBP: '£',
-    SGD: 'S$',
-    VND: '₫',
-  };
-  return symbols[currency] || '$';
+  return CURRENCY_CONFIG[currency]?.symbol || '$';
 }
 
 /**
- * Formats currency numbers.
- * VND uses compressed formatting ('K, 'M) with no decimals to keep UI clean.
- * USD/EUR/GBP use standard decimal comma formats.
+ * Formats currency numbers with strict locale compliance.
+ * Compresses large VND numbers into K/M formats.
+ * Formats standard currencies (USD, EUR, CAD) with exact decimals.
  */
 export function formatFriendlyCurrency(amount: number, currency: string): string {
   const amt = parseFloat(amount as any) || 0;
-  const symbol = getCurrencySymbol(currency);
+  const conf = CURRENCY_CONFIG[currency] || { symbol: '$', position: 'prefix', compression: false };
 
-  if (currency === 'VND') {
+  // Handle Large Number Compression (like VND)
+  if (conf.compression) {
     if (amt >= 1000000) {
       const formatted = (amt / 1000000).toFixed(1).replace(/\.0$/, '');
-      return `${formatted}M ₫`;
+      return `${formatted}M ${conf.symbol}`;
     }
     if (amt >= 1000) {
       const formatted = (amt / 1000).toFixed(0);
-      return `${formatted}K ₫`;
+      return `${formatted}K ${conf.symbol}`;
     }
-    return `${amt.toFixed(0)} ₫`;
+    return `${amt.toFixed(0)} ${conf.symbol}`;
   }
 
-  // Standard decimal format for standard currencies
+  // Standard decimal formatting using native Intl
   const formattedAmt = amt.toLocaleString('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
 
-  // Prefix glyphs
-  return `${symbol}${formattedAmt}`;
+  // Position glyphs based on configuration
+  return conf.position === 'prefix' 
+    ? `${conf.symbol}${formattedAmt}` 
+    : `${formattedAmt} ${conf.symbol}`;
 }
 

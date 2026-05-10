@@ -86,7 +86,7 @@ export default function DashboardTab() {
       data: sorted.map(s => s[1].total),
       bgColors: sorted.map((_, i) => brandColors[i % brandColors.length])
     };
-  }, [filteredExpenses]);
+  }, [filteredExpenses, displayCurrency, baseCurrency, exchangeRates]);
 
   const chartData = {
     labels: labels.map(l => wrapLabel(l, 12)),
