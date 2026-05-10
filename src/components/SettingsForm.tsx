@@ -23,6 +23,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
   const [email, setEmail] = useState(userEmail);
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('CAD');
   const [budgetResetDay, setBudgetResetDay] = useState(1);
+  // Keep aiTone backend state for seamless under-the-hood syncing!
   const [aiTone, setAiTone] = useState('nurturing');
 
   // 3. Password Form States
@@ -102,7 +103,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
         display_name: displayName,
         base_currency: baseCurrency,
         budget_reset_day: budgetResetDay,
-        ai_tone: aiTone,
+        ai_tone: aiTone, // Saved under the hood!
       });
 
       if (response.success) {
@@ -305,22 +306,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
             </select>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-zen-charcoal/60 font-semibold ml-1">AI Coach Persona Tone</label>
-            <select 
-              value={aiTone} 
-              disabled={!isEditingProfile}
-              aria-label="AI Coach Tone"
-              onChange={e => setAiTone(e.target.value)}
-              className={`w-full px-4 py-3 rounded-full bg-white/50 border focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal text-base appearance-none h-12 box-border transition-all ${
-                !isEditingProfile ? 'border-transparent opacity-75 bg-transparent cursor-default pointer-events-none' : 'border-zen-lavender/60 cursor-pointer'
-              }`}
-            >
-              <option value="nurturing">Nurturing & Encouraging Coach 🌟</option>
-              <option value="strict">Strict & Disciplined Accountant 📊</option>
-              <option value="humorous">Humorous & Sarcastic Companion 🎭</option>
-            </select>
-          </div>
+          {/* NOTE: AI Coach Persona Tone setting remains fully active on the backend, but is completely hidden from the end-user UI here */}
 
           {/* Submit button only displays when editing is active! */}
           {isEditingProfile && (
@@ -420,7 +406,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
           </div>
         )}
 
-        {/* Collapsible Trigger: show button when closed, reveal full re-auth form when active */}
+        {/* Collapsible Trigger: show button when closed, reveal re-auth form when active */}
         {!isEditingPassword ? (
           <button 
             id="change-password-btn"

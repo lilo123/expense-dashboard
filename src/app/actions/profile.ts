@@ -29,36 +29,21 @@ export async function getProfile(): Promise<{ success: boolean; data?: Profile; 
 
 export async function updateProfile(data: {
   display_name: string;
-  email: string;
   base_currency: SupportedCurrency;
   budget_reset_day: number;
   ai_tone: string;
-}): Promise<{ success: boolean; emailVerificationSent?: boolean; message?: string; error?: string }> {
+}): Promise<{ success: boolean; message?: string; error?: string }> {
   const supabase = await createClient();
 
   try {
-    // 1. Authenticate the session
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) {
       return { success: false, error: 'Unauthorized' };
     }
 
     const userId = userData.user.id;
-    const currentEmail = userData.user.email;
-    let emailVerificationSent = false;
 
-    // 2. Handle Email Address Updates in Supabase Auth
-    if (data.email && data.email !== currentEmail) {
-      console.log(`[AUTH EMAIL UPDATE] Requesting update from ${currentEmail} to ${data.email}...`);
-      const { error: emailUpdateError } = await supabase.auth.updateUser({
-        email: data.email
-      });
-
-      if (emailUpdateError) throw emailUpdateError;
-      emailVerificationSent = true;
-    }
-
-    // 3. Update Metadata in public.profiles Table
+    // Update Metadata in public.profiles Table
     const { error: profileUpdateError } = await supabase
       .from('profiles')
       .update({
@@ -72,15 +57,9 @@ export async function updateProfile(data: {
 
     if (profileUpdateError) throw profileUpdateError;
 
-    let successMessage = 'Account overview saved successfully!';
-    if (emailVerificationSent) {
-      successMessage = 'Overview saved! A verification link has been sent to your new email. Please check both inboxes to verify.';
-    }
-
     return { 
       success: true, 
-      emailVerificationSent, 
-      message: successMessage 
+      message: 'General details saved successfully!' 
     };
   } catch (err: any) {
     console.error('[SERVER ACTION updateProfile FAILURE]:', err.message || err);
@@ -91,7 +70,7 @@ export async function updateProfile(data: {
   }
 }
 
-export async function updatePassword(newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> {
+export async function updateEmail(newEmail: string): Promise<{ success: boolean; message?: string; error?: string }> {
   const supabase = await createClient();
 
   try {
@@ -100,12 +79,63 @@ export async function updatePassword(newPassword: string): Promise<{ success: bo
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Call Supabase Auth to update active user password
+    const currentEmail = userData.user.email;
+
+    if (newEmail === currentEmail) {
+      return { success: false, error: 'Please enter a different email address.' };
+    }
+
+    console.log(`[AUTH EMAIL UPDATE] Sending verification links from ${currentEmail} to ${newEmail}...`);
+    
+    // Trigger Supabase double-verification update flow
     const { error } = await supabase.auth.updateUser({
-      password: newPassword
+      email: newEmail
     });
 
     if (error) throw error;
+
+    return {
+      success: true,
+      message: 'Verification links have been sent to both your old and new email addresses. Please check both inboxes to verify.'
+    };
+  } catch (err: any) {
+    console.error('[SERVER ACTION updateEmail FAILURE]:', err.message || err);
+    return {
+      success: false,
+      error: 'Failed to request email update. Please try again.'
+    };
+  }
+}
+
+export async function updatePassword(data: { currentPassword: string; newPassword: string }): Promise<{ success: boolean; message?: string; error?: string }> {
+  const supabase = await createClient();
+
+  try {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const email = userData.user.email!;
+
+    // 1. Secure credentials re-auth check: try signing in with current password
+    console.log(`[AUTH PASSWORD RE-AUTH] Running re-authentication check for ${email}...`);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: data.currentPassword
+    });
+
+    if (signInError) {
+      console.warn('[AUTH RE-AUTH FAILED]: Current password check rejected.');
+      return { success: false, error: 'Current password is incorrect.' };
+    }
+
+    // 2. Proceed with password save if re-auth passed
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: data.newPassword
+    });
+
+    if (updateError) throw updateError;
 
     return { success: true, message: 'Password updated successfully!' };
   } catch (err: any) {

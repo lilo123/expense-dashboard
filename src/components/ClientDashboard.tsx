@@ -188,7 +188,7 @@ function ClientDashboardContent() {
 
                     <button 
                       onClick={() => { setIsDropdownOpen(false); handleSignOut(); }}
-                      className="flex items-center text-left px-3 py-2 rounded-xl hover:bg-zen-peach/20 text-zen-peach font-semibold text-sm transition-all cursor-pointer border-none bg-transparent w-full"
+                      className="flex items-center text-left px-3 py-2 rounded-xl hover:bg-zen-peach/30 text-zen-charcoal font-bold text-sm transition-all cursor-pointer border-none bg-transparent w-full"
                     >
                       Sign Out
                     </button>
