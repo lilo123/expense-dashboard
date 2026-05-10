@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
@@ -48,6 +48,11 @@ function ClientDashboardContent() {
   
   const router = useRouter();
   const supabase = createClient();
+
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -122,7 +127,7 @@ function ClientDashboardContent() {
         </div>
       </div>
       
-      <div id="hydrated-marker" style={{ width: 0, height: 0, opacity: 0, position: 'absolute', pointerEvents: 'none' }} />
+      {isMounted && <div id="hydrated-marker" style={{ width: 0, height: 0, opacity: 0, position: 'absolute', pointerEvents: 'none' }} />}
     
       {/* Add Expense FAB and Modal */}
       <div className="fab-container">

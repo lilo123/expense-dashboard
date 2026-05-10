@@ -4,5 +4,5 @@
 - [x] **Step 2:** Supabase Auth & Core Setup
 - [x] **Step 3:** Backend-for-Frontend (BFF) API Routes
 - [x] **Step 4:** Data Access & Types
-- [ ] **Step 5:** UI Implementation & State Management
-- [ ] **Step 6:** Integration & Functional Parity QA
+- [x] **Step 5:** UI Implementation & State Management
+- [x] **Step 6:** Integration & Functional Parity QA

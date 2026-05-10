@@ -44,12 +44,12 @@ export default function ChatBox() {
            aiContent = `Got it! I've added $${data.expense.amount} for ${data.expense.item} under ${(data.expense.categories?.name || data.expense.category_id)}.`;
         }
       } else if (!res.ok) {
-        aiContent = data.error || 'Failed to process request.';
+        aiContent = "Uh oh, the system tripped up! Don't worry, your data is safe. Let's try that again.";
       }
 
       setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
     } catch (err: any) {
-      setMessages(prev => [...prev, { role: 'ai', content: 'Network error. Please try again.' }]);
+      setMessages(prev => [...prev, { role: 'ai', content: "Uh oh, the system tripped up! Don't worry, your data is safe. Let's try that again." }]);
     } finally {
       setIsLoading(false);
     }
