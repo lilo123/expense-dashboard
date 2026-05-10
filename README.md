@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# An-yen Wealth App - Internal Developer Guide
 
-## Getting Started
+Welcome to the internal engineering repository for **An-yen**, a mindful, RPG-inspired financial tracking experience built to foster positive wealth relationships.
 
-First, run the development server:
+This private workspace is optimized for local execution, strict mathematical precision, WCAG contrast guidelines, and high E2E test coverage across desktop and mobile viewports.
 
+---
+
+## 🎨 1. Brand & Design System Guidelines
+
+Our visual theme is rooted in **empowerment, tranquility, and glassmorphic depth**. We strictly reject traditional, stress-inducing financial layouts and wording.
+
+### A. Glassmorphism Card Utility
+All main visual widgets, total cards, and modals must utilize our signature frosted glass class configurations:
+*   **Class Combo**: `bg-white/40 backdrop-blur-md border border-white/20 shadow-sm`
+*   **Corners**: Elements must use fluid pill-shaped corners to prevent sharp angles (e.g., `rounded-full`, `rounded-3xl`, `rounded-2xl`).
+
+### B. Custom Pastel Tailwind Palette
+To maintain a calm Zen mood, only reference these brand-approved colors:
+*   `bg-zen-base`: Light cream background.
+*   `text-zen-charcoal`: Deep charcoal text (main text color).
+*   `bg-zen-lavender`: Soft lilac highlights (e.g., buttons, accents).
+*   `bg-zen-sage`: Muted green for successful selections, categories, and streaks.
+*   `bg-zen-peach`: Pastel peach for delete actions and warning states.
+
+### C. The Levitating Iridescent AI Orb
+*   The Mindful AI Coach Companion (`AnyenOrb.tsx`) must use fluid, morphing CSS keyframe animations (`animate-liquid-flow`).
+*   **Strict Constraint**: **Never load heavy 3D engines** (like Three.js or WebGL). Visual fluidity must be kept entirely in CSS to guarantee lightning-fast performance on mobile screen sizes.
+
+---
+
+## ⚡ 2. Supabase Local Sandbox Quick-Start
+
+To develop and test securely without polluting live production databases, we replicate the entire cloud Supabase stack locally using lightweight Docker containers.
+
+### A. Start Local Sandbox
+Ensure you have Docker running locally, then spin up the Supabase containers:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npx supabase start
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### B. Compile Schemas & Reload Cache
+Because of local Docker socket permissions, our migrations are compiled and verified using a direct pg connection script. This script applies the sequential DDL structures and issues a PostgREST schema cache reset instantly:
+```bash
+npx tsx e2e/init_db.ts
+```
+*Migrations applied sequentially:*
+1.  `20260510000000_init.sql` (Base categories, expenses, and RLS rules).
+2.  `20260510140000_phase_1_65.sql` (Dual-amount auditing columns & PL/pgSQL trigger).
+3.  `20260510150000_phase_1_65_extensions.sql` (Default CAD baseline alters).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### C. Seed CAD baseline Dataset
+Wipes previous seeds, creates a fresh test user `test-user@example.com` (which automatically fires the Postgres Trigger to seed default categories), caches fixed mock exchange rates (`VND: 18500.0`), and inserts 35 realistic historical expenses:
+```bash
+npx tsx --env-file=.env.test e2e/seed.ts
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+---
 
-## Learn More
+## 🔐 3. Financial Math & Accessibility Standards
 
-To learn more about Next.js, take a look at the following resources:
+### A. Float Arithmetic Rounded Safeguard
+*   Javascript floating-point arithmetic is prone to tail drifts (e.g., `0.1 + 0.2 = 0.30000000000000004`).
+*   **The Rule**: All currency exchange calculations and identical logging pairs must route strictly through `convertAmount` inside `src/lib/utils.ts` which mathematically clamps results to exactly **2 decimal places** on every conversion step.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### B. Shortened Displays ('K, 'M)
+*   For large-denomination currencies (like Vietnamese Dong `VND`), the UI dynamically compresses text strings (e.g., `₫100K` instead of `100,000 ₫`, and `₫1.5M` instead of `1,500,000 ₫`) to prevent numbers from wrapping or overlapping on mobile.
+*   **Strict Chart Precision**: Visual charts (tooltips and datalabels) for standard currencies (like `CAD`, `USD`) must display exactly **2 decimal K precision (`0.00K`)** to prevent small transactions from rounding down to `0K` (e.g., `C$523` displays as `C$0.52K` and `C$15.50` as `C$0.02K`).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### C. Accessible E2E Selectors
+*   To maintain high accessibility (a11y) and ensure automated E2E selectors are deterministic:
+    *   All select dropdowns and modals must declare an explicit, descriptive `aria-label` (e.g., `aria-label="Category"` or `aria-label="Currency"`).
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🧪 4. Test Execution Playbook
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+We run a strict two-tier test suite.
+
+### A. Unit & Component Tests (Jest)
+Runs completely offline, verifying Zustand store state transitions, optimistic UI updates in Chat, and currency conversion precision:
+```bash
+npm run test
+```
+
+### B. E2E Integration Tests (Playwright - Desktop & Mobile viewports)
+Executes your full application stack simultaneously across **Desktop Chromium, Firefox, Safari (WebKit), Emulated Pixel 5 (Mobile Chrome), and Emulated iPhone 12 (Mobile Safari)**:
+```bash
+# Run all viewports E2E tests securely (includes auto env-backups and auto-restores)
+npx tsx e2e/run_e2e.ts
+
+# Open E2E HTML logs report to inspect screen recordings
+npx playwright show-report
+```
+
+---
+
+## 📝 5. VCS Commit Conventions
+
+To keep your private code reviews in Critique structured and clean, always write descriptive commit summaries and append the following tagging metadata at the **very bottom** of your commit message:
+
+```text
+TAG=agy
+CONV=<conversation_id>
+```
+*(Example: `git commit -m "feat: support CAD default base baseline\n\nTAG=agy\nCONV=ef767037"`)*

@@ -46,3 +46,15 @@ node_modules/
 *.log
 *.pid
 .next_dev.log
+
+# Local Scratch html & text dumps
+*.html
+*.txt
+db_setup.sql
+
+# Local Visual Backups Subdirectory
+visual_backups/
+
+# Playwright testing report directories
+playwright-report/
+test-results/
