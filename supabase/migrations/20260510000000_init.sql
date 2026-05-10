@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS expenses (
     item TEXT NOT NULL,
     amount DECIMAL(12, 2) NOT NULL,
     category_id UUID REFERENCES categories(id) ON DELETE SET NULL,
-    date TIMESTAMPTZ NOT NULL DEFAULT now(),
+    date DATE NOT NULL DEFAULT CURRENT_DATE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
