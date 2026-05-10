@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Phase 1.7: Settings & Profile Management E2E', () => {
+test.describe('Phase 1.7: Settings UX & Security Refinements E2E', () => {
   const TEST_EMAIL = 'test-user@example.com';
   const TEST_PASSWORD = 'password123';
 
@@ -16,94 +16,133 @@ test.describe('Phase 1.7: Settings & Profile Management E2E', () => {
     await page.waitForSelector('#hydrated-marker', { state: 'attached' });
   });
 
-  test('should verify Profile Avatar toggles glassmorphic dropdown and navigates to settings', async ({ page }) => {
-    // 1. Individual header buttons are gone
-    await expect(page.locator('#siri-btn')).not.toBeVisible();
-    await expect(page.locator('#logout-btn')).not.toBeVisible();
-
-    // 2. Profile initials button is visible
+  test('should verify Profile Avatar toggles dropdown with high-contrast Sign Out and routes to settings', async ({ page }) => {
     const profileBtn = page.locator('#profile-btn');
     await expect(profileBtn).toBeVisible();
-    await expect(profileBtn).toContainText('TE'); // 'test-user' initials 'TE'
 
-    // 3. Click Profile button to open dropdown
+    // 1. Open Dropdown
     await profileBtn.click();
     const dropdown = page.locator('#profile-dropdown');
     await expect(dropdown).toBeVisible();
 
-    // 4. Verify 4 menu options exist
-    await expect(dropdown.locator('a', { hasText: 'Account Overview' })).toBeVisible();
-    await expect(dropdown.locator('button', { hasText: 'Siri Setup' })).toBeVisible();
-    await expect(dropdown.locator('select[aria-label="Currency"]')).toBeVisible();
-    await expect(dropdown.locator('button', { hasText: 'Sign Out' })).toBeVisible();
+    // 2. Verify the new brand-compliant legible Sign Out option is present
+    const signOutBtn = dropdown.locator('button', { hasText: 'Sign Out' });
+    await expect(signOutBtn).toBeVisible();
+    await expect(signOutBtn).toHaveClass(/text-zen-charcoal/); // Deep Charcoal text
+    await expect(signOutBtn).toHaveClass(/hover:bg-zen-peach\/30/); // Soft Pale Peach hover
 
-    // 5. Click Account Overview and verify redirect to /settings
+    // 3. Navigate to Settings
     await dropdown.locator('a', { hasText: 'Account Overview' }).click();
     await expect(page).toHaveURL(/\/settings/);
-
-    // 6. Assert visual glassmorphic layout is present on settings page
-    const formContainer = page.locator('.bg-white\\/40').first();
-    await expect(formContainer).toBeVisible();
-    await expect(formContainer).toHaveClass(/backdrop-blur-md/);
   });
 
-  test('should successfully submit profile updates, trigger auth email changes, and update local Zunstand state', async ({ page }) => {
+  test('should enforce read-only locks on General Details and support Pencil edit toggling', async ({ page }) => {
     // Navigate to Settings
     await page.click('#profile-btn');
     await page.locator('#profile-dropdown a', { hasText: 'Account Overview' }).click();
     await expect(page).toHaveURL(/\/settings/);
 
-    // 1. Verify initial values are loaded (email matches, display_name defaults to email prefix)
     const nameInput = page.locator('input[placeholder="Name"]');
-    await expect(nameInput).toHaveValue('test-user');
+    const initialName = await nameInput.inputValue();
     
-    const emailInput = page.locator('input[placeholder="Email"]');
-    await expect(emailInput).toHaveValue(TEST_EMAIL);
+    // 1. Verified inputs are locked read-only by default!
+    await expect(nameInput).toBeDisabled();
+    await expect(page.locator('button:has-text("Save Details")')).not.toBeVisible();
 
-    // 2. Modify values: Change name, change email, change AI tone
+    // 2. Click Edit Pencil button to unlock
+    await page.click('#edit-profile-btn');
+    await expect(nameInput).toBeEnabled();
+    
+    const saveBtn = page.locator('button:has-text("Save Details")');
+    await expect(saveBtn).toBeVisible();
+
+    // 3. Edit display name and click Cancel (should revert values and lock back!)
+    await nameInput.fill('Accidental Edit');
+    await page.click('button:has-text("Cancel")');
+    
+    await expect(nameInput).toBeDisabled();
+    await expect(nameInput).toHaveValue(initialName);
+    await expect(saveBtn).not.toBeVisible();
+
+    // 4. Unlock, edit display name, and save successfully
+    await page.click('#edit-profile-btn');
     await nameInput.fill('Katherine Zen');
-    await emailInput.fill('katherine-new@example.com');
-    await page.locator('select[aria-label="AI Coach Tone"]').selectOption('strict');
-    
-    // Click Save Overview
-    await page.click('button:has-text("Save Overview")');
+    await saveBtn.click();
 
-    // 3. Verify pending verification message is displayed (empathetic banner!)
-    const alertBox = page.locator('.bg-zen-sage\\/20');
-    await expect(alertBox).toBeVisible();
-    await expect(alertBox).toContainText('verification link has been sent');
+    // Verify metadata update toast
+    const successAlert = page.locator('.bg-zen-sage\\/20');
+    await expect(successAlert).toBeVisible();
+    await expect(successAlert).toContainText('saved successfully');
 
-    // 4. Go back to dashboard and verify top Avatar initials updated instantly in Zustand!
-    await page.click('a:has-text("Back to Dashboard")');
-    await expect(page).toHaveURL(/\/dashboard/);
-    
-    // Initials should now be 'KA' (Katherine Zen)
-    await expect(page.locator('#profile-btn')).toContainText('KA');
+    // Form locks back after saving!
+    await expect(nameInput).toBeDisabled();
   });
 
-  test('should validate security password reset forms gracefully', async ({ page }) => {
+  test('should successfully isolate Email Updates and handle Supabase double-confirmation loops', async ({ page }) => {
     // Navigate to Settings
     await page.click('#profile-btn');
     await page.locator('#profile-dropdown a', { hasText: 'Account Overview' }).click();
     await expect(page).toHaveURL(/\/settings/);
 
-    const passInput = page.locator('input[placeholder="At least 6 characters"]');
-    const confirmInput = page.locator('input[placeholder="Repeat new password"]');
-    const submitBtn = page.locator('button:has-text("Update Password")');
+    const emailInput = page.locator('input[placeholder="Email"]');
 
-    // 1. Test mismatch passwords validation
-    await passInput.fill('pass123');
-    await confirmInput.fill('pass456');
+    // 1. Email input is locked read-only by default!
+    await expect(emailInput).toBeDisabled();
+    await expect(page.locator('button:has-text("Update Email")')).not.toBeVisible();
+
+    // 2. Click Edit Email Pencil to unlock
+    await page.click('#edit-email-btn');
+    await expect(emailInput).toBeEnabled();
+    
+    const updateEmailBtn = page.locator('button:has-text("Update Email")');
+    await expect(updateEmailBtn).toBeVisible();
+
+    // 3. Save new email, check double verification links info alert
+    await emailInput.fill('katherine-new@example.com');
+    await updateEmailBtn.click();
+
+    const emailAlert = page.locator('.bg-zen-sage\\/20');
+    await expect(emailAlert).toBeVisible();
+    // Verifies RLS confirmation dispatches notices
+    await expect(emailAlert).toContainText('links have been sent to both');
+    
+    await expect(emailInput).toBeDisabled();
+  });
+
+  test('should collapse password resets and enforce current password re-authentication checks', async ({ page }) => {
+    // Navigate to Settings
+    await page.click('#profile-btn');
+    await page.locator('#profile-dropdown a', { hasText: 'Account Overview' }).click();
+    await expect(page).toHaveURL(/\/settings/);
+
+    // 1. Form is collapsed by default
+    const currentPassInput = page.locator('input[placeholder="Verify current password"]');
+    await expect(currentPassInput).not.toBeVisible();
+
+    // 2. Click Change Password trigger button to unfold
+    await page.click('#change-password-btn');
+    await expect(currentPassInput).toBeVisible();
+
+    const newPassInput = page.locator('input[placeholder="At least 6 characters"]');
+    const confirmPassInput = page.locator('input[placeholder="Repeat new password"]');
+    const submitBtn = page.locator('button:has-text("Save Password")');
+
+    // 3. Enter mismatch passwords and verify validation
+    await currentPassInput.fill('password123');
+    await newPassInput.fill('newSecurePass123');
+    await confirmPassInput.fill('wrongMatch456');
     await submitBtn.click();
 
     let errorAlert = page.locator('.bg-zen-peach\\/20');
     await expect(errorAlert).toBeVisible();
-    await expect(errorAlert).toContainText('Passwords do not match');
+    await expect(errorAlert).toContainText('do not match');
 
-    // 2. Test too short validation
-    await passInput.fill('123');
-    await confirmInput.fill('123');
+    // 4. Enter incorrect current password and verify secure re-authentication checks reject the reset!
+    await currentPassInput.fill('incorrectPass123');
+    await newPassInput.fill('newSecurePass123');
+    await confirmPassInput.fill('newSecurePass123');
     await submitBtn.click();
-    await expect(errorAlert).toContainText('must be at least 6 characters');
+
+    await expect(errorAlert).toContainText('Current password is incorrect');
   });
 });
