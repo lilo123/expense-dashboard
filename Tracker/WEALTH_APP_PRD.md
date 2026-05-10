@@ -33,10 +33,19 @@
 * `id` (UUID)
 * `user_id` (UUID)
 * `item` (String)
-* `amount` (Exact Decimal type)
+* `amount` (Exact Decimal type - Normalized to CAD base currency for fast aggregates)
+* `original_amount` (Exact Decimal type - Raw transaction spent receipt value)
+* `original_currency` (String - spent currency, default 'CAD')
+* `currency` (String - duplicate tag for backwards compatibility, default 'CAD')
 * `category_id` (Foreign Key to `categories`, Nullable)
 * `date` (DATE type - calendar format without time to immunize dates against midnight timezone offset bugs)
 * `created_at` (Timestamp with timezone)
+
+### `exchange_rates` table
+* `id` (UUID Primary Key)
+* `base_currency` (String, default 'CAD')
+* `rates` (JSONB - cached daily conversion map for CAD, VND, USD, EUR, JPY, GBP, SGD)
+* `updated_at` (Timestamp with timezone)
 
 ## 4. Edge Cases & Robustness
 * **Zero-Dollar Budgets:** Safely handle $0 budgets (prevent divide-by-zero errors in health bar percentages if a user wants to block spending in a category).
