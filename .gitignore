@@ -58,3 +58,6 @@ visual_backups/
 # Playwright testing report directories
 playwright-report/
 test-results/
+
+# Unpackaged bug dumps
+UI_bug_V2.md
