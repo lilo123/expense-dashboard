@@ -21,7 +21,7 @@ To maintain a calm Zen mood, only reference these brand-approved colors:
 *   `text-zen-charcoal`: Deep charcoal text (main text color).
 *   `bg-zen-lavender`: Soft lilac highlights (e.g., buttons, accents).
 *   `bg-zen-sage`: Muted green for successful selections, categories, and streaks.
-*   `bg-zen-peach`: Pastel peach for delete actions and warning states.
+*   `bg-zen-peach`: Pastel peach for delete actions, warning states, and soft dropdown hovers (`hover:bg-zen-peach/30`).
 
 ### C. The Levitating Iridescent AI Orb
 *   The Mindful AI Coach Companion (`AnyenOrb.tsx`) must use fluid, morphing CSS keyframe animations (`animate-liquid-flow`).
@@ -48,6 +48,7 @@ npx tsx e2e/init_db.ts
 1.  `20260510000000_init.sql` (Base categories, expenses, and RLS rules).
 2.  `20260510140000_phase_1_65.sql` (Dual-amount auditing columns & PL/pgSQL trigger).
 3.  `20260510150000_phase_1_65_extensions.sql` (Default CAD baseline alters).
+4.  `20260510170000_phase_1_7.sql` (User profiles settings DDL table & refactored dual categories trigger).
 
 ### C. Seed CAD baseline Dataset
 Wipes previous seeds, creates a fresh test user `test-user@example.com` (which automatically fires the Postgres Trigger to seed default categories), caches fixed mock exchange rates (`VND: 18500.0`), and inserts 35 realistic historical expenses:
@@ -57,19 +58,31 @@ npx tsx --env-file=.env.test e2e/seed.ts
 
 ---
 
-## 🔐 3. Financial Math & Accessibility Standards
+## 🔐 3. Financial Math, Accessibility & Security Standards
 
 ### A. Float Arithmetic Rounded Safeguard
 *   Javascript floating-point arithmetic is prone to tail drifts (e.g., `0.1 + 0.2 = 0.30000000000000004`).
-*   **The Rule**: All currency exchange calculations and identical logging pairs must route strictly through `convertAmount` inside `src/lib/utils.ts` which mathematically clamps results to exactly **2 decimal places** on every conversion step.
+*   **The Rule**: All currency exchange calculations and logging pairs must route strictly through `convertAmount` inside `src/lib/utils.ts` which mathematically clamps results to exactly **2 decimal places** on every conversion step.
 
 ### B. Shortened Displays ('K, 'M)
 *   For large-denomination currencies (like Vietnamese Dong `VND`), the UI dynamically compresses text strings (e.g., `₫100K` instead of `100,000 ₫`, and `₫1.5M` instead of `1,500,000 ₫`) to prevent numbers from wrapping or overlapping on mobile.
-*   **Strict Chart Precision**: Visual charts (tooltips and datalabels) for standard currencies (like `CAD`, `USD`) must display exactly **2 decimal K precision (`0.00K`)** to prevent small transactions from rounding down to `0K` (e.g., `C$523` displays as `C$0.52K` and `C$15.50` as `C$0.02K`).
+*   **Strict Chart Precision**: Visual charts (tooltips and datalabels) for standard currencies (like `CAD`, `USD`) must display exactly **2 decimal K precision (`0.00K`)** to prevent small transactions from rounding down to `0K` (e.g., `C$15.50` as `C$0.02K` and `C$0` as `C$0.00K`).
 
 ### C. Accessible E2E Selectors
 *   To maintain high accessibility (a11y) and ensure automated E2E selectors are deterministic:
     *   All select dropdowns and modals must declare an explicit, descriptive `aria-label` (e.g., `aria-label="Category"` or `aria-label="Currency"`).
+
+### D. Secure Password Re-Authentication (Anti-Hijacking)
+*   To prevent unauthorized password modifications in logged-in sessions, the `updatePassword` Server Action enforces a **strict credentials re-authentication check**.
+*   Before allowing the save, it runs a secure sign-in check against Supabase Auth:
+    `supabase.auth.signInWithPassword({ email: user.email, password: currentPassword })`
+*   If the credentials check fails, Postgres immediately rejects the update, keeping the user's credentials completely safe.
+
+### E. Read-Only Edit Pencil Toggles (Accident Prevention)
+*   To prevent users from accidentally altering sensitive account configurations:
+    *   All form fields inside Settings are **read-only (`disabled`) by default**.
+    *   They can only be unlocked by clicking the **Edit Pencil Icon button** next to the section header.
+    *   Clicking **Cancel** discards active input states, reverts fields to their cached database settings state, and locks the inputs back to disabled.
 
 ---
 
@@ -78,7 +91,7 @@ npx tsx --env-file=.env.test e2e/seed.ts
 We run a strict two-tier test suite.
 
 ### A. Unit & Component Tests (Jest)
-Runs completely offline, verifying Zustand store state transitions, optimistic UI updates in Chat, and currency conversion precision:
+Runs completely offline, verifying Zustand store state transitions, optimistic UI updates in Chat, currency conversion precision, and secure Server Action re-authentications:
 ```bash
 npm run test
 ```
@@ -95,7 +108,20 @@ npx playwright show-report
 
 ---
 
-## 📝 5. VCS Commit Conventions
+## 🏗️ 5. React Server Component (RSC) Context Boundaries
+
+Next.js Server Component route files (like `src/app/(dashboard)/settings/page.tsx`) execute on the server and **cannot import client-specific providers (like the Zustand StoreProvider Context) directly** due to RSC rendering boundaries.
+
+### The Client Boundary Wrapper Pattern
+To keep route pages secure, lightweight, and 100% Server-Side Rendered:
+1.  Create a client boundary file marked with `"use client"` (e.g. **`src/components/SettingsWrapper.tsx`**).
+2.  Import `StoreProvider` and wrap your interactive settings forms cleanly inside it on the client.
+3.  Have your Server Route page import and render `<SettingsWrapper userEmail={user.email} />` safely!
+This cleanly isolates all client contexts and prevents Next.js build and compilation crashes.
+
+---
+
+## 📝 6. VCS Commit Conventions
 
 To keep your private code reviews in Critique structured and clean, always write descriptive commit summaries and append the following tagging metadata at the **very bottom** of your commit message:
 
