@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
-import { convertAmount, formatFriendlyCurrency } from '@/lib/utils';
+import { convertAmount, formatFriendlyCurrency, formatChartFriendlyCurrency } from '@/lib/utils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -161,7 +161,7 @@ export default function DashboardTab() {
             let label = context.dataset.label || '';
             if (label) label += ': ';
             if (context.parsed.x !== null) {
-              label += formatFriendlyCurrency(context.parsed.x, displayCurrency);
+              label += formatChartFriendlyCurrency(context.parsed.x, displayCurrency);
             }
             return label;
           }
@@ -170,7 +170,7 @@ export default function DashboardTab() {
       datalabels: {
         anchor: 'end' as const,
         align: 'right' as const,
-        formatter: (value: number) => formatFriendlyCurrency(value, displayCurrency),
+        formatter: (value: number) => formatChartFriendlyCurrency(value, displayCurrency),
         color: '#2D3748',
         font: (context: any) => {
           const width = context.chart?.width || 0;

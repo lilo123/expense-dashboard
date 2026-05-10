@@ -153,3 +153,27 @@ export function formatFriendlyCurrency(amount: number, currency: string): string
     : `${formattedAmt} ${conf.symbol}`;
 }
 
+/**
+ * Formats currency numbers compact for charts (tooltip/datalabels).
+ * If standard currency (CAD, USD, EUR), divides by 1000 and adds 'K' (e.g., C$0.5K).
+ * If large currency (VND), delegates to formatFriendlyCurrency.
+ */
+export function formatChartFriendlyCurrency(amount: number, currency: string): string {
+  const amt = parseFloat(amount as any) || 0;
+  const conf = CURRENCY_CONFIG[currency] || { symbol: '$', position: 'prefix', compression: false };
+
+  if (conf.compression) {
+    // VND is already compressed beautifully
+    return formatFriendlyCurrency(amt, currency);
+  }
+
+  // Compress standard currencies into thousands (e.g., 523 -> 0.5K)
+  const compressed = amt / 1000;
+  const formatted = compressed.toFixed(1).replace(/\.0$/, '');
+  const formattedWithK = `${formatted}K`;
+
+  return conf.position === 'prefix'
+    ? `${conf.symbol}${formattedWithK}`
+    : `${formattedWithK} ${conf.symbol}`;
+}
+

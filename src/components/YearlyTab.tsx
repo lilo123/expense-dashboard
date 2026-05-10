@@ -1,7 +1,7 @@
 'use client';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { formatUTCToLocal, parseLocalDate, formatFriendlyDate, convertAmount, formatFriendlyCurrency } from '@/lib/utils';
+import { formatUTCToLocal, parseLocalDate, formatFriendlyDate, convertAmount, formatFriendlyCurrency, formatChartFriendlyCurrency } from '@/lib/utils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -113,7 +113,7 @@ export default function YearlyTab() {
               let label = context.dataset.label || '';
               if (label) { label += ': '; }
               if (context.parsed.y !== null) { 
-                label += formatFriendlyCurrency(context.parsed.y, displayCurrency); 
+                label += formatChartFriendlyCurrency(context.parsed.y, displayCurrency); 
               }
               return label;
             }
@@ -124,7 +124,7 @@ export default function YearlyTab() {
             anchor: 'end' as const,
             align: 'top' as const,
             offset: 4,
-            formatter: (value: number) => formatFriendlyCurrency(value, displayCurrency),
+            formatter: (value: number) => formatChartFriendlyCurrency(value, displayCurrency),
             color: '#2D3748',
             font: { weight: 600, size: 12 }
         }
