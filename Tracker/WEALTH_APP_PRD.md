@@ -47,6 +47,21 @@
 
 ## 5. Future Roadmap
 * **Phase 1.6: Automated Testing (Jest + Playwright) - [COMPLETED]**: Locked down the refactored React logic with Jest unit tests and Playwright E2E tests (including BFF network mocks).
+* **Phase 1.65: Base Categories Seeding & Currency System:**
+  * **Seed Categories on Signup:**
+    * **Database Automation**: Implement a Postgres Trigger (`after_user_signup`) on `auth.users` that automatically inserts 16 default categories into `public.categories` for the newly created user ID.
+    * **16 Default Categories**: Housing, Utilities, Insurance, Groceries, Dining Out, Transportation, Household, Health & Care, Subscriptions, Shopping, Entertainment, Travel, Gifts, Education, Misc, Sport.
+  * **Multi-Currency System:**
+    * **Database Schema Requirements**:
+      * Table `expenses`: Add `currency` column (text, max length 3, default 'USD').
+      * Table `exchange_rates` [NEW]:
+        * Columns: `id` (UUID PK, Default random), `base_currency` (text, length 3, default 'USD'), `rates` (jsonb), `updated_at` (timestamptz).
+    * **Exchange Rates Sync**:
+      * Implement a Server Action `syncExchangeRates()` that queries a free FX API (e.g. ExchangeRate-API) for 6 core currencies (USD, EUR, JPY, GBP, SGD, VND) and caches the rates inside `exchange_rates` daily.
+    * **Frontend Integration**:
+      * Store display currency preference (`displayCurrency`, default 'USD') in Zustand store.
+      * Add currency selectors when manual logging or editing expenses.
+      * Dynamically convert totals and chart segments to match preferred display currency.
 * **Phase 1.7: User Settings & Profile Management:**
   * **Database Schema Requirements:**
     * Table Name: `profiles`

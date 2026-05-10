@@ -23,26 +23,20 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 const TARGET_EMAIL = 'test-user@example.com';
 const TARGET_PASSWORD = 'password123';
 
-const DEFAULT_CATEGORIES = [
-  { name: 'Food', icon: '🍔' },
-  { name: 'Transport', icon: '🚗' },
-  { name: 'Utilities', icon: '⚡' }
-];
-
-// Sample realistic expense descriptors
+// Sample realistic expense descriptors aligned to our 16 default trigger categories
 const SAMPLE_EXPENSES = [
-  { category: 'Food', item: 'Weekly Groceries 🛒', min: 45.0, max: 120.0 },
-  { category: 'Food', item: 'Matcha Latte 🍵', min: 4.50, max: 7.50 },
-  { category: 'Food', item: 'Cozy Coffee ☕', min: 3.50, max: 6.00 },
-  { category: 'Food', item: 'Dinner with Friends 🍕', min: 25.0, max: 85.0 },
-  { category: 'Food', item: 'Lunch Sandwich 🥪', min: 8.50, max: 15.50 },
-  { category: 'Food', item: 'Organic Salad 🥗', min: 12.0, max: 18.0 },
+  { category: 'Groceries', item: 'Weekly Groceries 🛒', min: 45.0, max: 120.0 },
+  { category: 'Dining Out', item: 'Matcha Latte 🍵', min: 4.50, max: 7.50 },
+  { category: 'Dining Out', item: 'Cozy Coffee ☕', min: 3.50, max: 6.00 },
+  { category: 'Dining Out', item: 'Dinner with Friends 🍕', min: 25.0, max: 85.0 },
+  { category: 'Dining Out', item: 'Lunch Sandwich 🥪', min: 8.50, max: 15.50 },
+  { category: 'Groceries', item: 'Organic Salad 🥗', min: 12.0, max: 18.0 },
   
-  { category: 'Transport', item: 'Uber Ride 🚗', min: 8.0, max: 38.0 },
-  { category: 'Transport', item: 'Train Ticket 🎫', min: 15.0, max: 45.0 },
-  { category: 'Transport', item: 'Bus Fare 🚌', min: 2.25, max: 4.50 },
-  { category: 'Transport', item: 'Gas Refill ⛽', min: 35.0, max: 65.0 },
-  { category: 'Transport', item: 'Bikeshare 🚲', min: 3.0, max: 8.0 },
+  { category: 'Transportation', item: 'Uber Ride 🚗', min: 8.0, max: 38.0 },
+  { category: 'Transportation', item: 'Train Ticket 🎫', min: 15.0, max: 45.0 },
+  { category: 'Transportation', item: 'Bus Fare 🚌', min: 2.25, max: 4.50 },
+  { category: 'Transportation', item: 'Gas Refill ⛽', min: 35.0, max: 65.0 },
+  { category: 'Transportation', item: 'Bikeshare 🚲', min: 3.0, max: 8.0 },
   
   { category: 'Utilities', item: 'Electric Bill ⚡', min: 65.0, max: 130.0 },
   { category: 'Utilities', item: 'Water Bill 💧', min: 30.0, max: 55.0 },
@@ -54,7 +48,6 @@ const SAMPLE_EXPENSES = [
 function getRandomPastDate(daysAgo: number): string {
   const date = new Date();
   date.setDate(date.getDate() - Math.floor(Math.random() * daysAgo));
-  // Format as local YYYY-MM-DD
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
@@ -62,7 +55,7 @@ function getRandomPastDate(daysAgo: number): string {
 }
 
 async function seed() {
-  console.log(`\n=== Seeding A Large Historical Test Dataset ===`);
+  console.log(`\n=== Seeding E2E test environment ===`);
   console.log(`Target User: ${TARGET_EMAIL}`);
 
   try {
@@ -78,8 +71,11 @@ async function seed() {
       console.log(`User already exists (ID: ${existingUser.id}). Cleaning up existing user data...`);
       
       // Delete user's records to ensure clean slate
-      await supabase.from('expenses').delete().eq('user_id', existingUser.id);
-      await supabase.from('categories').delete().eq('user_id', existingUser.id);
+      const { error: expDelError } = await supabase.from('expenses').delete().eq('user_id', existingUser.id);
+      if (expDelError) console.warn('Warning: failed to clean expenses:', expDelError.message);
+      
+      const { error: catDelError } = await supabase.from('categories').delete().eq('user_id', existingUser.id);
+      if (catDelError) console.warn('Warning: failed to clean categories:', catDelError.message);
 
       // Delete the auth user
       const { error: deleteError } = await supabase.auth.admin.deleteUser(existingUser.id);
@@ -94,7 +90,7 @@ async function seed() {
     const { data: createData, error: createError } = await supabase.auth.admin.createUser({
       email: TARGET_EMAIL,
       password: TARGET_PASSWORD,
-      email_confirm: true // Auto-confirm email
+      email_confirm: true // Auto-confirm email so they can log in immediately
     });
 
     if (createError) {
@@ -105,29 +101,50 @@ async function seed() {
     const userId = createData.user.id;
     console.log(`Created fresh test user. ID: ${userId}`);
 
-    // 3. Seed default categories
-    console.log('Seeding default categories...');
-    const categoriesToInsert = DEFAULT_CATEGORIES.map(cat => ({
-      user_id: userId,
-      name: cat.name
-    }));
-
+    // 3. Fetch categories dynamically created by the Postgres Trigger!
+    console.log('Waiting for Postgres trigger to auto-seed default categories...');
     const { data: seededCategories, error: catError } = await supabase
       .from('categories')
-      .insert(categoriesToInsert)
-      .select('*');
+      .select('*')
+      .eq('user_id', userId);
 
-    if (catError || !seededCategories) {
-      console.error('Failed to seed categories:', catError?.message || 'No data returned');
+    if (catError || !seededCategories || seededCategories.length === 0) {
+      console.error('Failed to verify categories trigger execution:', catError?.message || 'No categories returned');
       process.exit(1);
     }
-    console.log('Seeded categories:', seededCategories.map(c => c.name));
+
+    console.log(`Trigger verified! Fetched ${seededCategories.length} auto-seeded categories:`);
+    console.log(seededCategories.map(c => c.name));
 
     // Map category name to its newly created local UUID
     const categoryMap = new Map<string, string>();
     seededCategories.forEach(cat => {
       categoryMap.set(cat.name, cat.id);
     });
+
+    // 3.5 Seed fixed mock exchange rates for E2E testing
+    console.log('Seeding E2E mock exchange rates (VND: 25000)...');
+    const { error: ratesError } = await supabase
+      .from('exchange_rates')
+      .insert([
+        {
+          base_currency: 'USD',
+          rates: {
+            USD: 1.0,
+            EUR: 0.92,
+            JPY: 150.0,
+            GBP: 0.8,
+            SGD: 1.35,
+            VND: 25000.0
+          },
+          updated_at: new Date().toISOString()
+        }
+      ]);
+
+    if (ratesError) {
+      console.error('Failed to seed exchange rates:', ratesError.message);
+      process.exit(1);
+    }
 
     // 4. Generate a large historical dataset (35 realistic expenses)
     console.log('Generating 35 historical expenses spread over the last 90 days...');
@@ -149,7 +166,10 @@ async function seed() {
       expensesToInsert.push({
         user_id: userId,
         item: desc.item,
-        amount,
+        amount, // Base USD value
+        original_amount: amount,
+        original_currency: 'USD',
+        currency: 'USD',
         category_id: categoryId,
         date: new Date(date).toISOString(), // Convert local date to ISO UTC
         created_at: new Date(date).toISOString()

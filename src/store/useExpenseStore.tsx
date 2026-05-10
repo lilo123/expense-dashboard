@@ -8,6 +8,10 @@ export interface ExpenseState {
   user: User | null;
   globalError: string | null;
   
+  displayCurrency: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND';
+  baseCurrency: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND';
+  exchangeRates: Record<string, number>;
+
   isAddModalOpen: boolean;
   isEditModalOpen: boolean;
   isCategoryModalOpen: boolean;
@@ -26,7 +30,19 @@ export interface ExpenseState {
   setActiveCategoryFilter: (cat: string | null) => void;
   setActiveMonthFilter: (month: string | null) => void;
 
-  hydrate: (data: { expenses?: Expense[], categories?: Category[], user?: User | null, error?: string }) => void;
+  setDisplayCurrency: (curr: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND') => void;
+  setBaseCurrency: (curr: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND') => void;
+  setExchangeRates: (rates: Record<string, number>) => void;
+
+  hydrate: (data: { 
+    expenses?: Expense[]; 
+    categories?: Category[]; 
+    user?: User | null; 
+    error?: string;
+    displayCurrency?: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND';
+    baseCurrency?: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND';
+    exchangeRates?: Record<string, number>;
+  }) => void;
   toggleAddModal: () => void;
   toggleEditModal: (id?: string) => void;
   toggleCategoryModal: () => void;
@@ -58,6 +74,9 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     categories: initialState.categories || [],
     user: initialState.user || null,
     globalError: initialState.globalError || null,
+    displayCurrency: initialState.displayCurrency || 'USD',
+    baseCurrency: initialState.baseCurrency || 'USD',
+    exchangeRates: initialState.exchangeRates || { USD: 1.0 },
     isAddModalOpen: false,
     isEditModalOpen: false,
     isCategoryModalOpen: false,
@@ -74,12 +93,19 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     setActiveCategoryFilter: (cat) => set({ activeCategoryFilter: cat }),
     setActiveMonthFilter: (month) => set({ activeMonthFilter: month }),
     
-    hydrate: (data) => set({ 
+    setDisplayCurrency: (curr) => set({ displayCurrency: curr }),
+    setBaseCurrency: (curr) => set({ baseCurrency: curr }),
+    setExchangeRates: (rates) => set({ exchangeRates: rates }),
+    
+    hydrate: (data) => set((state) => ({ 
       expenses: data.expenses ? [...data.expenses] : [], 
       categories: data.categories ? [...data.categories] : [], 
       user: data.user || null, 
-      globalError: data.error || null 
-    }),
+      globalError: data.error || null,
+      displayCurrency: data.displayCurrency || state.displayCurrency,
+      baseCurrency: data.baseCurrency || state.baseCurrency,
+      exchangeRates: data.exchangeRates || state.exchangeRates
+    })),
     
     toggleAddModal: () => set((state) => ({ isAddModalOpen: !state.isAddModalOpen })),
     toggleEditModal: (id) => set((state) => ({ isEditModalOpen: !state.isEditModalOpen, editingExpenseId: id || null })),
@@ -93,6 +119,9 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       categories: [], 
       user: null, 
       globalError: null, 
+      displayCurrency: 'USD',
+      baseCurrency: 'USD',
+      exchangeRates: { USD: 1.0 },
       isAddModalOpen: false, 
       isEditModalOpen: false, 
       isCategoryModalOpen: false, 

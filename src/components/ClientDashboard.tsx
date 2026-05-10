@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { useExpenseStore, StoreProvider } from '@/store/useExpenseStore';
+import { syncExchangeRates } from '@/app/actions/rates';
 import { Category } from '@/types/database';
 import { Expense, User } from '@/types/database';
 import Tabs from './Tabs';
@@ -43,11 +44,25 @@ function ClientDashboardContent() {
     globalError, activeTab, 
     toggleAddModal, toggleCategoryModal, toggleChatModal, toggleSiriModal, 
     isCategoryModalOpen, isChatModalOpen, isAddModalOpen,
-    reset 
+    reset,
+    displayCurrency, setDisplayCurrency, setExchangeRates
   } = useExpenseStore(state => state);
   
   const router = useRouter();
   const supabase = createClient();
+
+  // Sync Exchange Rates on Mount
+  useEffect(() => {
+    async function fetchRates() {
+      try {
+        const rates = await syncExchangeRates();
+        setExchangeRates(rates);
+      } catch (err) {
+        console.error('[UI RATES SYNC ERROR] Failed to sync live rates:', err);
+      }
+    }
+    fetchRates();
+  }, [setExchangeRates]);
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
@@ -88,6 +103,18 @@ function ClientDashboardContent() {
             <Logo className="w-24 h-8 text-zen-charcoal flex items-center" />
           </Link>
           <div style={{ display: 'flex', gap: '10px' }}>
+            <select 
+              value={displayCurrency} 
+              onChange={e => setDisplayCurrency(e.target.value as any)}
+              className="px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold text-sm cursor-pointer outline-none transition-colors"
+            >
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="JPY">JPY (¥)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="SGD">SGD (S$)</option>
+              <option value="VND">VND (₫)</option>
+            </select>
             <button id="siri-btn" className="flex items-center gap-2 px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold transition-all text-sm cursor-pointer" onClick={toggleSiriModal}>
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>

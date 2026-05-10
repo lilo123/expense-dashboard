@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
+import { convertAmount, formatFriendlyCurrency } from '@/lib/utils';
 import { bulkDeleteAction } from '@/app/actions';
 import { Expense } from '@/types/database';
 import { formatFriendlyDate } from '@/lib/utils';
@@ -15,7 +16,10 @@ export default function ExpenseList() {
     deleteSelected, 
     toggleEditModal,
     toggleBulkEditModal,
-    updateBulkExpenses
+    updateBulkExpenses,
+    displayCurrency,
+    baseCurrency,
+    exchangeRates
   } = useExpenseStore();
 
   const handleDeleteSelected = async () => {
@@ -65,9 +69,19 @@ export default function ExpenseList() {
         </div>
         <div className="recent-list pb-24 flex flex-col gap-3" id="recent-list">
             {expenses.map((exp: Expense) => {
-              const amt = parseFloat(exp.amount as any) || 0;
+              const amtBase = parseFloat(exp.amount as any) || 0;
               const dateStr = formatFriendlyDate(exp.date);
               
+              // Select which currency amount to show:
+              // If displayCurrency is swapped, show converted. Otherwise, show exact original receipt value!
+              let displayAmt = exp.original_amount || amtBase;
+              let displayCurr = exp.original_currency || exp.currency || 'USD';
+
+              if (displayCurrency !== baseCurrency) {
+                displayAmt = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
+                displayCurr = displayCurrency;
+              }
+
               return (
                 <div 
                   key={exp.id} 
@@ -78,7 +92,7 @@ export default function ExpenseList() {
                   }`}
                   data-id={exp.id} 
                   data-item={exp.item} 
-                  data-amount={amt} 
+                  data-amount={displayAmt} 
                   data-category={exp.categories?.name || "Uncategorized"} 
                   data-date={exp.date}
                   onClick={() => {
@@ -100,7 +114,9 @@ export default function ExpenseList() {
                         <h4>{exp.item}</h4>
                         <p>{exp.categories?.name || "Uncategorized"} &bull; {dateStr}</p>
                     </div>
-                    <div className="expense-amount">${amt.toFixed(2)}</div>
+                    <div className="expense-amount">
+                      {formatFriendlyCurrency(displayAmt, displayCurr)}
+                    </div>
                 </div>
               );
             })}

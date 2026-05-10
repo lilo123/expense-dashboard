@@ -1,6 +1,7 @@
 'use client';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
+import { convertAmount, formatFriendlyCurrency } from '@/lib/utils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -34,7 +35,7 @@ const now = new Date();
 }
 
 export default function DashboardTab() {
-  const { expenses, activeCategoryFilter, setActiveCategoryFilter } = useExpenseStore();
+  const { expenses, activeCategoryFilter, setActiveCategoryFilter, displayCurrency, baseCurrency, exchangeRates } = useExpenseStore();
   
   const { firstDay, todayStr } = getCurrentMonthDatesLocal();
   
@@ -61,14 +62,20 @@ export default function DashboardTab() {
     });
   }, [expenses, startDate, endDate]);
 
-  const total = filteredExpenses.reduce((sum, exp) => sum + (parseFloat(exp.amount as any) || 0), 0);
+  const total = filteredExpenses.reduce((sum, exp) => {
+    const amtBase = parseFloat(exp.amount as any) || 0;
+    const amtDisplay = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
+    return sum + amtDisplay;
+  }, 0);
 
   const { labels, data, bgColors } = useMemo(() => {
     const byCategory: Record<string, { total: number; items: any[] }> = {};
     filteredExpenses.forEach(exp => {
       const catName = exp.categories?.name || "Uncategorized";
       if (!byCategory[catName]) byCategory[catName] = { total: 0, items: [] };
-      byCategory[catName].total += (parseFloat(exp.amount as any) || 0);
+      const amtBase = parseFloat(exp.amount as any) || 0;
+      const amtDisplay = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
+      byCategory[catName].total += amtDisplay;
       byCategory[catName].items.push(exp);
     });
 
@@ -154,7 +161,7 @@ export default function DashboardTab() {
             let label = context.dataset.label || '';
             if (label) label += ': ';
             if (context.parsed.x !== null) {
-              label += '$' + context.parsed.x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+              label += formatFriendlyCurrency(context.parsed.x, displayCurrency);
             }
             return label;
           }
@@ -163,7 +170,7 @@ export default function DashboardTab() {
       datalabels: {
         anchor: 'end' as const,
         align: 'right' as const,
-        formatter: (value: number) => '$' + Number(value).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
+        formatter: (value: number) => formatFriendlyCurrency(value, displayCurrency),
         color: '#2D3748',
         font: (context: any) => {
           const width = context.chart?.width || 0;
@@ -230,7 +237,7 @@ export default function DashboardTab() {
 
       <div className="bg-white/40 backdrop-blur-md border border-white/20 shadow-sm text-zen-charcoal p-6 rounded-2xl text-center mb-6">
           <h3 className="text-zen-charcoal/70 font-medium text-sm mb-2">Total Expense</h3>
-          <p id="total-amount" className="text-zen-charcoal text-4xl font-extrabold">${total.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          <p id="total-amount" className="text-zen-charcoal text-4xl font-extrabold">{formatFriendlyCurrency(total, displayCurrency)}</p>
       </div>
 
       <h2 className="font-bold">By Category</h2>
@@ -257,7 +264,12 @@ export default function DashboardTab() {
                     <h4>{exp.item}</h4>
                     <p>{formatFriendlyDate(exp.date)}</p>
                   </div>
-                  <div className="expense-amount">${(parseFloat(exp.amount as any) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                  <div className="expense-amount">
+                    {formatFriendlyCurrency(
+                      convertAmount(parseFloat(exp.amount as any) || 0, baseCurrency, displayCurrency, exchangeRates),
+                      displayCurrency
+                    )}
+                  </div>
                 </div>
               ))}
             </div>

@@ -58,7 +58,8 @@ describe('AddExpenseModal Component', () => {
     expect(screen.getByRole('heading', { name: 'Add Expense' })).toBeInTheDocument();
     expect(screen.getByPlaceholderText('What did you buy?')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('0.00')).toBeInTheDocument();
-    expect(screen.getByRole('combobox')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /category/i })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: /currency/i })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Select category' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Food' })).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'Transport' })).toBeInTheDocument();
@@ -92,7 +93,7 @@ describe('AddExpenseModal Component', () => {
     // Fill form
     fireEvent.change(screen.getByPlaceholderText('What did you buy?'), { target: { value: 'Coffee' } });
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '4.50' } });
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'cat-1' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /category/i }), { target: { value: 'cat-1' } });
 
     // Submit
     const submitBtn = screen.getByRole('button', { name: 'Add Expense' });
@@ -120,7 +121,7 @@ describe('AddExpenseModal Component', () => {
     // Fill form
     fireEvent.change(screen.getByPlaceholderText('What did you buy?'), { target: { value: 'Coffee' } });
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '4.50' } });
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'cat-1' } });
+    fireEvent.change(screen.getByRole('combobox', { name: /category/i }), { target: { value: 'cat-1' } });
 
     // Submit
     const submitBtn = screen.getByRole('button', { name: 'Add Expense' });

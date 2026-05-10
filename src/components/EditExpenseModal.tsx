@@ -2,14 +2,15 @@
 import { useState, useEffect } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { bulkUpdateAction, bulkDeleteAction } from '@/app/actions';
-import { formatUTCToLocal, toUTCISOString } from '@/lib/utils';
+import { formatUTCToLocal, toUTCISOString, convertAmount } from '@/lib/utils';
 
 export default function EditExpenseModal() {
-  const { isEditModalOpen, toggleEditModal, editingExpenseId, expenses, categories, updateBulkExpenses, deleteExpense } = useExpenseStore();
-  const [date, setDate] = useState('');
+  const { isEditModalOpen, toggleEditModal, editingExpenseId, expenses, categories, updateBulkExpenses, deleteExpense, baseCurrency, exchangeRates } = useExpenseStore();
+   const [date, setDate] = useState('');
   const [item, setItem] = useState('');
   const [amount, setAmount] = useState('');
   const [categoryId, setCategoryId] = useState('');
+  const [currency, setCurrency] = useState('USD');
 
   const editingExpense = expenses.find(e => e.id === editingExpenseId);
 
@@ -17,20 +18,33 @@ export default function EditExpenseModal() {
     if (editingExpense) {
       setDate(editingExpense.date ? formatUTCToLocal(editingExpense.date) : '');
       setItem(editingExpense.item || '');
-      setAmount(editingExpense.amount?.toString() || '');
+      // Load original spent amount and currency to edit raw transaction values
+      setAmount(editingExpense.original_amount?.toString() || editingExpense.amount?.toString() || '');
       setCategoryId(editingExpense.category_id || '');
+      setCurrency(editingExpense.original_currency || editingExpense.currency || baseCurrency);
     }
-  }, [editingExpense]);
+  }, [editingExpense, baseCurrency]);
 
   if (!isEditModalOpen) return null;
 
   const handleSave = async () => {
     if (!editingExpenseId) return;
     try {
+      const originalAmount = parseFloat(amount);
+      let finalAmount = originalAmount;
+
+      // Re-convert edited amount to base currency on save if original currency is foreign
+      if (currency !== baseCurrency) {
+        finalAmount = convertAmount(originalAmount, currency, baseCurrency, exchangeRates);
+      }
+
       const updates: any = {
         date: date ? toUTCISOString(date) : undefined,
         item,
-        amount: parseFloat(amount),
+        amount: finalAmount,
+        original_amount: originalAmount,
+        original_currency: currency,
+        currency: currency,
         category_id: categoryId
       };
       // 1. Update Supabase backend
@@ -73,11 +87,24 @@ export default function EditExpenseModal() {
                 <input type="hidden" id="edit-row" />
                 <input type="date" id="edit-date" className="w-full px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 text-base appearance-none box-border" value={date} onChange={e => setDate(e.target.value)} />
                 <input type="text" id="edit-item" placeholder="Item Name" className="w-full px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 text-base appearance-none box-border" value={item} onChange={e => setItem(e.target.value)} />
-                <div className="flex items-center bg-white/50 border border-zen-lavender/60 rounded-full px-4 h-12 box-border overflow-hidden">
-                    <span className="text-zen-charcoal/60 text-base mr-2 flex items-center">$</span>
+                <div className="flex items-center bg-white/50 border border-zen-lavender/60 rounded-full pl-4 pr-2 h-12 box-border overflow-hidden gap-1">
+                    <select 
+                      value={currency} 
+                      aria-label="Currency"
+                      onChange={e => setCurrency(e.target.value as any)}
+                      className="bg-transparent border-none text-zen-charcoal font-semibold text-base outline-none focus:ring-0 cursor-pointer pr-1 h-full appearance-none"
+                      style={{ padding: '0 20px 0 0', backgroundPosition: 'right center' }}
+                    >
+                      <option value="USD">$</option>
+                      <option value="EUR">€</option>
+                      <option value="JPY">¥</option>
+                      <option value="GBP">£</option>
+                      <option value="SGD">S$</option>
+                      <option value="VND">₫</option>
+                    </select>
                     <input type="number" id="edit-amount" placeholder="Amount" className="flex-1 border-none bg-transparent text-zen-charcoal p-0 m-0 text-base outline-none focus:ring-0 appearance-none h-full" value={amount} onChange={e => setAmount(e.target.value)} />
                 </div>
-                <select id="edit-category" className="w-full px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal text-base appearance-none h-12 box-border" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
+                <select id="edit-category" aria-label="Category" className="w-full px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal text-base appearance-none h-12 box-border" value={categoryId} onChange={e => setCategoryId(e.target.value)}>
                   <option value="" disabled>Select category</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>{cat.name}</option>

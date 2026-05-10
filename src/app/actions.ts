@@ -9,6 +9,9 @@ import { Expense } from '@/types/database'
 export async function addExpenseAction(data: {
   item: string
   amount: number
+  original_amount: number
+  original_currency: string
+  currency: string
   category_id: string
   date: string
 }): Promise<{ success: boolean; data?: Expense; error?: string }> {
@@ -26,6 +29,9 @@ export async function addExpenseAction(data: {
         user_id: userData.user.id,
         item: data.item,
         amount: data.amount,
+        original_amount: data.original_amount,
+        original_currency: data.original_currency,
+        currency: data.currency,
         category_id: data.category_id,
         date: data.date
       }
@@ -55,7 +61,15 @@ export async function deleteExpenseAction(id: string): Promise<{ success: boolea
 
 export async function updateExpenseAction(
   id: string,
-  updates: Partial<{ item: string; amount: number; category_id: string; date: string }>
+  updates: Partial<{ 
+    item: string; 
+    amount: number; 
+    original_amount: number;
+    original_currency: string;
+    currency: string;
+    category_id: string; 
+    date: string; 
+  }>
 ): Promise<{ success: boolean; data?: Expense; error?: string }> {
   const supabase = await createClient()
   const { data, error } = await supabase
@@ -154,7 +168,15 @@ export async function bulkDeleteAction(ids: string[]): Promise<{ success: boolea
 
 export async function bulkUpdateAction(
   ids: string[],
-  updates: Partial<{ item: string; amount: number; category_id: string; date: string }>
+  updates: Partial<{ 
+    item: string; 
+    amount: number; 
+    original_amount: number;
+    original_currency: string;
+    currency: string;
+    category_id: string; 
+    date: string; 
+  }>
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
   const { error } = await supabase.from('expenses').update(updates).in('id', ids)

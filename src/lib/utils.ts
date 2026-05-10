@@ -77,3 +77,67 @@ export function wrapLabel(label: string, maxLength: number = 15): string | strin
   if (currentLine) lines.push(currentLine);
   return lines.length > 1 ? lines : label;
 }
+
+/**
+ * Converts an amount from one currency to another using a cached rates map.
+ * The rates map is expected to have USD as base (rates['USD'] = 1).
+ */
+export function convertAmount(
+  amount: number,
+  from: string,
+  to: string,
+  rates: Record<string, number>
+): number {
+  if (!from || !to || from === to) return amount;
+  const fromRate = rates[from] || 1;
+  const toRate = rates[to] || 1;
+  // Convert via USD base
+  return amount * (toRate / fromRate);
+}
+
+/**
+ * Returns the glyph/symbol for standard supported currencies.
+ */
+export function getCurrencySymbol(currency: string): string {
+  const symbols: Record<string, string> = {
+    USD: '$',
+    EUR: '€',
+    JPY: '¥',
+    GBP: '£',
+    SGD: 'S$',
+    VND: '₫',
+  };
+  return symbols[currency] || '$';
+}
+
+/**
+ * Formats currency numbers.
+ * VND uses compressed formatting ('K, 'M) with no decimals to keep UI clean.
+ * USD/EUR/GBP use standard decimal comma formats.
+ */
+export function formatFriendlyCurrency(amount: number, currency: string): string {
+  const amt = parseFloat(amount as any) || 0;
+  const symbol = getCurrencySymbol(currency);
+
+  if (currency === 'VND') {
+    if (amt >= 1000000) {
+      const formatted = (amt / 1000000).toFixed(1).replace(/\.0$/, '');
+      return `${formatted}M ₫`;
+    }
+    if (amt >= 1000) {
+      const formatted = (amt / 1000).toFixed(0);
+      return `${formatted}K ₫`;
+    }
+    return `${amt.toFixed(0)} ₫`;
+  }
+
+  // Standard decimal format for standard currencies
+  const formattedAmt = amt.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  // Prefix glyphs
+  return `${symbol}${formattedAmt}`;
+}
+
