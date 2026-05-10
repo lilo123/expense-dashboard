@@ -2,14 +2,16 @@ import { createContext, useContext, useRef } from 'react';
 import { createStore, useStore } from 'zustand';
 import { Expense, Category, User } from '@/types/database';
 
+export type SupportedCurrency = 'CAD' | 'VND' | 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD';
+
 export interface ExpenseState {
   expenses: Expense[];
   categories: Category[];
   user: User | null;
   globalError: string | null;
   
-  displayCurrency: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND';
-  baseCurrency: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND';
+  displayCurrency: SupportedCurrency;
+  baseCurrency: SupportedCurrency;
   exchangeRates: Record<string, number>;
 
   isAddModalOpen: boolean;
@@ -30,8 +32,8 @@ export interface ExpenseState {
   setActiveCategoryFilter: (cat: string | null) => void;
   setActiveMonthFilter: (month: string | null) => void;
 
-  setDisplayCurrency: (curr: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND') => void;
-  setBaseCurrency: (curr: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND') => void;
+  setDisplayCurrency: (curr: SupportedCurrency) => void;
+  setBaseCurrency: (curr: SupportedCurrency) => void;
   setExchangeRates: (rates: Record<string, number>) => void;
 
   hydrate: (data: { 
@@ -39,8 +41,8 @@ export interface ExpenseState {
     categories?: Category[]; 
     user?: User | null; 
     error?: string;
-    displayCurrency?: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND';
-    baseCurrency?: 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD' | 'VND';
+    displayCurrency?: SupportedCurrency;
+    baseCurrency?: SupportedCurrency;
     exchangeRates?: Record<string, number>;
   }) => void;
   toggleAddModal: () => void;

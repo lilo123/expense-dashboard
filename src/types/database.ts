@@ -1,6 +1,6 @@
 export interface Category {
   id: string;
-  user_id: string;
+  user_id?: string;
   name: string;
 }
 
@@ -9,9 +9,9 @@ export interface Expense {
   user_id: string;
   item: string;
   amount: number;            // Normalized value in base currency (for sums/aggregates)
-  original_amount: number;   // Raw spent receipt value
-  original_currency: string; // Original currency spent
-  currency: string;          // Legacy compatibility mapping to original_currency
+  original_amount?: number;   // Raw spent receipt value
+  original_currency?: string; // Original currency spent
+  currency?: string;          // Legacy compatibility mapping to original_currency
   category_id: string;
   date: string;
   created_at: string;
