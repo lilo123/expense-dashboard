@@ -33,7 +33,7 @@ test.describe('Authentication Flows', () => {
 
     // Should redirect to dashboard
     await expect(page).toHaveURL(/\/dashboard/);
-    await expect(page.locator('#logout-btn')).toBeVisible();
+    await expect(page.locator('#profile-btn')).toBeVisible();
 
     // Reload to verify session persistence
     await page.reload();

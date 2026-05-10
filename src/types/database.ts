@@ -31,3 +31,15 @@ export interface ExchangeRates {
   rates: Record<string, number>;
   updated_at: string;
 }
+
+export type SupportedCurrency = 'CAD' | 'VND' | 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD';
+
+export interface Profile {
+  id: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  base_currency: SupportedCurrency;
+  budget_reset_day: number;
+  ai_tone: string;
+  updated_at: string;
+}

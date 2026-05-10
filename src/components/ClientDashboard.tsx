@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { useExpenseStore, StoreProvider } from '@/store/useExpenseStore';
 import { syncExchangeRates } from '@/app/actions/rates';
+import { getProfile } from '@/app/actions/profile';
 import { Category } from '@/types/database';
 import { Expense, User } from '@/types/database';
 import Tabs from './Tabs';
@@ -45,24 +46,35 @@ function ClientDashboardContent() {
     toggleAddModal, toggleCategoryModal, toggleChatModal, toggleSiriModal, 
     isCategoryModalOpen, isChatModalOpen, isAddModalOpen,
     reset,
-    displayCurrency, setDisplayCurrency, setExchangeRates
+    displayCurrency, setDisplayCurrency, setExchangeRates,
+    profile, setProfile, baseCurrency, user
   } = useExpenseStore(state => state);
+
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   
   const router = useRouter();
   const supabase = createClient();
 
-  // Sync Exchange Rates on Mount
+  // Sync Exchange Rates & Profile on Mount
   useEffect(() => {
-    async function fetchRates() {
+    async function fetchRatesAndProfile() {
       try {
+        // 1. Sync FX rates cache
         const rates = await syncExchangeRates();
         setExchangeRates(rates);
+
+        // 2. Hydrate user settings profile from database
+        const profileRes = await getProfile();
+        if (profileRes.success && profileRes.data) {
+          console.log('[PROFILE HYDRATION] Loaded database settings successfully.');
+          setProfile(profileRes.data);
+        }
       } catch (err) {
-        console.error('[UI RATES SYNC ERROR] Failed to sync live rates:', err);
+        console.error('[UI INITIAL SYNC ERROR] Failed to sync live rates or profile:', err);
       }
     }
-    fetchRates();
-  }, [setExchangeRates]);
+    fetchRatesAndProfile();
+  }, [setExchangeRates, setProfile]);
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
@@ -113,38 +125,79 @@ function ClientDashboardContent() {
           <Link href="/" className="cursor-pointer hover:opacity-80 transition-all no-underline">
             <Logo className="w-24 h-8 text-zen-charcoal flex items-center" />
           </Link>
-          <div style={{ display: 'flex', gap: '10px' }}>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }} className="relative">
             {isMounted ? (
-              <select 
-                value={displayCurrency} 
-                onChange={e => setDisplayCurrency(e.target.value as any)}
-                className="px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold text-sm cursor-pointer outline-none transition-colors"
-              >
-                <option value="CAD">CAD (C$)</option>
-                <option value="VND">VND (₫)</option>
-                <option value="USD">USD ($)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="JPY">JPY (¥)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="SGD">SGD (S$)</option>
-              </select>
-            ) : (
-              <div className="px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/40 text-zen-charcoal/50 text-sm font-semibold select-none h-9 flex items-center justify-center min-w-[85px]">
-                Loading...
+              <div className="relative">
+                {/* 1. Profile Initials Avatar button */}
+                <button 
+                  id="profile-btn"
+                  aria-label="Profile Menu"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-10 h-10 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-bold text-sm flex items-center justify-center transition-all cursor-pointer select-none shadow-sm"
+                >
+                  {profile?.display_name
+                    ? profile.display_name.substring(0, 2).toUpperCase()
+                    : (user?.email ? user.email.substring(0, 2).toUpperCase() : 'U')}
+                </button>
+
+                {/* 2. Floating Glassmorphic Dropdown Menu */}
+                {isDropdownOpen && (
+                  <div 
+                    id="profile-dropdown"
+                    className="absolute right-0 mt-2 w-48 bg-white/60 backdrop-blur-md border border-white/20 shadow-lg rounded-2xl p-2 flex flex-col gap-1 z-50 text-left"
+                    style={{ transformOrigin: 'top right' }}
+                  >
+                    <Link 
+                      href="/settings" 
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="block px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
+                    >
+                      Account Overview
+                    </Link>
+                    
+                    <button 
+                      onClick={() => { setIsDropdownOpen(false); toggleSiriModal(); }}
+                      className="flex items-center text-left px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all cursor-pointer border-none bg-transparent w-full"
+                    >
+                      Siri Setup
+                    </button>
+
+                    {/* Inline Currency Select Dropdown Pill */}
+                    <div className="px-3 py-2 flex flex-col gap-1">
+                      <span className="text-[10px] text-zen-charcoal/50 font-bold uppercase tracking-wider">Display Currency</span>
+                      <select 
+                        value={displayCurrency} 
+                        aria-label="Currency"
+                        onChange={e => { 
+                          setDisplayCurrency(e.target.value as any);
+                          setIsDropdownOpen(false);
+                        }}
+                        className="w-full px-2 py-1.5 rounded-lg border border-zen-lavender/40 bg-white/80 text-zen-charcoal text-xs font-semibold cursor-pointer outline-none"
+                      >
+                        <option value="CAD">CAD (C$)</option>
+                        <option value="VND">VND (₫)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="JPY">JPY (¥)</option>
+                        <option value="GBP">GBP (£)</option>
+                        <option value="SGD">SGD (S$)</option>
+                      </select>
+                    </div>
+
+                    <hr className="border-t border-zen-lavender/20 my-1" />
+
+                    <button 
+                      onClick={() => { setIsDropdownOpen(false); handleSignOut(); }}
+                      className="flex items-center text-left px-3 py-2 rounded-xl hover:bg-zen-peach/20 text-zen-peach font-semibold text-sm transition-all cursor-pointer border-none bg-transparent w-full"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
+            ) : (
+              <div className="w-10 h-10 rounded-full border border-zen-lavender/20 bg-white/40 flex items-center justify-center select-none shadow-sm animate-pulse" />
             )}
-            <button id="siri-btn" className="flex items-center gap-2 px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold transition-all text-sm cursor-pointer" onClick={toggleSiriModal}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path>
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                <line x1="12" y1="19" x2="12" y2="23"></line>
-                <line x1="8" y1="23" x2="16" y2="23"></line>
-              </svg> 
-              <span>Siri Setup</span>
-            </button>
-            <button id="logout-btn" className="px-4 py-2 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold transition-all text-sm cursor-pointer" onClick={handleSignOut}>
-              Sign Out
-            </button>
           </div>
         </div>
 

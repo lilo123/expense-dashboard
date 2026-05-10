@@ -5,14 +5,14 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
   const TEST_PASSWORD = 'password123';
 
   test.beforeEach(async ({ page }) => {
-    // Perform login before each test
+    // 1. Authenticate and log in before each test
     await page.goto('/login');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
     await expect(page).toHaveURL(/\/dashboard/);
     
-    // Wait for client-side hydration to be complete
+    // Wait for client-side hydration
     await page.waitForSelector('#hydrated-marker', { state: 'attached' });
   });
 
@@ -52,7 +52,7 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
 
     await page.fill('#add-item', 'VND Pho Noodles 🍜');
     
-    // Select VND from accessible Currency combobox dropdown (first items are CAD/VND!)
+    // Select VND from accessible Currency combobox dropdown
     const currencyDropdown = page.getByRole('combobox', { name: 'Currency' });
     await currencyDropdown.selectOption('VND');
     
@@ -65,7 +65,6 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
     await page.click('#add-expense-btn');
     await expect(page.locator('#add-modal')).not.toBeVisible();
 
-    // Verify list rendering displays original logged currency in compressed form (100K ₫)
     const loggedItem = page.locator('.expense-item', { hasText: 'VND Pho Noodles 🍜' }).first();
     await expect(loggedItem).toBeVisible();
     
@@ -77,20 +76,27 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
     const totalLabel = page.locator('#total-amount-desktop');
     await expect(totalLabel).toBeVisible();
     
-    // Initial display is default base: CAD (C$)
     const initialTotalText = await totalLabel.innerText();
     expect(initialTotalText).toContain('C$'); 
 
-    // Swap Display Currency in header to VND (CAD and VND are at the very top!)
-    const headerCurrencyDropdown = page.locator('nav select, div.header select');
-    await expect(headerCurrencyDropdown).toBeVisible();
-    await headerCurrencyDropdown.selectOption('VND');
+    // 1. Open Profile dropdown first to access currency selector
+    await page.click('#profile-btn');
+    const dropdown = page.locator('#profile-dropdown');
+    await expect(dropdown).toBeVisible();
 
-    // Total Expense amount updates dynamically to VND Millions compressed
+    // 2. Select VND
+    const dropdownCurrencySelect = dropdown.locator('select[aria-label="Currency"]');
+    await expect(dropdownCurrencySelect).toBeVisible();
+    await dropdownCurrencySelect.selectOption('VND');
+
+    // Total updates dynamically to VND Millions compressed
     await expect(totalLabel).toContainText('M ₫'); 
 
-    // Swap to EUR shows standard decimal Euro prefix format
-    await headerCurrencyDropdown.selectOption('EUR');
+    // 3. Open again to swap to EUR
+    await page.click('#profile-btn');
+    await expect(dropdown).toBeVisible();
+    await dropdownCurrencySelect.selectOption('EUR');
+
     await expect(totalLabel).toContainText('€');
     await expect(totalLabel).not.toContainText('K');
     await expect(totalLabel).not.toContainText('M');
@@ -98,19 +104,23 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
 
   test('should remember Display Currency preference via LocalStorage across reloads (Hydration-Safe)', async ({ page }) => {
     const totalLabel = page.locator('#total-amount-desktop');
-    const headerCurrencyDropdown = page.locator('nav select, div.header select');
-    await expect(headerCurrencyDropdown).toBeVisible();
+    const dropdown = page.locator('#profile-dropdown');
 
-    // 1. Select VND
-    await headerCurrencyDropdown.selectOption('VND');
+    // 1. Open dropdown and select VND
+    await page.click('#profile-btn');
+    await expect(dropdown).toBeVisible();
+    const dropdownCurrencySelect = dropdown.locator('select[aria-label="Currency"]');
+    await dropdownCurrencySelect.selectOption('VND');
     await expect(totalLabel).toContainText('M ₫');
 
     // 2. Reload page
     await page.reload();
     await page.waitForSelector('#hydrated-marker', { state: 'attached' });
 
-    // 3. Assert selection is remembered and total remains in VND!
-    await expect(headerCurrencyDropdown).toHaveValue('VND');
+    // 3. Assert selection is remembered inside dropdown!
+    await page.click('#profile-btn');
+    await expect(dropdown).toBeVisible();
+    await expect(dropdownCurrencySelect).toHaveValue('VND');
     await expect(totalLabel).toContainText('M ₫');
   });
 });

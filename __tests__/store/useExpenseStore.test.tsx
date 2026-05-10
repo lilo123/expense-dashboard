@@ -59,6 +59,31 @@ describe('useExpenseStore', () => {
     expect(state.user).toEqual(mockUser);
   });
 
+  it('should synchronize baseCurrency and displayCurrency from database profile on hydration', () => {
+    const store = createExpenseStore();
+    const mockProfile = {
+      id: 'user-123',
+      display_name: 'Katherine Zen',
+      avatar_url: null,
+      base_currency: 'VND' as const,
+      budget_reset_day: 15,
+      ai_tone: 'encouraging',
+      updated_at: '2026-05-10T00:00:00Z',
+    };
+
+    store.getState().hydrate({
+      expenses: [],
+      categories: [],
+      user: mockUser,
+      profile: mockProfile
+    });
+
+    const state = store.getState();
+    expect(state.profile).toEqual(mockProfile);
+    expect(state.baseCurrency).toBe('VND');
+    expect(state.displayCurrency).toBe('VND');
+  });
+
   it('should toggle modals correctly', () => {
     const store = createExpenseStore();
 

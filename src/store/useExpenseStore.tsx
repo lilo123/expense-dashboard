@@ -1,14 +1,14 @@
 import { createContext, useContext, useRef } from 'react';
 import { createStore, useStore } from 'zustand';
-import { Expense, Category, User } from '@/types/database';
-
-export type SupportedCurrency = 'CAD' | 'VND' | 'USD' | 'EUR' | 'JPY' | 'GBP' | 'SGD';
+import { Expense, Category, User, SupportedCurrency, Profile } from '@/types/database';
 
 export interface ExpenseState {
   expenses: Expense[];
   categories: Category[];
   user: User | null;
   globalError: string | null;
+  
+  profile: Profile | null;
   
   displayCurrency: SupportedCurrency;
   baseCurrency: SupportedCurrency;
@@ -33,6 +33,7 @@ export interface ExpenseState {
   setActiveMonthFilter: (month: string | null) => void;
 
   setDisplayCurrency: (curr: SupportedCurrency) => void;
+  setProfile: (prof: Profile | null) => void;
   setBaseCurrency: (curr: SupportedCurrency) => void;
   setExchangeRates: (rates: Record<string, number>) => void;
 
@@ -44,6 +45,7 @@ export interface ExpenseState {
     displayCurrency?: SupportedCurrency;
     baseCurrency?: SupportedCurrency;
     exchangeRates?: Record<string, number>;
+    profile?: Profile | null;
   }) => void;
   toggleAddModal: () => void;
   toggleEditModal: (id?: string) => void;
@@ -79,6 +81,7 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     displayCurrency: initialState.displayCurrency || 'CAD',
     baseCurrency: initialState.baseCurrency || 'CAD',
     exchangeRates: initialState.exchangeRates || { CAD: 1.0 },
+    profile: initialState.profile || null,
     isAddModalOpen: false,
     isEditModalOpen: false,
     isCategoryModalOpen: false,
@@ -101,18 +104,27 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       }
       return { displayCurrency: curr };
     }),
+    setProfile: (prof) => set({ profile: prof }),
     setBaseCurrency: (curr) => set({ baseCurrency: curr }),
     setExchangeRates: (rates) => set({ exchangeRates: rates }),
     
-    hydrate: (data) => set((state) => ({ 
-      expenses: data.expenses ? [...data.expenses] : [], 
-      categories: data.categories ? [...data.categories] : [], 
-      user: data.user || null, 
-      globalError: data.error || null,
-      displayCurrency: data.displayCurrency || state.displayCurrency,
-      baseCurrency: data.baseCurrency || state.baseCurrency,
-      exchangeRates: data.exchangeRates || state.exchangeRates
-    })),
+    hydrate: (data) => set((state) => {
+      const activeProfile = data.profile !== undefined ? data.profile : state.profile;
+      // Sync currencies to database profile base_currency if loaded
+      const hydratedBase = data.baseCurrency || (activeProfile ? activeProfile.base_currency : state.baseCurrency);
+      const hydratedDisplay = data.displayCurrency || (activeProfile ? activeProfile.base_currency : state.displayCurrency);
+
+      return { 
+        expenses: data.expenses ? [...data.expenses] : [], 
+        categories: data.categories ? [...data.categories] : [], 
+        user: data.user || null, 
+        globalError: data.error || null,
+        profile: activeProfile,
+        baseCurrency: hydratedBase,
+        displayCurrency: hydratedDisplay,
+        exchangeRates: data.exchangeRates || state.exchangeRates
+      };
+    }),
     
     toggleAddModal: () => set((state) => ({ isAddModalOpen: !state.isAddModalOpen })),
     toggleEditModal: (id) => set((state) => ({ isEditModalOpen: !state.isEditModalOpen, editingExpenseId: id || null })),
@@ -129,6 +141,7 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       displayCurrency: 'CAD',
       baseCurrency: 'CAD',
       exchangeRates: { CAD: 1.0 },
+      profile: null,
       isAddModalOpen: false, 
       isEditModalOpen: false, 
       isCategoryModalOpen: false, 
