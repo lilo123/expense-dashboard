@@ -167,9 +167,9 @@ export function formatChartFriendlyCurrency(amount: number, currency: string): s
     return formatFriendlyCurrency(amt, currency);
   }
 
-  // Compress standard currencies into thousands (e.g., 523 -> 0.5K)
+  // Compress standard currencies into thousands with strict 2-decimal precision (e.g., 523 -> 0.52K, 15 -> 0.02K)
   const compressed = amt / 1000;
-  const formatted = compressed.toFixed(1).replace(/\.0$/, '');
+  const formatted = compressed.toFixed(2);
   const formattedWithK = `${formatted}K`;
 
   return conf.position === 'prefix'

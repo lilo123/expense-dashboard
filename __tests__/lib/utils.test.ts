@@ -59,15 +59,17 @@ describe('Currency Utilities - Scaled Architecture', () => {
   });
 
   describe('formatChartFriendlyCurrency', () => {
-    it('should format standard currencies compact in thousands K with prefix glyphs', () => {
-      // 523 CAD -> C$0.5K
-      expect(formatChartFriendlyCurrency(523, 'CAD')).toBe('C$0.5K');
-      // 1250 CAD -> C$1.3K (rounds up)
-      expect(formatChartFriendlyCurrency(1250, 'CAD')).toBe('C$1.3K');
-      // 15000 CAD -> C$15K (even integer formats)
-      expect(formatChartFriendlyCurrency(15000, 'CAD')).toBe('C$15K');
-      // 0 CAD -> C$0K
-      expect(formatChartFriendlyCurrency(0, 'CAD')).toBe('C$0K');
+    it('should format standard currencies compact in thousands K with exactly 2 decimals', () => {
+      // 523 CAD -> C$0.52K
+      expect(formatChartFriendlyCurrency(523, 'CAD')).toBe('C$0.52K');
+      // 1250 CAD -> C$1.25K
+      expect(formatChartFriendlyCurrency(1250, 'CAD')).toBe('C$1.25K');
+      // 15000 CAD -> C$15.00K (retains decimals)
+      expect(formatChartFriendlyCurrency(15000, 'CAD')).toBe('C$15.00K');
+      // 15.50 CAD -> C$0.02K (prevents C$0K rounding errors!)
+      expect(formatChartFriendlyCurrency(15.5, 'CAD')).toBe('C$0.02K');
+      // 0 CAD -> C$0.00K
+      expect(formatChartFriendlyCurrency(0, 'CAD')).toBe('C$0.00K');
     });
 
     it('should delegate to formatFriendlyCurrency for compressed large currencies (like VND)', () => {
