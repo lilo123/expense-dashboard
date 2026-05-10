@@ -74,10 +74,10 @@
 * **Phase 1.7: User Settings & Profile Management:**
   * **Database Schema Requirements:**
     * Table Name: `profiles`
-    * Foreign Key: `id` references `auth.users.id` (1-to-1 relationship).
-    * Columns: `display_name` (text), `avatar_url` (text), `base_currency` (text, max length 3).
+    * Foreign Key: `id` references `auth.users.id` (1-to-1 relationship, Cascade delete).
+    * Columns: `display_name` (text, nullable), `avatar_url` (text, nullable), `base_currency` (VARCHAR(3), default 'CAD'), `budget_reset_day` (integer, default 1), `ai_tone` (text, default 'nurturing').
     * Security: RLS enabled. Users can only select and update where `auth.uid() = id`.
-    * Automation: Postgres trigger required to insert a default row into `profiles` automatically upon new user signup in `auth.users`.
+    * Automation: Refactored signup categories trigger function (`seed_default_categories()`) to automatically insert a default profile row first, then seed default categories inside a single exception-safe database transaction block.
   * **Frontend Requirements:**
     * Route: `src/app/(dashboard)/settings/page.tsx` (Protected route).
     * UI Components: Profile editing form, Password update form.
