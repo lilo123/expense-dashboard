@@ -111,7 +111,26 @@ export default function YearlyTab() {
         backgroundColor: '#AEC3B0', // Soft Sage Green
         borderRadius: 4,
         barPercentage: 0.6,
-        stack: 'stack1'
+        stack: 'stack1',
+        datalabels: {
+          display: (context: any) => {
+            const val = context.dataset.data[context.dataIndex];
+            return val !== null && val > 0;
+          },
+          anchor: 'center' as const,
+          align: 'center' as const,
+          color: '#2D3748',
+          font: { weight: 'bold' as const, size: 10 },
+          formatter: (value: number, context: any) => {
+            const idx = context.dataIndex;
+            const recVal = recurringData[idx] || 0;
+            const oneVal = oneOffData[idx] || 0;
+            const total = recVal + oneVal;
+            if (total === 0) return '';
+            const pct = Math.round((value / total) * 100);
+            return pct > 0 ? `${pct}%` : '';
+          }
+        }
       },
       {
         label: 'One-off',
@@ -119,7 +138,46 @@ export default function YearlyTab() {
         backgroundColor: '#D8D2E1', // Muted Lavender
         borderRadius: 4,
         barPercentage: 0.6,
-        stack: 'stack1'
+        stack: 'stack1',
+        datalabels: {
+          labels: {
+            value: {
+              display: (context: any) => {
+                const val = context.dataset.data[context.dataIndex];
+                return val !== null && val > 0;
+              },
+              anchor: 'center' as const,
+              align: 'center' as const,
+              color: '#2D3748',
+              font: { weight: 'bold' as const, size: 10 },
+              formatter: (value: number, context: any) => {
+                const idx = context.dataIndex;
+                const recVal = recurringData[idx] || 0;
+                const oneVal = oneOffData[idx] || 0;
+                const total = recVal + oneVal;
+                if (total === 0) return '';
+                const pct = Math.round((value / total) * 100);
+                return pct > 0 ? `${pct}%` : '';
+              }
+            },
+            total: {
+              display: (context: any) => {
+                const idx = context.dataIndex;
+                return totalData[idx] !== null && totalData[idx]! > 0;
+              },
+              anchor: 'end' as const,
+              align: 'top' as const,
+              offset: 4,
+              color: '#2D3748',
+              font: { weight: 'bold' as const, size: 11 },
+              formatter: (value: number, context: any) => {
+                const idx = context.dataIndex;
+                const sum = (recurringData[idx] || 0) + (oneOffData[idx] || 0);
+                return formatChartFriendlyCurrency(sum, displayCurrency);
+              }
+            }
+          }
+        }
       }
     ] : [
       {
@@ -215,14 +273,21 @@ export default function YearlyTab() {
                   </button>
                 </div>
 
-                <select 
-                  id="yearSelect" 
-                  value={selectedYear} 
-                  onChange={e => setSelectedYear(e.target.value)}
-                  className="px-4 py-2 bg-white/50 border border-zen-lavender/60 rounded-full text-zen-charcoal text-base outline-none cursor-pointer h-9 flex items-center"
-                >
-                  {years.map(y => <option key={y} value={y}>{y}</option>)}
-                </select>
+                <div className="relative inline-flex items-center">
+                  <select 
+                    id="yearSelect" 
+                    value={selectedYear} 
+                    onChange={e => setSelectedYear(e.target.value)}
+                    className="pl-4 pr-8 py-2 bg-white/50 border border-zen-lavender/60 rounded-full text-zen-charcoal text-sm outline-none cursor-pointer h-9 appearance-none box-border"
+                  >
+                    {years.map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                  <div className="absolute right-3.5 pointer-events-none text-zen-charcoal/60 flex items-center justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="m6 9 6 6 6-6"></path>
+                    </svg>
+                  </div>
+                </div>
             </div>
         </div>
         <div className="chart-container" style={{ height: '300px', maxHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

@@ -149,7 +149,106 @@ async function seed() {
       process.exit(1);
     }
 
-    // 4. Generate a large historical dataset (35 realistic expenses)
+    // 4. Seed 3 active recurring configurations (Rent, Netflix, Gym)
+    console.log('Seeding 3 active recurring configurations (Rent, Netflix, Gym)...');
+    const recurringToInsert = [
+      {
+        user_id: userId,
+        item: 'Monthly Rent 🏠',
+        amount: 1200.00,
+        currency: 'CAD',
+        category_id: categoryMap.get('Housing'),
+        frequency: 'monthly',
+        day_of_month: 1,
+        is_last_day_of_month: false,
+        start_date: getRandomPastDate(90),
+        next_occurrence: new Date().toISOString().split('T')[0],
+        is_active: true
+      },
+      {
+        user_id: userId,
+        item: 'Netflix Subscription 🎬',
+        amount: 18.99,
+        currency: 'CAD',
+        category_id: categoryMap.get('Subscriptions'),
+        frequency: 'monthly',
+        day_of_month: 15,
+        is_last_day_of_month: false,
+        start_date: getRandomPastDate(90),
+        next_occurrence: new Date().toISOString().split('T')[0],
+        is_active: true
+      },
+      {
+        user_id: userId,
+        item: 'Gym Membership 🏋️',
+        amount: 45.00,
+        currency: 'CAD',
+        category_id: categoryMap.get('Health & Care'),
+        frequency: 'monthly',
+        is_last_day_of_month: true,
+        start_date: getRandomPastDate(90),
+        next_occurrence: new Date().toISOString().split('T')[0],
+        is_active: true
+      }
+    ];
+
+    const { data: insertedRecurring, error: recurInsertError } = await supabase
+      .from('recurring_expenses')
+      .insert(recurringToInsert)
+      .select('*');
+
+    if (recurInsertError || !insertedRecurring) {
+      console.error('Failed to seed recurring expenses:', recurInsertError?.message);
+      process.exit(1);
+    }
+    console.log(`Successfully seeded ${insertedRecurring.length} recurring configurations!`);
+
+    // Generate historical logged occurrences for the last 3 months
+    console.log('Generating historical logged occurrences for recurring expenses over the past 3 months...');
+    const recurringExpensesToInsert = [];
+    const today = new Date();
+
+    for (const recur of insertedRecurring) {
+      for (let mOffset = 1; mOffset <= 3; mOffset++) {
+        const occDate = new Date();
+        occDate.setMonth(today.getMonth() - mOffset);
+        
+        if (recur.day_of_month) {
+          occDate.setDate(recur.day_of_month);
+        } else if (recur.is_last_day_of_month) {
+          // Set to last day of that month
+          occDate.setMonth(occDate.getMonth() + 1);
+          occDate.setDate(0);
+        }
+        
+        const dateString = occDate.toISOString().split('T')[0];
+
+        recurringExpensesToInsert.push({
+          user_id: userId,
+          item: recur.item,
+          amount: recur.amount,
+          original_amount: recur.amount,
+          original_currency: 'CAD',
+          currency: 'CAD',
+          category_id: recur.category_id,
+          recurring_expense_id: recur.id,
+          date: new Date(dateString).toISOString(),
+          created_at: new Date(dateString).toISOString()
+        });
+      }
+    }
+
+    const { error: recurLogsError } = await supabase
+      .from('expenses')
+      .insert(recurringExpensesToInsert);
+
+    if (recurLogsError) {
+      console.error('Failed to seed recurring logged expenses:', recurLogsError.message);
+      process.exit(1);
+    }
+    console.log(`Successfully seeded ${recurringExpensesToInsert.length} historical recurring logged expenses!`);
+
+    // 5. Generate a large historical dataset (35 realistic expenses)
     console.log('Generating 35 historical expenses spread over the last 90 days...');
     const expensesToInsert = [];
 
