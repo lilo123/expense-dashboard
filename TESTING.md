@@ -104,6 +104,7 @@ Our frontend tests validate that the UI correctly aligns with the An-yen Zen aes
 *   **The Levitating iridescent AI Orb**: The An-yen AI Companion must use the pure CSS `animate-liquid-flow` keyframe morphing without WebGL to guarantee 100% lightweight, fast loading.
 *   **Global Modals Layout Alignment & Overlap Safety**: Automated tests measure outer bounding boxes (`titleBox.x`, `closeBox.x`, etc.) across viewports to guarantee that absolute close triggers never intersect or collide with text elements.
 *   **Visual Snapshots Baseline Matching (`toHaveScreenshot`)**: Targets header container boxes to compare rasterized browser renders against saved baseline images, locking in optical visual centering (flex centers, baseline adjustments, and button padding overrides) exactly.
+*   **Automated Mathematical Filter Heights Alignment Tests**: E2E tests dynamically fetch the bounding boxes of the Search Input, Category Filter Dropdown, Type Filter Dropdown, and Sort Select button. It mathematically asserts that their rendered heights are **exactly identical** down to the sub-pixel (e.g. 36px), preventing any vertical alignment mismatches or CSS cascading regressions!
 *   **Layered Glass-on-Glass Card Layouts**: Sub-settings containers inside modals are styled using a higher white opacity/tint (**`bg-white/60 border-zen-lavender/40 shadow-sm`**) compared to the base modal's `bg-white/40` background, giving them a beautiful premium 3D layered contrast.
 
 ---

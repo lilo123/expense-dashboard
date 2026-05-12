@@ -159,7 +159,8 @@ function ClientDashboardContent() {
                   id="profile-btn"
                   aria-label="Profile Menu"
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="w-10 h-10 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-bold text-sm flex items-center justify-center transition-all cursor-pointer select-none shadow-sm"
+                  style={{ minHeight: 0 }}
+                  className="w-10 h-10 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-bold text-sm flex items-center justify-center transition-all cursor-pointer select-none shadow-sm shrink-0 min-h-0"
                 >
                   {profile?.display_name
                     ? profile.display_name.substring(0, 2).toUpperCase()

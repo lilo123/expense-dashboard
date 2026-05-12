@@ -64,11 +64,19 @@ export default function ChatBox() {
             <div className="chat-header bg-white/60 text-zen-charcoal border-b border-zen-lavender/30" style={{ padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
                 <div className="bg-zen-charcoal/20 rounded-full" style={{ position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)', width: '40px', height: '5px' }} />
                 
-                <h2 className="text-zen-charcoal font-bold m-0 text-left" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '40px' }}>
+                <h2 className="text-zen-charcoal font-bold m-0 text-left pr-10 leading-snug w-fit" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path><path d="M5 3v4"></path><path d="M19 17v4"></path><path d="M3 5h4"></path><path d="M17 19h4"></path></svg> 
                   AI Assistant
                 </h2>
-                <span id="action-elem-13" className="close" onClick={toggleChatModal} style={{ position: 'relative', top: 0, right: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', width: '32px', height: '32px', borderRadius: '50%', background: 'rgba(0,0,0,0.05)', color: 'var(--text)', cursor: 'pointer', fontSize: '24px', lineHeight: 0, padding: 0, margin: 0, boxSizing: 'border-box', transition: 'background 0.2s' }}>&times;</span>
+                <button 
+                  id="action-elem-13" 
+                  className="close-btn rounded-full text-zen-charcoal/60 hover:text-zen-charcoal" 
+                  onClick={toggleChatModal}
+                  style={{ top: '15px', right: '15px' }}
+                  aria-label="Close Modal"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
             </div>
 
             <div id="chat-history" ref={chatHistoryRef} className="chat-history bg-transparent" style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>

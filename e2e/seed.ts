@@ -232,6 +232,7 @@ async function seed() {
           currency: 'CAD',
           category_id: recur.category_id,
           recurring_expense_id: recur.id,
+          is_recurring: true,
           date: new Date(dateString).toISOString(),
           created_at: new Date(dateString).toISOString()
         });
@@ -263,7 +264,8 @@ async function seed() {
       const amount = parseFloat((Math.random() * (desc.max - desc.min) + desc.min).toFixed(2));
       
       // Generate a random date in the past 90 days
-      const date = getRandomPastDate(90);
+      // Force the first 3 to be logged today (current month) to ensure stable E2E currency sums!
+      const date = i < 3 ? new Date().toISOString().split('T')[0] : getRandomPastDate(90);
 
       expensesToInsert.push({
         user_id: userId,

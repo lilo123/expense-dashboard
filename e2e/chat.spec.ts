@@ -73,7 +73,7 @@ test.describe('AI Orb & Mindful Chat Flows', () => {
     await expect(page.locator('.chat-message', { hasText: 'Thinking...' })).not.toBeVisible();
 
     // 7. Close Chat Modal
-    await page.click('.close'); // Close button inside modal
+    await page.click('.close-btn'); // Close button inside modal
     await expect(chatModal).not.toBeVisible();
 
     // 8. Verify local list is updated automatically with the logged item from chat

@@ -15,6 +15,7 @@ export interface Expense {
   category_id: string;
   date: string;
   created_at: string;
+  is_recurring: boolean;
   recurring_expense_id?: string | null;
   categories?: {
     name: string;

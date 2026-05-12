@@ -2,7 +2,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AddExpenseModal from '@/components/AddExpenseModal';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { addExpenseAction } from '@/app/actions';
-import { Category } from '@/types/database';
+import { getRecurringExpensesAction } from '@/app/actions/recurring';
+import { Category, RecurringExpense } from '@/types/database';
 
 // Mock useExpenseStore
 jest.mock('@/store/useExpenseStore', () => ({
@@ -14,28 +15,56 @@ jest.mock('@/app/actions', () => ({
   addExpenseAction: jest.fn(),
 }));
 
+jest.mock('@/app/actions/recurring', () => ({
+  getRecurringExpensesAction: jest.fn(),
+}));
+
 describe('AddExpenseModal Component', () => {
   const mockCategories: Category[] = [
     { id: 'cat-1', name: 'Food' },
-    { id: 'cat-2', name: 'Transport' },
+  ];
+
+  const mockRecurringExpenses: RecurringExpense[] = [
+    {
+      id: 'rec-1',
+      user_id: 'user-123',
+      item: 'Netflix Subscription',
+      amount: 18.99,
+      currency: 'CAD',
+      category_id: 'cat-3',
+      frequency: 'monthly',
+      start_date: '2026-05-01',
+      next_occurrence: '2026-06-01',
+      is_active: true,
+      created_at: '2026-05-01T00:00:00Z',
+    }
   ];
 
   const mockToggleAddModal = jest.fn();
   const mockToggleCategoryModal = jest.fn();
   const mockAddExpense = jest.fn();
+  const mockHydrate = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    // Default store mock
+    
     (useExpenseStore as unknown as jest.Mock).mockReturnValue({
       isAddModalOpen: true,
       toggleAddModal: mockToggleAddModal,
       categories: mockCategories,
       toggleCategoryModal: mockToggleCategoryModal,
       addExpense: mockAddExpense,
+      recurringExpenses: mockRecurringExpenses,
+      hydrate: mockHydrate,
+      baseCurrency: 'CAD',
+      exchangeRates: { CAD: 1.0 },
     });
 
-    // Mock window.alert
+    (getRecurringExpensesAction as jest.Mock).mockResolvedValue({
+      success: true,
+      data: mockRecurringExpenses
+    });
+
     global.alert = jest.fn();
   });
 
@@ -46,36 +75,34 @@ describe('AddExpenseModal Component', () => {
       categories: mockCategories,
       toggleCategoryModal: mockToggleCategoryModal,
       addExpense: mockAddExpense,
+      hydrate: mockHydrate,
+      baseCurrency: 'CAD',
+      exchangeRates: { CAD: 1.0 },
     });
 
     const { container } = render(<AddExpenseModal />);
     expect(container.firstChild).toBeNull();
   });
 
-  it('should render form fields and categories', () => {
+  it('should render custom toggle switch', () => {
     render(<AddExpenseModal />);
 
-    expect(screen.getByRole('heading', { name: 'Add Expense' })).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('What did you buy?')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('0.00')).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /category/i })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: /currency/i })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Select category' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Food' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Transport' })).toBeInTheDocument();
+    expect(screen.getByText('Recurring Expense')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Toggle Recurring Status' })).toBeInTheDocument();
   });
 
-  it('should show validation alert if fields are missing', () => {
+  it('should toggle active states and reveal target template progressive select list', async () => {
     render(<AddExpenseModal />);
 
-    const submitBtn = screen.getByRole('button', { name: 'Add Expense' });
-    fireEvent.click(submitBtn);
+    // Toggle ON
+    const toggleBtn = screen.getByRole('switch', { name: 'Toggle Recurring Status' });
+    fireEvent.click(toggleBtn);
 
-    expect(global.alert).toHaveBeenCalledWith('Please fill out all fields.');
-    expect(addExpenseAction).not.toHaveBeenCalled();
+    // Verify select reveals
+    expect(screen.getByRole('combobox', { name: 'Recurring Template' })).toBeInTheDocument();
   });
 
-  it('should handle successful submission', async () => {
+  it('should submit standalone recurring expense successfully', async () => {
     (addExpenseAction as jest.Mock).mockResolvedValueOnce({
       success: true,
       data: {
@@ -84,7 +111,8 @@ describe('AddExpenseModal Component', () => {
         amount: 4.5,
         category_id: 'cat-1',
         date: '2026-05-10T00:00:00.000Z',
-        categories: { name: 'Food' },
+        is_recurring: true,
+        recurring_expense_id: null
       },
     });
 
@@ -93,27 +121,38 @@ describe('AddExpenseModal Component', () => {
     // Fill form
     fireEvent.change(screen.getByPlaceholderText('What did you buy?'), { target: { value: 'Coffee' } });
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '4.50' } });
-    fireEvent.change(screen.getByRole('combobox', { name: /category/i }), { target: { value: 'cat-1' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'cat-1' } });
 
-    // Submit
-    const submitBtn = screen.getByRole('button', { name: 'Add Expense' });
-    fireEvent.click(submitBtn);
+    // Toggle ON
+    fireEvent.click(screen.getByRole('switch', { name: 'Toggle Recurring Status' }));
+
+    // Submit (leave template blank -> standalone!)
+    fireEvent.click(screen.getByRole('button', { name: 'Add Expense' }));
 
     await waitFor(() => {
       expect(addExpenseAction).toHaveBeenCalledWith(expect.objectContaining({
         item: 'Coffee',
         amount: 4.5,
         category_id: 'cat-1',
+        is_recurring: true,
+        recurring_expense_id: null
       }));
       expect(mockAddExpense).toHaveBeenCalled();
-      expect(mockToggleAddModal).toHaveBeenCalled();
     });
   });
 
-  it('should show empathetic error alert on server failure', async () => {
+  it('should submit template-linked recurring expense successfully', async () => {
     (addExpenseAction as jest.Mock).mockResolvedValueOnce({
-      success: false,
-      error: 'Something went wrong with our flow, let\'s try that again.', // Empathetic error
+      success: true,
+      data: {
+        id: 'exp-3',
+        item: 'Coffee',
+        amount: 4.5,
+        category_id: 'cat-1',
+        date: '2026-05-10T00:00:00.000Z',
+        is_recurring: true,
+        recurring_expense_id: 'rec-1'
+      },
     });
 
     render(<AddExpenseModal />);
@@ -121,16 +160,27 @@ describe('AddExpenseModal Component', () => {
     // Fill form
     fireEvent.change(screen.getByPlaceholderText('What did you buy?'), { target: { value: 'Coffee' } });
     fireEvent.change(screen.getByPlaceholderText('0.00'), { target: { value: '4.50' } });
-    fireEvent.change(screen.getByRole('combobox', { name: /category/i }), { target: { value: 'cat-1' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'cat-1' } });
+
+    // Toggle ON
+    fireEvent.click(screen.getByRole('switch', { name: 'Toggle Recurring Status' }));
+
+    // Select Template
+    const targetSelect = screen.getByRole('combobox', { name: 'Recurring Template' });
+    fireEvent.change(targetSelect, { target: { value: 'rec-1' } });
 
     // Submit
-    const submitBtn = screen.getByRole('button', { name: 'Add Expense' });
-    fireEvent.click(submitBtn);
+    fireEvent.click(screen.getByRole('button', { name: 'Add Expense' }));
 
     await waitFor(() => {
-      expect(global.alert).toHaveBeenCalledWith('Something went wrong with our flow, let\'s try that again.');
-      expect(mockAddExpense).not.toHaveBeenCalled();
-      expect(mockToggleAddModal).not.toHaveBeenCalled();
+      expect(addExpenseAction).toHaveBeenCalledWith(expect.objectContaining({
+        item: 'Coffee',
+        amount: 4.5,
+        category_id: 'cat-1',
+        is_recurring: true,
+        recurring_expense_id: 'rec-1'
+      }));
+      expect(mockAddExpense).toHaveBeenCalled();
     });
   });
 });

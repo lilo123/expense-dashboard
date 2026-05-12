@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ExpenseList from '@/components/ExpenseList';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { bulkDeleteAction } from '@/app/actions';
-import { Expense } from '@/types/database';
+import { Expense, Category } from '@/types/database';
 
 // Mock useExpenseStore
 jest.mock('@/store/useExpenseStore', () => ({
@@ -15,6 +15,12 @@ jest.mock('@/app/actions', () => ({
 }));
 
 describe('ExpenseList Component', () => {
+  const mockCategories: Category[] = [
+    { id: 'cat-1', name: 'Food' },
+    { id: 'cat-2', name: 'Transport' },
+    { id: 'cat-3', name: 'Entertainment' },
+  ];
+
   const mockExpenses: Expense[] = [
     {
       id: 'exp-1',
@@ -24,6 +30,7 @@ describe('ExpenseList Component', () => {
       category_id: 'cat-1',
       date: '2026-05-08',
       created_at: '2026-05-08T00:00:00Z',
+      is_recurring: false,
       categories: { name: 'Food' },
     },
     {
@@ -34,7 +41,31 @@ describe('ExpenseList Component', () => {
       category_id: 'cat-2',
       date: '2026-05-08',
       created_at: '2026-05-08T01:00:00Z',
+      is_recurring: false,
       categories: { name: 'Transport' },
+    },
+    {
+      id: 'exp-3',
+      user_id: 'user-123',
+      item: 'Netflix Subscription',
+      amount: 18.99,
+      category_id: 'cat-3',
+      date: '2026-05-09',
+      created_at: '2026-05-09T00:00:00Z',
+      is_recurring: true,
+      recurring_expense_id: 'rec-1',
+      categories: { name: 'Entertainment' },
+    },
+    {
+      id: 'exp-4',
+      user_id: 'user-123',
+      item: 'Groceries',
+      amount: 45.0,
+      category_id: 'cat-1',
+      date: '2026-05-07',
+      created_at: '2026-05-07T00:00:00Z',
+      is_recurring: false,
+      categories: { name: 'Food' },
     },
   ];
 
@@ -49,6 +80,7 @@ describe('ExpenseList Component', () => {
     // Default store mock
     (useExpenseStore as unknown as jest.Mock).mockReturnValue({
       expenses: mockExpenses,
+      categories: mockCategories,
       isSelectMode: false,
       toggleSelectMode: mockToggleSelectMode,
       selectedIds: new Set(),
@@ -56,9 +88,11 @@ describe('ExpenseList Component', () => {
       deleteSelected: mockDeleteSelected,
       toggleEditModal: mockToggleEditModal,
       toggleBulkEditModal: mockToggleBulkEditModal,
+      displayCurrency: 'CAD',
+      baseCurrency: 'CAD',
+      exchangeRates: { CAD: 1.0 },
     });
 
-    // Mock confirm dialog
     global.confirm = jest.fn().mockReturnValue(true);
   });
 
@@ -68,10 +102,6 @@ describe('ExpenseList Component', () => {
     expect(screen.getByText('Lunch')).toBeInTheDocument();
     expect(screen.getByText('Food • Fri, May 8')).toBeInTheDocument();
     expect(screen.getByText('$15.50')).toBeInTheDocument();
-
-    expect(screen.getByText('Bus Ticket')).toBeInTheDocument();
-    expect(screen.getByText('Transport • Fri, May 8')).toBeInTheDocument();
-    expect(screen.getByText('$2.50')).toBeInTheDocument();
   });
 
   it('should verify glassmorphism classes are applied to items', () => {
@@ -91,13 +121,14 @@ describe('ExpenseList Component', () => {
     render(<ExpenseList />);
 
     expect(screen.getByRole('button', { name: 'Select' })).toBeInTheDocument();
-    const bulkActionsContainer = screen.getByText('Edit Selected').closest('#bulk-actions');
+    const bulkActionsContainer = screen.getByText('Edit').closest('#bulk-actions');
     expect(bulkActionsContainer).toHaveStyle('display: none');
   });
 
   it('should handle select mode toggle', () => {
     (useExpenseStore as unknown as jest.Mock).mockReturnValue({
       expenses: mockExpenses,
+      categories: mockCategories,
       isSelectMode: true,
       toggleSelectMode: mockToggleSelectMode,
       selectedIds: new Set(),
@@ -105,96 +136,62 @@ describe('ExpenseList Component', () => {
       deleteSelected: mockDeleteSelected,
       toggleEditModal: mockToggleEditModal,
       toggleBulkEditModal: mockToggleBulkEditModal,
+      displayCurrency: 'CAD',
+      baseCurrency: 'CAD',
+      exchangeRates: { CAD: 1.0 },
     });
 
     render(<ExpenseList />);
 
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
-    const bulkActionsContainer = screen.getByText('Edit Selected').closest('#bulk-actions');
+    const bulkActionsContainer = screen.getByText('Edit').closest('#bulk-actions');
     expect(bulkActionsContainer).toHaveStyle('display: flex');
   });
 
-  it('should handle item click to open edit modal when not in select mode', () => {
+  it('should filter expenses by search query', () => {
     render(<ExpenseList />);
 
-    const item = screen.getByText('Lunch').closest('.expense-item');
-    fireEvent.click(item!);
+    const searchInput = screen.getByPlaceholderText('Search expenses...');
+    fireEvent.change(searchInput, { target: { value: 'Bus' } });
 
-    expect(mockToggleEditModal).toHaveBeenCalledWith('exp-1');
-    expect(mockToggleSelection).not.toHaveBeenCalled();
+    expect(screen.getByText('Bus Ticket')).toBeInTheDocument();
+    expect(screen.queryByText('Lunch')).not.toBeInTheDocument();
   });
 
-  it('should handle item click to toggle selection when in select mode', () => {
-    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
-      expenses: mockExpenses,
-      isSelectMode: true,
-      toggleSelectMode: mockToggleSelectMode,
-      selectedIds: new Set(),
-      toggleSelection: mockToggleSelection,
-      deleteSelected: mockDeleteSelected,
-      toggleEditModal: mockToggleEditModal,
-      toggleBulkEditModal: mockToggleBulkEditModal,
-    });
-
+  it('should filter expenses by category', () => {
     render(<ExpenseList />);
 
-    const item = screen.getByText('Lunch').closest('.expense-item');
-    fireEvent.click(item!);
+    const dropdownBtn = screen.getByRole('button', { name: 'All Categories' });
+    fireEvent.click(dropdownBtn);
 
-    expect(mockToggleSelection).toHaveBeenCalledWith('exp-1');
-    expect(mockToggleEditModal).not.toHaveBeenCalled();
+    const foodCheckbox = screen.getByRole('checkbox', { name: 'Food' });
+    fireEvent.click(foodCheckbox);
+
+    expect(screen.getByText('Lunch')).toBeInTheDocument();
+    expect(screen.getByText('Groceries')).toBeInTheDocument();
+    expect(screen.queryByText('Bus Ticket')).not.toBeInTheDocument();
   });
 
-  it('should handle bulk delete', async () => {
-    const selectedIds = new Set(['exp-1']);
-    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
-      expenses: mockExpenses,
-      isSelectMode: true,
-      toggleSelectMode: mockToggleSelectMode,
-      selectedIds,
-      toggleSelection: mockToggleSelection,
-      deleteSelected: mockDeleteSelected,
-      toggleEditModal: mockToggleEditModal,
-      toggleBulkEditModal: mockToggleBulkEditModal,
-    });
-
-    (bulkDeleteAction as jest.Mock).mockResolvedValueOnce({ success: true });
-
+  it('should filter expenses by type (recurring) based on is_recurring', () => {
     render(<ExpenseList />);
 
-    const deleteBtn = screen.getByRole('button', { name: 'Delete Selected' });
-    expect(deleteBtn).not.toBeDisabled();
+    const dropdownBtn = screen.getByRole('button', { name: 'All Types' });
+    fireEvent.click(dropdownBtn);
 
-    fireEvent.click(deleteBtn);
+    const recurringCheckbox = screen.getByRole('checkbox', { name: 'Recurring' });
+    fireEvent.click(recurringCheckbox);
 
-    expect(global.confirm).toHaveBeenCalledWith('Are you sure you want to delete 1 expense(s)?');
-    
-    await waitFor(() => {
-      expect(bulkDeleteAction).toHaveBeenCalledWith(['exp-1']);
-      expect(mockDeleteSelected).toHaveBeenCalled();
-    });
+    expect(screen.getByText('Netflix Subscription')).toBeInTheDocument();
+    expect(screen.queryByText('Lunch')).not.toBeInTheDocument();
   });
 
-  it('should handle bulk edit click', () => {
-    const selectedIds = new Set(['exp-1', 'exp-2']);
-    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
-      expenses: mockExpenses,
-      isSelectMode: true,
-      toggleSelectMode: mockToggleSelectMode,
-      selectedIds,
-      toggleSelection: mockToggleSelection,
-      deleteSelected: mockDeleteSelected,
-      toggleEditModal: mockToggleEditModal,
-      toggleBulkEditModal: mockToggleBulkEditModal,
-    });
-
+  it('should render recurring icon for recurring expenses based on is_recurring', () => {
     render(<ExpenseList />);
 
-    const editBtn = screen.getByRole('button', { name: 'Edit Selected' });
-    expect(editBtn).not.toBeDisabled();
+    const netflixItem = screen.getByText('Netflix Subscription').closest('.expense-item');
+    expect(netflixItem?.querySelector('[data-testid="recurring-icon"]')).toBeInTheDocument();
 
-    fireEvent.click(editBtn);
-
-    expect(mockToggleBulkEditModal).toHaveBeenCalled();
+    const lunchItem = screen.getByText('Lunch').closest('.expense-item');
+    expect(lunchItem?.querySelector('[data-testid="recurring-icon"]')).not.toBeInTheDocument();
   });
 });

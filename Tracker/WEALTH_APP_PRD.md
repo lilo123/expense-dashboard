@@ -125,6 +125,18 @@
       * **Ends Radio Panel**: Integrated inline radios (`Never`, `On` [date selector], `After` [occurrences count input]) to handle schedulers expiration parameters gracefully.
       * **Real-Time Client-Side Date Calculator**: Mirrors backend DDL triggers to calculate and output: `"First expense will be logged on [Calculated Date]"` in real-time as values shift.
     * **Yearly Chart [MODIFY]:** Add minimalist "Simple / Breakdown" pill toggle. When breakdown is active, render a stacked bar chart showing Sage Green (Recurring) vs Lavender (One-off) segments, hiding datalabels for clean aesthetics.
+    * **Recent Tab Enhancements [NEW]:**
+      * **Search**: Add search input to filter expenses by item name (case-insensitive).
+      * **Filters**: Add Category dropdown (from database categories) and Type dropdown (All, One-off, Recurring).
+      * **Sort**: Add Sort dropdown supporting Date (Newest/Oldest first) and Value (Highest/Lowest first).
+      * **Coexistence**: Ensure search, filters, and sorting operate together dynamically via a unified client-side data pipeline.
+      * **Recurring Tag**: Add a small, brand-aligned recurring loop SVG next to the expense date (using `text-zen-sage` or `text-zen-lavender` with smooth transitions) for items linked to `recurring_expense_id`.
+      * **Optimistic Empty State**: Render a frosted glass card (`bg-white/40 backdrop-blur-md border border-white/20 rounded-3xl p-8 text-center`) displaying a calm message (*"No expenses found for this view. You are all caught up!"*) in Deep Charcoal if the filtered results are empty.
+      * **Premium Mobile-Only UX upgrades [NEW]**:
+        * **Press-and-Hold (Long Press) Selection**: Remove the manual `"Select"` button on Mobile viewports, replacing it with intuitive touch-gestures. Long pressing any list item card for `500ms` triggers a tactile vibration feedback (`navigator.vibrate(50)`), activates Bulk Select mode, and checks the card dynamically. Includes scroll-move safety hooks to prevent gesture conflicts during scrolling.
+        * **Responsive Layout Shifting**: Duplicate-render the Sort dropdown (Desktop instance inside the filters box; Mobile instance on the left edge of the controls row next to shortened `"Edit"` and `"Delete"` action buttons). Hide the desktop instance on mobile to eliminate layout duplicates.
+        * **Transparent Overlay Select Pattern**: Style a custom button displaying `Sort by [Selected Option]` dynamically (e.g., `Sort by Date: Newest` as the default prompt), overlaying a fully transparent native `<select>` on top of it. This locks standard desktop/mobile responsive picker menus with custom visual prefixes beautifully.
+        * **Automated Height Validation Guardrails**: Lock the vertical height of all filter search dropdown buttons to exactly `36px` (`h-9`) with explicit `minHeight: 0` and `box-border` overrides. Enforce this visual symmetry by compiling a mathematical E2E height comparison test case inside the test runner.
 * **Phase 2: Budget "Health Bars" (MVP v2):**
   * **State & Database:** Integrate `budgets` data fetches into store.
   * **Frontend Components:** Implement RPG-style budget "health bars" that transition dynamically from Green (100%) to Yellow (25%).

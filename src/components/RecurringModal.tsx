@@ -287,17 +287,14 @@ export default function RecurringModal() {
         {view === 'list' ? (
           // ---------------- VIEW 1: DASHBOARD LIST GRID ----------------
           <div className="flex flex-col overflow-hidden h-full">
-            <div data-testid="recurring-header" className="flex justify-between items-center mb-4">
-              <h2 className="m-0 mt-1 font-bold text-zen-charcoal text-left text-xl leading-none">Recurring Expense</h2>
-              <button 
-                onClick={toggleRecurringModal}
-                aria-label="Close Modal"
-                style={{ minHeight: 0 }}
-                className="-translate-y-[2px] text-zen-charcoal/60 hover:text-zen-charcoal bg-transparent border-none cursor-pointer flex items-center justify-center w-6 h-6 rounded-full hover:bg-zen-charcoal/5 transition-all"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
+            <h2 className="m-0 font-bold text-zen-charcoal text-xl leading-snug pr-10 w-fit" style={{ marginBottom: '16px' }}>Recurring Expense</h2>
+            <button 
+              onClick={toggleRecurringModal}
+              aria-label="Close Modal"
+              className="close-btn rounded-full text-zen-charcoal/60 hover:text-zen-charcoal"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
             <p className="text-xs text-zen-charcoal/60 mb-4 text-left">List of active scheduled background expense entry rules.</p>
 
             {/* Config Table Grid Container - Aligned pixel-perfectly to the left */}
@@ -367,27 +364,22 @@ export default function RecurringModal() {
         ) : (
           // ---------------- VIEW 2: SETUP FORM ----------------
           <div className="overflow-y-auto max-h-[80vh] flex flex-col">
-            <div data-testid="recurring-header" className="flex justify-between items-start mb-4">
-              <div className="flex flex-col text-left mr-8">
-                <h2 className="m-0 mt-1 font-bold text-zen-charcoal text-lg leading-none">
-                  {editingConfig ? 'Edit Recurring Expense' : 'Add Recurring Expense'}
-                </h2>
-                <p className="text-xs text-zen-charcoal/60 m-0 mt-2">
-                  Recurring expense will be logged at {getLocalExecutionTime()} on the date.
-                </p>
-                <p className="text-xs text-zen-charcoal/50 m-0 mt-1 font-bold">
-                  First expense will be logged on {formatFriendlyDate(calculateFirstOccurrenceClient(startDate, frequency, dayOfWeek, dayOfMonth, isLastDayOfMonth))}.
-                </p>
-              </div>
-              <button 
-                onClick={toggleRecurringModal}
-                aria-label="Close Modal"
-                style={{ minHeight: 0 }}
-                className="-translate-y-[2px] text-zen-charcoal/60 hover:text-zen-charcoal bg-transparent border-none cursor-pointer flex items-center justify-center w-6 h-6 rounded-full hover:bg-zen-charcoal/5 transition-all"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-              </button>
-            </div>
+            <h2 className="m-0 font-bold text-zen-charcoal text-lg leading-snug pr-10 w-fit" style={{ marginBottom: '8px' }}>
+              {editingConfig ? 'Edit Recurring Expense' : 'Add Recurring Expense'}
+            </h2>
+            <button 
+              onClick={toggleRecurringModal}
+              aria-label="Close Modal"
+              className="close-btn rounded-full text-zen-charcoal/60 hover:text-zen-charcoal"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+            <p className="text-xs text-zen-charcoal/60 m-0" style={{ marginBottom: '4px' }}>
+              Recurring expense will be logged at {getLocalExecutionTime()} on the date.
+            </p>
+            <p className="text-xs text-zen-charcoal/50 m-0 font-bold mb-4">
+              First expense will be logged on {formatFriendlyDate(calculateFirstOccurrenceClient(startDate, frequency, dayOfWeek, dayOfMonth, isLastDayOfMonth))}.
+            </p>
 
             {message && (
               <div className={`p-3 rounded-2xl mb-4 text-sm font-medium border ${

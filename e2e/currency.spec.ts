@@ -41,7 +41,7 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
       expect(options).toContain(cat);
     });
 
-    await page.click('#add-modal .close');
+    await page.click('#add-modal .close-btn');
   });
 
   test('should log in foreign VND, convert to base CAD (C$), and display compressed pill format in Recent list', async ({ page }) => {

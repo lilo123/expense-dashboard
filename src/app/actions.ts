@@ -14,6 +14,8 @@ export async function addExpenseAction(data: {
   currency: string
   category_id: string
   date: string
+  is_recurring?: boolean
+  recurring_expense_id?: string | null
 }): Promise<{ success: boolean; data?: Expense; error?: string }> {
   const supabase = await createClient()
   const { data: userData, error: userError } = await supabase.auth.getUser()
@@ -33,7 +35,9 @@ export async function addExpenseAction(data: {
         original_currency: data.original_currency,
         currency: data.currency,
         category_id: data.category_id,
-        date: data.date
+        date: data.date,
+        is_recurring: data.is_recurring || false,
+        recurring_expense_id: data.recurring_expense_id || null
       }
     ])
     .select('*, categories(name)')
@@ -69,6 +73,8 @@ export async function updateExpenseAction(
     currency: string;
     category_id: string; 
     date: string; 
+    is_recurring: boolean;
+    recurring_expense_id: string | null;
   }>
 ): Promise<{ success: boolean; data?: Expense; error?: string }> {
   const supabase = await createClient()
@@ -176,6 +182,8 @@ export async function bulkUpdateAction(
     currency: string;
     category_id: string; 
     date: string; 
+    is_recurring?: boolean;
+    recurring_expense_id?: string | null;
   }>
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()

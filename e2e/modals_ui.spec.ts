@@ -68,7 +68,7 @@ test.describe('Global Modals UI & Responsiveness E2E Test Suite', () => {
       }
     }
 
-    const primaryButtons = await modal.locator('button:not(.close):not(.secondary-fab)').all();
+    const primaryButtons = await modal.locator('button:not(.close-btn):not(.secondary-fab)').all();
     for (const btn of primaryButtons) {
       if (await btn.isVisible() && (await btn.textContent())?.trim()) {
         await expect(btn).toHaveClass(/rounded-full/);
@@ -121,6 +121,29 @@ test.describe('Global Modals UI & Responsiveness E2E Test Suite', () => {
       await runModalUIChecks(page, '.modal-content:has(h2:has-text("Add Recurring Expense"))', 'button[aria-label="Close Modal"]', 'h2', 'Desktop');
       
       await page.click('button[aria-label="Close Modal"]');
+    });
+
+    test('should verify all header filters are perfectly identical in height', async ({ page }) => {
+      await page.click('#action-elem-2'); // Recent Tab
+      
+      const searchBox = await page.locator('#search-input').boundingBox();
+      const catBox = await page.locator('#category-filter').boundingBox();
+      const typeBox = await page.locator('#type-filter').boundingBox();
+      
+      // desktop sort selector button wrapper
+      const sortBox = await page.locator('#recent-filters button:has-text("Sort by")').boundingBox();
+
+      expect(searchBox).not.toBeNull();
+      expect(catBox).not.toBeNull();
+      expect(typeBox).not.toBeNull();
+      expect(sortBox).not.toBeNull();
+
+      if (searchBox && catBox && typeBox && sortBox) {
+        console.log(`[HEIGHT CHECK] Search: ${searchBox.height}px, Category: ${catBox.height}px, Type: ${typeBox.height}px, Sort: ${sortBox.height}px`);
+        expect(catBox.height).toBe(searchBox.height);
+        expect(typeBox.height).toBe(searchBox.height);
+        expect(sortBox.height).toBe(searchBox.height);
+      }
     });
   });
 

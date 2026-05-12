@@ -9,7 +9,9 @@ const MIGRATION_FILES = [
   'supabase/migrations/20260510000000_init.sql',
   'supabase/migrations/20260510140000_phase_1_65.sql',
   'supabase/migrations/20260510150000_phase_1_65_extensions.sql',
-  'supabase/migrations/20260510170000_phase_1_7.sql'
+  'supabase/migrations/20260510170000_phase_1_7.sql',
+  'supabase/migrations/20260511000000_phase_1_8_recurring.sql',
+  'supabase/migrations/20260512000000_decouple_recurring.sql'
 ];
 
 async function initDb() {
