@@ -49,6 +49,8 @@ npx tsx e2e/init_db.ts
 2.  `20260510140000_phase_1_65.sql` (Dual-amount auditing columns & PL/pgSQL trigger).
 3.  `20260510150000_phase_1_65_extensions.sql` (Default CAD baseline alters).
 4.  `20260510170000_phase_1_7.sql` (User profiles settings DDL table & refactored dual categories trigger).
+5.  `20260511000000_phase_1_8_recurring.sql` (Timezone hourly scheduling database tables & cron schedules).
+6.  `20260511140000_phase_1_8_refinement.sql` (First occurrence automated triggers and visual alignment refinements).
 
 ### C. Seed CAD baseline Dataset
 Wipes previous seeds, creates a fresh test user `test-user@example.com` (which automatically fires the Postgres Trigger to seed default categories), caches fixed mock exchange rates (`VND: 18500.0`), and inserts 35 realistic historical expenses:
