@@ -54,13 +54,22 @@ export async function updateProfile(data: Partial<{
     if (data.ai_tone !== undefined) updatePayload.ai_tone = data.ai_tone;
     if (data.timezone !== undefined) updatePayload.timezone = data.timezone;
 
-    // Update Metadata in public.profiles Table
-    const { error: profileUpdateError } = await supabase
+    // Update Metadata in public.profiles Table and select the mutated row
+    const { data: updatedData, error: profileUpdateError } = await supabase
       .from('profiles')
       .update(updatePayload)
-      .eq('id', userId);
+      .eq('id', userId)
+      .select();
 
     if (profileUpdateError) throw profileUpdateError;
+
+    // STRICT VERIFICATION: Throw error if no rows were affected (profile row missing!)
+    if (!updatedData || updatedData.length === 0) {
+      return {
+        success: false,
+        error: 'Uh oh, your profile record was not found in the database. Please contact support.'
+      };
+    }
 
     return { 
       success: true, 
