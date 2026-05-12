@@ -196,27 +196,7 @@ function ClientDashboardContent() {
                       Siri Setup
                     </button>
 
-                    {/* Inline Currency Select Dropdown Pill */}
-                    <div className="px-3 py-2 flex flex-col gap-1">
-                      <span className="text-[10px] text-zen-charcoal/50 font-bold uppercase tracking-wider">Display Currency</span>
-                      <select 
-                        value={displayCurrency} 
-                        aria-label="Currency"
-                        onChange={e => { 
-                          setDisplayCurrency(e.target.value as any);
-                          setIsDropdownOpen(false);
-                        }}
-                        className="w-full px-2 py-1.5 rounded-lg border border-zen-lavender/40 bg-white/80 text-zen-charcoal text-xs font-semibold cursor-pointer outline-none"
-                      >
-                        <option value="CAD">CAD (C$)</option>
-                        <option value="VND">VND (₫)</option>
-                        <option value="USD">USD ($)</option>
-                        <option value="EUR">EUR (€)</option>
-                        <option value="JPY">JPY (¥)</option>
-                        <option value="GBP">GBP (£)</option>
-                        <option value="SGD">SGD (S$)</option>
-                      </select>
-                    </div>
+
 
                     <hr className="border-t border-zen-lavender/20 my-1" />
 

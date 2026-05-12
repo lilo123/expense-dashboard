@@ -12,7 +12,7 @@ interface SettingsFormProps {
 }
 
 export default function SettingsForm({ userEmail }: SettingsFormProps) {
-  const { profile, hydrate } = useExpenseStore();
+  const { profile, hydrate, displayCurrency, setDisplayCurrency } = useExpenseStore();
 
   // 1. Edit Toggle States (Accidental Changes Prevention)
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -24,8 +24,8 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
   const [email, setEmail] = useState(userEmail);
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('CAD');
   const [budgetResetDay, setBudgetResetDay] = useState(1);
-  // Keep aiTone backend state for seamless under-the-hood syncing!
   const [aiTone, setAiTone] = useState('nurturing');
+  const [tempDisplayCurrency, setTempDisplayCurrency] = useState<SupportedCurrency>('CAD');
 
   // 3. Password Form States
   const [currentPassword, setCurrentPassword] = useState('');
@@ -49,6 +49,13 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
       setAiTone(profile.ai_tone || 'nurturing');
     }
   }, [profile]);
+
+  // Sync tempDisplayCurrency from Zustand displayCurrency loaded on mount
+  useEffect(() => {
+    if (displayCurrency) {
+      setTempDisplayCurrency(displayCurrency);
+    }
+  }, [displayCurrency]);
 
   // Fetch profile from Supabase if not cached in store yet
   useEffect(() => {
@@ -75,6 +82,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
       setBudgetResetDay(profile.budget_reset_day || 1);
       setAiTone(profile.ai_tone || 'nurturing');
     }
+    setTempDisplayCurrency(displayCurrency);
     setProfileMessage(null);
     setIsEditingProfile(false);
   };
@@ -108,6 +116,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
       });
 
       if (response.success) {
+        setDisplayCurrency(tempDisplayCurrency);
         setProfileMessage({ text: response.message || 'General details updated!', isError: false });
         setIsEditingProfile(false); // Lock inputs back
         
@@ -270,12 +279,33 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
           </div>
 
           <div className="flex flex-col gap-1">
-            <label className="text-xs text-zen-charcoal/60 font-semibold ml-1">Base Currency</label>
+            <label className="text-xs text-zen-charcoal/60 font-semibold ml-1">Base Currency (to record expense)</label>
             <select 
               value={baseCurrency} 
               disabled={!isEditingProfile}
               aria-label="Base Currency"
               onChange={e => setBaseCurrency(e.target.value as any)}
+              className={`w-full px-4 py-3 rounded-full bg-white/50 border focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal text-base appearance-none h-12 box-border transition-all ${
+                !isEditingProfile ? 'border-transparent opacity-75 bg-transparent cursor-default pointer-events-none' : 'border-zen-lavender/60 cursor-pointer'
+              }`}
+            >
+              <option value="CAD">CAD (C$)</option>
+              <option value="VND">VND (₫)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="JPY">JPY (¥)</option>
+              <option value="GBP">GBP (£)</option>
+              <option value="SGD">SGD (S$)</option>
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-xs text-zen-charcoal/60 font-semibold ml-1">Display Currency</label>
+            <select 
+              value={tempDisplayCurrency} 
+              disabled={!isEditingProfile}
+              aria-label="Display Currency"
+              onChange={e => setTempDisplayCurrency(e.target.value as any)}
               className={`w-full px-4 py-3 rounded-full bg-white/50 border focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal text-base appearance-none h-12 box-border transition-all ${
                 !isEditingProfile ? 'border-transparent opacity-75 bg-transparent cursor-default pointer-events-none' : 'border-zen-lavender/60 cursor-pointer'
               }`}

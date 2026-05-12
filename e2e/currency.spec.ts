@@ -79,23 +79,39 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
     const initialTotalText = await totalLabel.innerText();
     expect(initialTotalText).toContain('C$'); 
 
-    // 1. Open Profile dropdown first to access currency selector
-    await page.click('#profile-btn');
-    const dropdown = page.locator('#profile-dropdown');
-    await expect(dropdown).toBeVisible();
+    // 1. Navigate to settings and wait for client-side profile hydration
+    await page.goto('/settings');
+    const nameInput = page.locator('input[placeholder="Name"]');
+    await expect(nameInput).toHaveValue(/^[a-zA-Z0-9_-]+/); // Wait for database profile fetch to load!
 
-    // 2. Select VND
-    const dropdownCurrencySelect = dropdown.locator('select[aria-label="Currency"]');
-    await expect(dropdownCurrencySelect).toBeVisible();
-    await dropdownCurrencySelect.selectOption('VND');
+    await page.click('#edit-profile-btn');
+
+    // 2. Select VND as Display Currency
+    const displaySelect = page.locator('select[aria-label="Display Currency"]');
+    await expect(displaySelect).toBeVisible();
+    await displaySelect.selectOption('VND');
+    await page.click('button:has-text("Save Details")'); // Save details explicitly
+    
+    // WAIT FOR ASYNC SAVE SUCCESS: Avoid premature unmount race conditions!
+    await expect(page.locator('text=General details saved successfully!')).toBeVisible();
+
+    // 3. Go back to dashboard
+    await page.click('text=Back to Dashboard');
+    await page.waitForSelector('#hydrated-marker', { state: 'attached' });
 
     // Total updates dynamically to VND Millions compressed
     await expect(totalLabel).toContainText('M ₫'); 
 
-    // 3. Open again to swap to EUR
-    await page.click('#profile-btn');
-    await expect(dropdown).toBeVisible();
-    await dropdownCurrencySelect.selectOption('EUR');
+    // 4. Navigate again to swap to EUR
+    await page.goto('/settings');
+    await expect(nameInput).toHaveValue(/^[a-zA-Z0-9_-]+/); // Wait for profile load
+    await page.click('#edit-profile-btn');
+    await displaySelect.selectOption('EUR');
+    await page.click('button:has-text("Save Details")'); // Save details explicitly
+    await expect(page.locator('text=General details saved successfully!')).toBeVisible();
+
+    await page.click('text=Back to Dashboard');
+    await page.waitForSelector('#hydrated-marker', { state: 'attached' });
 
     await expect(totalLabel).toContainText('€');
     await expect(totalLabel).not.toContainText('K');
@@ -104,23 +120,33 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
 
   test('should remember Display Currency preference via LocalStorage across reloads (Hydration-Safe)', async ({ page }) => {
     const totalLabel = page.locator('#total-amount-desktop');
-    const dropdown = page.locator('#profile-dropdown');
 
-    // 1. Open dropdown and select VND
-    await page.click('#profile-btn');
-    await expect(dropdown).toBeVisible();
-    const dropdownCurrencySelect = dropdown.locator('select[aria-label="Currency"]');
-    await dropdownCurrencySelect.selectOption('VND');
+    // 1. Go to settings, wait for profile load, select VND and save
+    await page.goto('/settings');
+    const nameInput = page.locator('input[placeholder="Name"]');
+    await expect(nameInput).toHaveValue(/^[a-zA-Z0-9_-]+/); // Wait for profile load
+
+    await page.click('#edit-profile-btn');
+    const displaySelect = page.locator('select[aria-label="Display Currency"]');
+    await displaySelect.selectOption('VND');
+    await page.click('button:has-text("Save Details")'); // Save details explicitly
+    await expect(page.locator('text=General details saved successfully!')).toBeVisible();
+
+    await page.click('text=Back to Dashboard');
+    await page.waitForSelector('#hydrated-marker', { state: 'attached' });
     await expect(totalLabel).toContainText('M ₫');
 
     // 2. Reload page
     await page.reload();
     await page.waitForSelector('#hydrated-marker', { state: 'attached' });
 
-    // 3. Assert selection is remembered inside dropdown!
-    await page.click('#profile-btn');
-    await expect(dropdown).toBeVisible();
-    await expect(dropdownCurrencySelect).toHaveValue('VND');
+    // 3. Assert selection is remembered inside settings!
+    await page.goto('/settings');
+    await expect(nameInput).toHaveValue(/^[a-zA-Z0-9_-]+/); // Wait for profile load
+    await expect(displaySelect).toHaveValue('VND');
+    
+    await page.click('text=Back to Dashboard');
+    await page.waitForSelector('#hydrated-marker', { state: 'attached' });
     await expect(totalLabel).toContainText('M ₫');
   });
 });

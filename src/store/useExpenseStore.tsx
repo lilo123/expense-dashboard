@@ -118,9 +118,16 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     
     hydrate: (data) => set((state) => {
       const activeProfile = data.profile !== undefined ? data.profile : state.profile;
-      // Sync currencies to database profile base_currency if loaded
+      
+      // Sync display currency cleanly to LocalStorage cached preference if present
+      let preferredDisplay = state.displayCurrency;
+      if (typeof window !== 'undefined') {
+        const stored = localStorage.getItem('displayCurrency');
+        if (stored) preferredDisplay = stored as SupportedCurrency;
+      }
+
       const hydratedBase = data.baseCurrency || (activeProfile ? activeProfile.base_currency : state.baseCurrency);
-      const hydratedDisplay = data.displayCurrency || (activeProfile ? activeProfile.base_currency : state.displayCurrency);
+      const hydratedDisplay = data.displayCurrency || preferredDisplay || (activeProfile ? activeProfile.base_currency : state.displayCurrency);
 
       return { 
         expenses: data.expenses !== undefined ? [...data.expenses] : state.expenses, 
