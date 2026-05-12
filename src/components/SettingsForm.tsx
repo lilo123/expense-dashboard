@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { updateProfile, updateEmail, updatePassword, getProfile } from '@/app/actions/profile';
 import { SupportedCurrency } from '@/types/database';
+import CategoryManager from './CategoryManager';
 
 interface SettingsFormProps {
   userEmail: string;
@@ -472,6 +473,9 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
           </form>
         )}
       </div>
+
+      {/* Category Management Card */}
+      <CategoryManager />
     </div>
   );
 }

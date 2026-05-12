@@ -39,7 +39,7 @@ export default function SiriModal() {
     }}>
         <div className="modal-content bg-white/40 backdrop-blur-md border border-white/20 shadow-xl text-zen-charcoal rounded-3xl" style={{ maxWidth: '500px', width: '100%', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
             <span id="action-elem-12" className="close" onClick={toggleSiriModal}>&times;</span>
-            <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <h2 className="text-zen-charcoal font-bold m-0 text-left" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginRight: '40px' }}>
               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
               Connect with Siri
             </h2>
@@ -47,7 +47,7 @@ export default function SiriModal() {
                 Generate a secure API token to allow Siri to add expenses without logging in every time. Keep this token secret!
             </p>
             
-            <div className="bg-white/50 border border-zen-lavender/40 p-4 rounded-2xl mb-5 text-left">
+            <div className="bg-white/60 border border-zen-lavender/40 p-4 rounded-2xl mb-5 text-left shadow-sm">
                 <p style={{ marginTop: 0, fontWeight: 500, fontSize: '14px' }}>Your Personal API Token (Click token to copy):</p>
                 <div className="flex gap-2 mt-3 flex-wrap items-center w-full">
                     <input 
@@ -68,13 +68,13 @@ export default function SiriModal() {
             </div>
             
             <div style={{ marginTop: '25px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
-                <h3 style={{ fontSize: '16px', marginBottom: '10px' }}>How to set up:</h3>
+                <h3 className="text-zen-charcoal font-bold m-0" style={{ fontSize: '16px', marginBottom: '10px' }}>How to set up:</h3>
                 <ol style={{ paddingLeft: '20px', fontSize: '14px', color: 'var(--secondary-text)', lineHeight: '1.6' }}>
                     <li><strong>Generate and Copy</strong> your token above.</li>
                     <li>Open the <strong>Shortcuts app</strong> on your iPhone and tap <strong>+</strong>. Name it "Log Expense".</li>
                     <li>Add an <strong>Ask for Input</strong> action. Set the prompt to <em>"What did you spend?"</em></li>
                     <li>Add a <strong>Get Contents of URL</strong> action and configure it:
-                        <ul className="pl-6 pr-3 py-3 my-2 bg-white/50 border border-zen-lavender/40 rounded-2xl list-disc text-left">
+                        <ul className="pl-6 pr-3 py-3 my-2 bg-white/60 border border-zen-lavender/40 rounded-2xl list-disc text-left shadow-sm">
                             <li><strong>URL:</strong> <code id="siri-endpoint-url" className="bg-zen-lavender/30 px-2 py-0.5 rounded font-mono text-sm">https://expense-dashboard-blond.vercel.app/api/siri</code></li>
                             <li><strong>Method:</strong> POST</li>
                             <li><strong>Headers:</strong> Add new header <code>Authorization</code> with value <code>Bearer [PASTE_YOUR_TOKEN_HERE]</code></li>

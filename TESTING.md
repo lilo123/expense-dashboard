@@ -55,7 +55,7 @@ To run E2E tests locally without polluting your cloud databases, Supabase CLI re
     npx supabase start
     ```
 3.  **Apply all migrations DDL sequentially & force cache reload**:
-    Our custom PG initializer connects directly to the local Postgres port (54322) and applies the base tables (`20260510000000_init.sql`), currency additions (`20260510140000_phase_1_65.sql`), and CAD default extensions (`20260510150000_phase_1_65_extensions.sql`) before issuing the PostgREST reload signal:
+    Our custom PG initializer connects directly to the local Postgres port (54322) and applies base tables (`20260510000000_init.sql`), currency additions (`20260510140000_phase_1_65.sql`), CAD extensions (`20260510150000_phase_1_65_extensions.sql`), recurring cron additions (`20260511000000_phase_1_8_recurring.sql`), and visual refinements (`20260511140000_phase_1_8_refinement.sql`) sequentially:
     ```bash
     npx tsx e2e/init_db.ts
     ```
@@ -102,6 +102,9 @@ Our frontend tests validate that the UI correctly aligns with the An-yen Zen aes
 *   **Glassmorphism Utility**: Cards and modals must use our signature frosted glass look (`bg-white/40 backdrop-blur-md border border-white/20`).
 *   **Fluid Rounded Corners**: No harsh 90-degree corners (`rounded-full`, `rounded-3xl`, `rounded-2xl`).
 *   **The Levitating iridescent AI Orb**: The An-yen AI Companion must use the pure CSS `animate-liquid-flow` keyframe morphing without WebGL to guarantee 100% lightweight, fast loading.
+*   **Global Modals Layout Alignment & Overlap Safety**: Automated tests measure outer bounding boxes (`titleBox.x`, `closeBox.x`, etc.) across viewports to guarantee that absolute close triggers never intersect or collide with text elements.
+*   **Visual Snapshots Baseline Matching (`toHaveScreenshot`)**: Targets header container boxes to compare rasterized browser renders against saved baseline images, locking in optical visual centering (flex centers, baseline adjustments, and button padding overrides) exactly.
+*   **Layered Glass-on-Glass Card Layouts**: Sub-settings containers inside modals are styled using a higher white opacity/tint (**`bg-white/60 border-zen-lavender/40 shadow-sm`**) compared to the base modal's `bg-white/40` background, giving them a beautiful premium 3D layered contrast.
 
 ---
 
@@ -113,9 +116,12 @@ Our frontend tests validate that the UI correctly aligns with the An-yen Zen aes
 *   **AI Chat Box (`ChatBox.tsx`)**: Asserts optimistic UI loads and empathetic error fallbacks.
 *   **Recent List (`ExpenseList.tsx`)**: Verifies list item rendering in original spent currencies.
 *   **Modals (`AddExpenseModal.tsx`)**: Asserts ARIA-labeled selects and converts foreign currency values to base currency on submit.
+*   **Recurring Manager (`RecurringModal.tsx`)**: Unit tests verify real-time client-side first execution date calculations, Ends radio button selections, and active input state enabling/disabling.
+*   **Database Calendar Math Triggers (`recurring_db.test.ts`)**: Verifies pg_cron triggers under past frozen years to assert Month Cap (May 31 -> June 30), Feb Non-Leap (Jan 30 -> Feb 28), and Feb Leap Year (Jan 31 -> Feb 29) boundary transitions.
 
 ### B. E2E Integration Tests (Playwright)
 *   **Trigger Seeding (`currency.spec.ts`)**: Asserts the Postgres categories trigger automatically auto-seeds all 16 categories inside `public.categories` on user signup.
 *   **LocalStorage Currency Persistence (`currency.spec.ts`)**: Verifies that changing a Display Currency preference is cached in local storage and safely restored upon page reloads without triggering Next.js hydration mismatch warnings.
 *   **Multi-Currency conversions**: Logs `100,000 VND`, asserts the DB stores the CAD converted equivalent (`$5.41`), while the Recent List displays the raw spent `100K ₫`.
-*   **Mobile Viewports emulations**: Tests manual CRUD logging and category dropdowns inside simulated Pixel 5 and iPhone 12 viewports.
+*   **Scheduled Expenses CRUD Scheduling (`recurring.spec.ts`)**: Verifies the complete end-to-end recurring expense CRUD flow (weekly pills, Ends After Occurrences radio selections, dynamic helper date strings) and confirms background database inserts.
+*   **Global Modals Overlap & Visual regression (`modals_ui.spec.ts`)**: Verifies structural safety (zero exit overlaps, roundness, deep charcoal accessibility text contrast) and enforces pixel-perfect visual snapshot baselines on both Desktop (`1280x800`) and Mobile (`375x812`) viewport emulations across all 6 application modals.

@@ -53,37 +53,79 @@ export default function YearlyTab() {
     }
   }, [years, selectedYear]);
 
-  const { data } = useMemo(() => {
-    const byMonth: Record<number, number | null> = {};
-    for(let i=0; i<12; i++) byMonth[i] = null;
+  const [showBreakdown, setShowBreakdown] = useState(false);
+
+  const { recurringData, oneOffData, totalData } = useMemo(() => {
+    const recurringByMonth: Record<number, number | null> = {};
+    const oneOffByMonth: Record<number, number | null> = {};
+    const totalByMonth: Record<number, number | null> = {};
+    
+    for(let i=0; i<12; i++) {
+      recurringByMonth[i] = null;
+      oneOffByMonth[i] = null;
+      totalByMonth[i] = null;
+    }
 
     expenses.forEach(exp => {
       if (!exp.date) return;
       const d = parseLocalDate(exp.date);
       if (isNaN(d.getTime()) || d.getFullYear().toString() !== selectedYear) return;
       const m = d.getMonth();
-      if (byMonth[m] === null) byMonth[m] = 0;
       
-      // Convert stored amount (base) dynamically to display currency before summing
+      if (totalByMonth[m] === null) {
+        totalByMonth[m] = 0;
+        recurringByMonth[m] = 0;
+        oneOffByMonth[m] = 0;
+      }
+      
       const amtBase = parseFloat(exp.amount as any) || 0;
       const amtDisplay = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
-      byMonth[m] += amtDisplay;
+      
+      const isRecurring = !!exp.recurring_expense_id;
+      
+      if (isRecurring) {
+        recurringByMonth[m] = (recurringByMonth[m] || 0) + amtDisplay;
+      } else {
+        oneOffByMonth[m] = (oneOffByMonth[m] || 0) + amtDisplay;
+      }
+      totalByMonth[m] = (totalByMonth[m] || 0) + amtDisplay;
     });
 
     const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const dataVals = labels.map((_, i) => byMonth[i]);
 
-    return { data: dataVals };
+    return {
+      recurringData: labels.map((_, i) => recurringByMonth[i]),
+      oneOffData: labels.map((_, i) => oneOffByMonth[i]),
+      totalData: labels.map((_, i) => totalByMonth[i])
+    };
   }, [expenses, selectedYear, displayCurrency, baseCurrency, exchangeRates]);
 
   const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   const chartData = {
     labels,
-    datasets: [
+    datasets: showBreakdown ? [
       {
-        data,
-        backgroundColor: '#AEC3B0',
+        label: 'Recurring',
+        data: recurringData,
+        backgroundColor: '#AEC3B0', // Soft Sage Green
+        borderRadius: 4,
+        barPercentage: 0.6,
+        stack: 'stack1'
+      },
+      {
+        label: 'One-off',
+        data: oneOffData,
+        backgroundColor: '#D8D2E1', // Muted Lavender
+        borderRadius: 4,
+        barPercentage: 0.6,
+        stack: 'stack1'
+      }
+    ] : [
+      {
+        label: 'Total',
+        data: totalData,
+        backgroundColor: '#AEC3B0', // Soft Sage Green
         borderRadius: 4,
         barPercentage: 0.6
       }
@@ -102,8 +144,19 @@ export default function YearlyTab() {
       }
     },
     scales: {
-        x: { grid: { display: false }, border: { display: false }, ticks: { color: '#2D3748', font: { weight: 'bold' as const } } },
-        y: { grid: { display: false }, border: { display: false }, ticks: { display: false }, min: 0 }
+        x: { 
+          stacked: showBreakdown,
+          grid: { display: false }, 
+          border: { display: false }, 
+          ticks: { color: '#2D3748', font: { weight: 'bold' as const } } 
+        },
+        y: { 
+          stacked: showBreakdown,
+          grid: { display: false }, 
+          border: { display: false }, 
+          ticks: { display: false }, 
+          min: 0 
+        }
     },
     plugins: {
         legend: { display: false },
@@ -120,7 +173,7 @@ export default function YearlyTab() {
           }
         },
         datalabels: {
-            display: function(context: any) { return context.dataset.data[context.dataIndex] !== null; },
+            display: function(context: any) { return !showBreakdown && context.dataset.data[context.dataIndex] !== null; },
             anchor: 'end' as const,
             align: 'top' as const,
             offset: 4,
@@ -145,14 +198,32 @@ export default function YearlyTab() {
     <div id="tab-yearly" className="tab-content active" style={{ display: "block" }}>
         <div className="flex justify-between items-center mb-4">
             <h2 className="margin-0 text-zen-charcoal font-bold">Monthly Expenses</h2>
-            <select 
-              id="yearSelect" 
-              value={selectedYear} 
-              onChange={e => setSelectedYear(e.target.value)}
-              className="px-4 py-2 bg-white/50 border border-zen-lavender/60 rounded-full text-zen-charcoal text-base outline-none cursor-pointer h-9 flex items-center"
-            >
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
+            <div className="flex items-center gap-3">
+                {/* Minimalist Toggle Box */}
+                <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-full p-1 inline-flex items-center gap-1">
+                  <button 
+                    onClick={() => setShowBreakdown(false)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all border-none cursor-pointer ${!showBreakdown ? 'bg-zen-charcoal text-white shadow-sm' : 'text-zen-charcoal/60 hover:text-zen-charcoal bg-transparent'}`}
+                  >
+                    Simple
+                  </button>
+                  <button 
+                    onClick={() => setShowBreakdown(true)}
+                    className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all border-none cursor-pointer ${showBreakdown ? 'bg-zen-charcoal text-white shadow-sm' : 'text-zen-charcoal/60 hover:text-zen-charcoal bg-transparent'}`}
+                  >
+                    Breakdown
+                  </button>
+                </div>
+
+                <select 
+                  id="yearSelect" 
+                  value={selectedYear} 
+                  onChange={e => setSelectedYear(e.target.value)}
+                  className="px-4 py-2 bg-white/50 border border-zen-lavender/60 rounded-full text-zen-charcoal text-base outline-none cursor-pointer h-9 flex items-center"
+                >
+                  {years.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+            </div>
         </div>
         <div className="chart-container" style={{ height: '300px', maxHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {isMounted ? (

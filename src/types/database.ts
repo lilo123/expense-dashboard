@@ -15,6 +15,7 @@ export interface Expense {
   category_id: string;
   date: string;
   created_at: string;
+  recurring_expense_id?: string | null;
   categories?: {
     name: string;
   };
@@ -41,5 +42,23 @@ export interface Profile {
   base_currency: SupportedCurrency;
   budget_reset_day: number;
   ai_tone: string;
+  timezone: string;
   updated_at: string;
+}
+
+export interface RecurringExpense {
+  id: string;
+  user_id: string;
+  item: string;
+  amount: number;
+  currency: string;
+  category_id: string;
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly';
+  start_date: string;
+  next_occurrence: string;
+  is_active: boolean;
+  created_at: string;
+  categories?: {
+    name: string;
+  };
 }

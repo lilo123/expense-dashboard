@@ -77,6 +77,9 @@ async function seed() {
       const { error: catDelError } = await supabase.from('categories').delete().eq('user_id', existingUser.id);
       if (catDelError) console.warn('Warning: failed to clean categories:', catDelError.message);
 
+      const { error: recurDelError } = await supabase.from('recurring_expenses').delete().eq('user_id', existingUser.id);
+      if (recurDelError) console.warn('Warning: failed to clean recurring_expenses:', recurDelError.message);
+
       // Delete the auth user
       const { error: deleteError } = await supabase.auth.admin.deleteUser(existingUser.id);
       if (deleteError) {

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { useExpenseStore, StoreProvider } from '@/store/useExpenseStore';
 import { syncExchangeRates } from '@/app/actions/rates';
-import { getProfile } from '@/app/actions/profile';
+import { getProfile, updateProfile } from '@/app/actions/profile';
 import { Category } from '@/types/database';
 import { Expense, User } from '@/types/database';
 import Tabs from './Tabs';
@@ -15,9 +15,9 @@ import ExpenseList from './ExpenseList';
 import YearlyTab from './YearlyTab';
 import AddExpenseModal from './AddExpenseModal';
 import EditExpenseModal from './EditExpenseModal';
-import CategoryModal from './CategoryModal';
 import BulkEditModal from './BulkEditModal';
 import SiriModal from './SiriModal';
+import RecurringModal from './RecurringModal';
 import Logo from './Logo';
 
 interface ClientDashboardProps {
@@ -43,8 +43,8 @@ export default function ClientDashboard({
 function ClientDashboardContent() {
   const { 
     globalError, activeTab, 
-    toggleAddModal, toggleCategoryModal, toggleChatModal, toggleSiriModal, 
-    isCategoryModalOpen, isChatModalOpen, isAddModalOpen,
+    toggleAddModal, toggleChatModal, toggleSiriModal, toggleRecurringModal,
+    isChatModalOpen, isAddModalOpen, isRecurringModalOpen,
     reset,
     displayCurrency, setDisplayCurrency, setExchangeRates,
     profile, setProfile, baseCurrency, user
@@ -75,6 +75,32 @@ function ClientDashboardContent() {
     }
     fetchRatesAndProfile();
   }, [setExchangeRates, setProfile]);
+
+  // Timezone Sync Effect
+  useEffect(() => {
+    async function syncTimezone() {
+      if (profile) {
+        const localTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        if (profile.timezone !== localTZ) {
+          console.log(`[TIMEZONE SYNC] Browser timezone (${localTZ}) differs from profile (${profile.timezone}). Syncing...`);
+          try {
+            const res = await updateProfile({
+              timezone: localTZ
+            });
+            if (res.success) {
+              setProfile({ ...profile, timezone: localTZ });
+              console.log('[TIMEZONE SYNC SUCCESS] Database and store updated.');
+            } else {
+              console.error('[TIMEZONE SYNC FAILED]:', res.error);
+            }
+          } catch (err) {
+            console.error('[TIMEZONE SYNC ERROR]:', err);
+          }
+        }
+      }
+    }
+    syncTimezone();
+  }, [profile, setProfile]);
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
@@ -154,6 +180,13 @@ function ClientDashboardContent() {
                     >
                       Account Overview
                     </Link>
+
+                    <button 
+                      onClick={() => { setIsDropdownOpen(false); toggleRecurringModal(); }}
+                      className="flex items-center text-left px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all cursor-pointer border-none bg-transparent w-full"
+                    >
+                      Recurring Expense
+                    </button>
                     
                     <button 
                       onClick={() => { setIsDropdownOpen(false); toggleSiriModal(); }}
@@ -230,14 +263,6 @@ function ClientDashboardContent() {
       {/* Add Expense FAB and Modal */}
       <div className="fab-container">
         <button 
-          id="action-elem-7" 
-          className={`fab secondary-fab transition-all duration-200 rounded-full ${isCategoryModalOpen ? 'bg-zen-sage text-zen-charcoal shadow-md border-none' : 'bg-white/60 text-zen-charcoal/60 border border-zen-lavender/30 hover:bg-white/80'}`}
-          title="Manage Categories" 
-          onClick={toggleCategoryModal}
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-1.2-1.8A2 2 0 0 0 7.55 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"></path></svg>
-        </button>
-        <button 
           id="action-elem-8" 
           className={`fab secondary-fab transition-all duration-200 rounded-full ${isChatModalOpen ? 'bg-zen-sage text-zen-charcoal shadow-md border-none' : 'bg-white/60 text-zen-charcoal/60 border border-zen-lavender/30 hover:bg-white/80'}`}
           onClick={() => { console.log("FAB_CLICKED_SUCCESSFULLY"); toggleChatModal(); }}
@@ -255,10 +280,10 @@ function ClientDashboardContent() {
       
       <AddExpenseModal />
       <EditExpenseModal />
-      <CategoryModal />
       <BulkEditModal />
       <ChatBox />
       <SiriModal />
+      <RecurringModal />
     </>
   );
 }

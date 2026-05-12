@@ -43,6 +43,7 @@ test.describe('Phase 1.7: Settings UX & Security Refinements E2E', () => {
     await expect(page).toHaveURL(/\/settings/);
 
     const nameInput = page.locator('input[placeholder="Name"]');
+    await expect(nameInput).not.toHaveValue(''); // Wait for asynchronous hydration to load actual name
     const initialName = await nameInput.inputValue();
     
     // 1. Verified inputs are locked read-only by default!

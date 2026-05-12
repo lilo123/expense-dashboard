@@ -47,6 +47,26 @@
 * `rates` (JSONB - cached daily conversion map for CAD, VND, USD, EUR, JPY, GBP, SGD)
 * `updated_at` (Timestamp with timezone)
 
+### `recurring_expenses` table [NEW]
+* `id` (UUID Primary Key)
+* `user_id` (UUID Foreign Key to `auth.users` ON DELETE CASCADE)
+* `category_id` (UUID Foreign Key to `categories.id` ON DELETE SET NULL)
+* `item` (String - expense title)
+* `amount` (Exact Decimal type)
+* `currency` (String - code default 'CAD')
+* `frequency` (String: 'weekly' | 'monthly' - restricted to weekly and monthly options for MVP)
+* `day_of_week` (Integer - weekly weekday index 0-6, nullable)
+* `day_of_month` (Integer - monthly day index 1-31, nullable)
+* `is_last_day_of_month` (Boolean, default false)
+* `start_date` (DATE type)
+* `end_date` (DATE type, nullable - specific expiration date)
+* `max_occurrences` (Integer, nullable - expiration limit by runs count)
+* `num_occurrences` (Integer, default 0 - tracking counter for occurrences limits)
+* `next_occurrence` (DATE type - calculated dynamically by triggers)
+* `is_active` (Boolean, default true)
+* `created_at` (Timestamp with timezone)
+
+
 ## 4. Edge Cases & Robustness
 * **Zero-Dollar Budgets:** Safely handle $0 budgets (prevent divide-by-zero errors in health bar percentages if a user wants to block spending in a category).
 * **Timezones:** Budget math must strictly respect the user's local timezone (avoiding UTC crossover bugs at midnight on the last day of the month).
@@ -83,6 +103,28 @@
     * UI Components: Profile editing form, Password update form.
     * Styling: Must utilize standard An-yen glassmorphism (`bg-white/40 backdrop-blur-md border border-white/20`).
     * Data Fetching: Utilize Next.js Server Actions. `updateProfile(data)` mapping to `profiles` table; `updatePassword(newPassword)` reusing `supabase.auth.updateUser()`.
+* **Phase 1.8: Automation & Integration - [COMPLETED]:**
+  * **Database Schema Requirements:**
+    * Table Name: `recurring_expenses` [NEW] - See details in Section 3.
+    * Table `profiles` [MODIFY]: Add `timezone` (text, default 'UTC') to track user local timezones.
+    * Table `expenses` [MODIFY]: Add `recurring_expense_id` (UUID FK to `recurring_expenses`, Set Null).
+    * Security: RLS enabled on `recurring_expenses`. Users can only manage their own.
+  * **Backend Automation (Timezone-Aware & Free Tier Optimized):**
+    * Implement PL/pgSQL function `process_recurring_expenses()` (Security Definer, secure search path) to log expenses when the user's local calendar date crosses `next_occurrence`.
+    * Implement database trigger `seed_first_next_occurrence()` to automatically seed the first next occurrence upon initial insertion of recurring expenses.
+    * Schedule hourly worker execution via `pg_cron` (`0 * * * *`) to process global timezones quickly.
+    * Schedule daily janitor execution via `pg_cron` (`0 0 * * *`) to purge `cron.job_run_details` logs older than 7 days to protect the 500 MB Free Tier limit.
+  * **UI/UX Refactoring (An-yen Vibe & Strict Vocabulary):**
+    * **Category Relocation:** Move category management from dashboard FAB modal to inline card on Settings page (`/settings`).
+    * **Profile Menu:** Inject strictly `"Recurring Expense"` (avoiding `"Management"`) above "Siri Setup" in the user dropdown.
+    * **Recurring Expense Modal [NEW]:** Grid-style dashboard displaying running configurations at the top level, with centered bottom-aligned primary `+ Add New` CTA buttons, and left-aligned grid rows.
+    * **Form Setup View [NEW]:**
+      * Inputs: Item, Amount, Start Date, Frequency, Category.
+      * Weeklyweekday pills selector if Weekly frequency is active.
+      * Last Day of the Month checkbox and log on specific day dropdown if Monthly is active.
+      * **Ends Radio Panel**: Integrated inline radios (`Never`, `On` [date selector], `After` [occurrences count input]) to handle schedulers expiration parameters gracefully.
+      * **Real-Time Client-Side Date Calculator**: Mirrors backend DDL triggers to calculate and output: `"First expense will be logged on [Calculated Date]"` in real-time as values shift.
+    * **Yearly Chart [MODIFY]:** Add minimalist "Simple / Breakdown" pill toggle. When breakdown is active, render a stacked bar chart showing Sage Green (Recurring) vs Lavender (One-off) segments, hiding datalabels for clean aesthetics.
 * **Phase 2: Budget "Health Bars" (MVP v2):**
   * **State & Database:** Integrate `budgets` data fetches into store.
   * **Frontend Components:** Implement RPG-style budget "health bars" that transition dynamically from Green (100%) to Yellow (25%).

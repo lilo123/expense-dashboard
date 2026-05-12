@@ -1,10 +1,11 @@
 import { createContext, useContext, useRef } from 'react';
 import { createStore, useStore } from 'zustand';
-import { Expense, Category, User, SupportedCurrency, Profile } from '@/types/database';
+import { Expense, Category, User, SupportedCurrency, Profile, RecurringExpense } from '@/types/database';
 
 export interface ExpenseState {
   expenses: Expense[];
   categories: Category[];
+  recurringExpenses: RecurringExpense[];
   user: User | null;
   globalError: string | null;
   
@@ -20,6 +21,7 @@ export interface ExpenseState {
   isChatModalOpen: boolean;
   isBulkEditModalOpen: boolean;
   isSiriModalOpen: boolean;
+  isRecurringModalOpen: boolean;
   
   activeTab: 'dashboard' | 'recent' | 'yearly';
   editingExpenseId: string | null;
@@ -40,6 +42,7 @@ export interface ExpenseState {
   hydrate: (data: { 
     expenses?: Expense[]; 
     categories?: Category[]; 
+    recurringExpenses?: RecurringExpense[];
     user?: User | null; 
     error?: string;
     displayCurrency?: SupportedCurrency;
@@ -53,6 +56,7 @@ export interface ExpenseState {
   toggleChatModal: () => void;
   toggleBulkEditModal: () => void;
   toggleSiriModal: () => void;
+  toggleRecurringModal: () => void;
   
   reset: () => void;
   
@@ -70,12 +74,15 @@ export interface ExpenseState {
   updateCategoryInExpenses: (oldCatId: string, newCatId: string) => void;
   addExpense: (expense: Expense) => void;
   deleteExpense: (id: string) => void;
+  addRecurringExpense: (config: RecurringExpense) => void;
+  removeRecurringExpense: (id: string) => void;
 }
 
 export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) => 
   createStore<ExpenseState>((set) => ({
     expenses: initialState.expenses || [],
     categories: initialState.categories || [],
+    recurringExpenses: initialState.recurringExpenses || [],
     user: initialState.user || null,
     globalError: initialState.globalError || null,
     displayCurrency: initialState.displayCurrency || 'CAD',
@@ -88,6 +95,7 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     isChatModalOpen: false,
     isBulkEditModalOpen: false,
     isSiriModalOpen: false,
+    isRecurringModalOpen: false,
     activeTab: 'dashboard',
     editingExpenseId: null,
     activeCategoryFilter: null,
@@ -115,10 +123,11 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       const hydratedDisplay = data.displayCurrency || (activeProfile ? activeProfile.base_currency : state.displayCurrency);
 
       return { 
-        expenses: data.expenses ? [...data.expenses] : [], 
-        categories: data.categories ? [...data.categories] : [], 
-        user: data.user || null, 
-        globalError: data.error || null,
+        expenses: data.expenses !== undefined ? [...data.expenses] : state.expenses, 
+        categories: data.categories !== undefined ? [...data.categories] : state.categories, 
+        recurringExpenses: data.recurringExpenses !== undefined ? [...data.recurringExpenses] : state.recurringExpenses,
+        user: data.user !== undefined ? data.user : state.user, 
+        globalError: data.error !== undefined ? data.error : state.globalError,
         profile: activeProfile,
         baseCurrency: hydratedBase,
         displayCurrency: hydratedDisplay,
@@ -132,10 +141,12 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     toggleChatModal: () => set((state) => ({ isChatModalOpen: !state.isChatModalOpen })),
     toggleBulkEditModal: () => set((state) => ({ isBulkEditModalOpen: !state.isBulkEditModalOpen })),
     toggleSiriModal: () => set((state) => ({ isSiriModalOpen: !state.isSiriModalOpen })),
+    toggleRecurringModal: () => set((state) => ({ isRecurringModalOpen: !state.isRecurringModalOpen })),
     
     reset: () => set({ 
       expenses: [], 
       categories: [], 
+      recurringExpenses: [],
       user: null, 
       globalError: null, 
       displayCurrency: 'CAD',
@@ -148,6 +159,7 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       isChatModalOpen: false, 
       isBulkEditModalOpen: false, 
       isSiriModalOpen: false, 
+      isRecurringModalOpen: false, 
       editingExpenseId: null, 
       activeCategoryFilter: null, 
       activeMonthFilter: null, 
@@ -232,6 +244,14 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
 
     deleteExpense: (id) => set((state) => ({
       expenses: state.expenses.filter((e) => e.id !== id)
+    })),
+
+    addRecurringExpense: (config) => set((state) => ({
+      recurringExpenses: [config, ...state.recurringExpenses]
+    })),
+
+    removeRecurringExpense: (id) => set((state) => ({
+      recurringExpenses: state.recurringExpenses.filter((r) => r.id !== id)
     }))
   }));
 

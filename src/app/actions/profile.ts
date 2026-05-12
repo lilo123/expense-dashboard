@@ -27,12 +27,13 @@ export async function getProfile(): Promise<{ success: boolean; data?: Profile; 
   }
 }
 
-export async function updateProfile(data: {
+export async function updateProfile(data: Partial<{
   display_name: string;
   base_currency: SupportedCurrency;
   budget_reset_day: number;
   ai_tone: string;
-}): Promise<{ success: boolean; message?: string; error?: string }> {
+  timezone: string;
+}>): Promise<{ success: boolean; message?: string; error?: string }> {
   const supabase = await createClient();
 
   try {
@@ -43,16 +44,20 @@ export async function updateProfile(data: {
 
     const userId = userData.user.id;
 
+    // Build dynamic update payload to only update provided fields
+    const updatePayload: any = {
+      updated_at: new Date().toISOString()
+    };
+    if (data.display_name !== undefined) updatePayload.display_name = data.display_name;
+    if (data.base_currency !== undefined) updatePayload.base_currency = data.base_currency;
+    if (data.budget_reset_day !== undefined) updatePayload.budget_reset_day = data.budget_reset_day;
+    if (data.ai_tone !== undefined) updatePayload.ai_tone = data.ai_tone;
+    if (data.timezone !== undefined) updatePayload.timezone = data.timezone;
+
     // Update Metadata in public.profiles Table
     const { error: profileUpdateError } = await supabase
       .from('profiles')
-      .update({
-        display_name: data.display_name,
-        base_currency: data.base_currency,
-        budget_reset_day: data.budget_reset_day,
-        ai_tone: data.ai_tone,
-        updated_at: new Date().toISOString()
-      })
+      .update(updatePayload)
       .eq('id', userId);
 
     if (profileUpdateError) throw profileUpdateError;

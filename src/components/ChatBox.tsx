@@ -64,7 +64,7 @@ export default function ChatBox() {
             <div className="chat-header bg-white/60 text-zen-charcoal border-b border-zen-lavender/30" style={{ padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
                 <div className="bg-zen-charcoal/20 rounded-full" style={{ position: 'absolute', top: '8px', left: '50%', transform: 'translateX(-50%)', width: '40px', height: '5px' }} />
                 
-                <h2 style={{ margin: 0, fontSize: '1.2rem', textAlign: 'left', flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h2 className="text-zen-charcoal font-bold m-0 text-left" style={{ fontSize: '1.2rem', display: 'flex', alignItems: 'center', gap: '8px', marginRight: '40px' }}>
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path><path d="M5 3v4"></path><path d="M19 17v4"></path><path d="M3 5h4"></path><path d="M17 19h4"></path></svg> 
                   AI Assistant
                 </h2>

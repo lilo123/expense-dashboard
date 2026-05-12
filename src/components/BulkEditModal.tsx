@@ -56,7 +56,7 @@ export default function BulkEditModal() {
     }}>
         <div className="modal-content bg-white/40 backdrop-blur-md border border-white/20 shadow-xl text-zen-charcoal rounded-3xl" style={{ maxWidth: '400px', padding: '25px', maxHeight: '90dvh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <span className="close" style={{ fontSize: '24px' }} onClick={() => toggleBulkEditModal()}>&times;</span>
-            <h2 style={{ fontSize: '1.5em', marginBottom: '5px' }}>Bulk Edit ({selectedIds.size} selected)</h2>
+            <h2 className="text-zen-charcoal font-bold m-0 text-left" style={{ fontSize: '1.5em', marginBottom: '5px', marginRight: '40px' }}>Bulk Edit ({selectedIds.size} selected)</h2>
             <p style={{ marginBottom: '20px', color: 'var(--text-muted)', fontSize: '0.9em' }}>
                 Leave fields blank to keep their current values.
             </p>

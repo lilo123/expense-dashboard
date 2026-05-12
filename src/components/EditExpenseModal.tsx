@@ -82,7 +82,7 @@ export default function EditExpenseModal() {
     }}>
         <div className="modal-content bg-white/40 backdrop-blur-md border border-white/20 shadow-xl text-zen-charcoal rounded-3xl" style={{ maxWidth: '400px', padding: '25px', maxHeight: '90dvh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <span id="action-elem-6" className="close" style={{ fontSize: '24px' }} onClick={() => toggleEditModal()}>&times;</span>
-            <h2 style={{ marginBottom: '20px', fontSize: '1.5em' }}>Edit Expense</h2>
+            <h2 className="text-zen-charcoal font-bold m-0 text-left" style={{ marginBottom: '20px', fontSize: '1.5em', marginRight: '40px' }}>Edit Expense</h2>
             <div className="flex flex-col gap-4">
                 <input type="hidden" id="edit-row" />
                 <input type="date" id="edit-date" className="w-full px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 text-base appearance-none box-border" value={date} onChange={e => setDate(e.target.value)} />
