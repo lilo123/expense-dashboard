@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { 
   addRecurringExpenseAction, 
+  updateRecurringExpenseAction,
   getRecurringExpensesAction, 
   deleteRecurringExpenseAction 
 } from '@/app/actions/recurring';
@@ -32,7 +33,7 @@ const calculateFirstOccurrenceClient = (
   if (isNaN(start.getTime())) return '';
 
   if (freq === 'weekly' && dow !== null) {
-    const currentDow = start.getDay(); // 0-6 (Sun-Sat)
+    const currentDow = start.getDay();
     const daysToAdd = (dow - currentDow + 7) % 7;
     const firstDate = new Date(start.getTime() + daysToAdd * 86400000);
     return firstDate.toISOString().split('T')[0];
@@ -68,11 +69,10 @@ export default function RecurringModal() {
   const [view, setView] = useState<'list' | 'form'>('list');
   const [editingConfig, setEditingConfig] = useState<RecurringExpense | null>(null);
 
-  // Form States
   const [item, setItem] = useState('');
   const [amount, setAmount] = useState('');
   const [frequency, setFrequency] = useState<'weekly' | 'monthly'>('monthly');
-  const [dayOfWeek, setDayOfWeek] = useState<number | null>(null); // 1 (Mon) to 0 (Sun)
+  const [dayOfWeek, setDayOfWeek] = useState<number | null>(null);
   const [dayOfMonth, setDayOfMonth] = useState<number | null>(1);
   const [isLastDayOfMonth, setIsLastDayOfMonth] = useState(false);
   
@@ -86,7 +86,6 @@ export default function RecurringModal() {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
 
-  // Fetch configs on open
   useEffect(() => {
     if (isRecurringModalOpen) {
       setView('list');
@@ -112,7 +111,7 @@ export default function RecurringModal() {
     setItem('');
     setAmount('');
     setFrequency('monthly');
-    setDayOfWeek(1); // Default Monday
+    setDayOfWeek(1);
     setDayOfMonth(1);
     setIsLastDayOfMonth(false);
     setStartDate(new Date().toISOString().split('T')[0]);
@@ -176,7 +175,6 @@ export default function RecurringModal() {
       return;
     }
 
-    // Form validations
     if (frequency === 'weekly' && dayOfWeek === null) {
       setMessage({ text: 'Please select a day of the week.', isError: true });
       return;
@@ -203,7 +201,6 @@ export default function RecurringModal() {
     try {
       const currency = profile?.base_currency || 'CAD';
       
-      // Prepare parameters based on refined schedule rules
       const scheduleParams = {
         item: item.trim(),
         amount: parseFloat(amount),
@@ -218,23 +215,17 @@ export default function RecurringModal() {
         max_occurrences: untilType === 'occurrences' ? parseInt(maxOccurrences, 10) : null
       };
 
-      // Note: In this phase we focus on Add New. To keep things simple, if editing we will just delete and insert.
-      // Let's write adding logic
       let res;
       if (editingConfig) {
-        // Delete old and insert new to prevent update payload duplication
-        const delRes = await deleteRecurringExpenseAction(editingConfig.id);
-        if (!delRes.success) throw new Error(delRes.error || 'Failed to update configuration step 1');
-        removeRecurringExpense(editingConfig.id);
+        res = await updateRecurringExpenseAction(editingConfig.id, scheduleParams);
+      } else {
+        res = await addRecurringExpenseAction(scheduleParams);
       }
-      
-      res = await addRecurringExpenseAction(scheduleParams);
 
       if (res.success) {
         setMessage({ text: `Recurring expense ${editingConfig ? 'updated' : 'registered'} successfully!`, isError: false });
         setTimeout(async () => {
           setMessage(null);
-          // Refresh configurations list
           const refreshRes = await getRecurringExpensesAction();
           if (refreshRes.success && refreshRes.data) {
             hydrate({ recurringExpenses: refreshRes.data as RecurringExpense[] });
@@ -242,7 +233,7 @@ export default function RecurringModal() {
           setView('list');
         }, 1000);
       } else {
-        setMessage({ text: res.error || 'Failed to register configuration.', isError: true });
+        setMessage({ text: res.error || 'Failed to update configuration.', isError: true });
       }
     } catch (err: any) {
       console.error(err);
@@ -285,7 +276,6 @@ export default function RecurringModal() {
       <div className="modal-content bg-white/40 backdrop-blur-md border border-white/20 shadow-xl text-zen-charcoal rounded-3xl p-6 max-w-lg w-full relative flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
         
         {view === 'list' ? (
-          // ---------------- VIEW 1: DASHBOARD LIST GRID ----------------
           <div className="flex flex-col overflow-hidden h-full">
             <h2 className="m-0 font-bold text-zen-charcoal text-xl leading-snug pr-10 w-fit" style={{ marginBottom: '16px' }}>Recurring Expense</h2>
             <button 
@@ -297,7 +287,6 @@ export default function RecurringModal() {
             </button>
             <p className="text-xs text-zen-charcoal/60 mb-4 text-left">List of active scheduled background expense entry rules.</p>
 
-            {/* Config Table Grid Container - Aligned pixel-perfectly to the left */}
             <div className="overflow-y-auto flex-1 pr-1 py-1 flex flex-col gap-3">
               {recurringExpenses.length === 0 ? (
                 <div className="text-center py-8 text-sm text-zen-charcoal/50 font-medium">
@@ -351,7 +340,6 @@ export default function RecurringModal() {
               )}
             </div>
             
-            {/* Bottom centered Add New CTA Button */}
             <div className="mt-5 flex justify-center shrink-0">
               <button 
                 onClick={openAddForm}
@@ -362,7 +350,6 @@ export default function RecurringModal() {
             </div>
           </div>
         ) : (
-          // ---------------- VIEW 2: SETUP FORM ----------------
           <div className="overflow-y-auto max-h-[80vh] flex flex-col">
             <h2 className="m-0 font-bold text-zen-charcoal text-lg leading-snug pr-10 w-fit" style={{ marginBottom: '8px' }}>
               {editingConfig ? 'Edit Recurring Expense' : 'Add Recurring Expense'}
@@ -429,7 +416,7 @@ export default function RecurringModal() {
                     onChange={e => {
                       const val = e.target.value as 'weekly' | 'monthly';
                       setFrequency(val);
-                      if (val === 'weekly') setDayOfWeek(1); // default Mon
+                      if (val === 'weekly') setDayOfWeek(1);
                       else {
                         setDayOfWeek(null);
                         setDayOfMonth(1);
@@ -444,7 +431,6 @@ export default function RecurringModal() {
                 </div>
               </div>
 
-              {/* Conditional Input: Day of Week Selector if WEEKLY */}
               {frequency === 'weekly' && (
                 <div className="flex flex-col gap-1 text-left">
                   <label className="text-xs text-zen-charcoal/60 font-semibold ml-1">Log Weekly On</label>
@@ -473,7 +459,6 @@ export default function RecurringModal() {
                 </div>
               )}
 
-              {/* Conditional Input: Day of Month Selector if MONTHLY */}
               {frequency === 'monthly' && (
                 <div className="flex flex-col gap-3 p-3 bg-white/60 border border-zen-lavender/40 rounded-2xl text-left shadow-sm">
                   <div className="flex items-center gap-2 cursor-pointer select-none">
@@ -520,12 +505,10 @@ export default function RecurringModal() {
                 />
               </div>
 
-              {/* Visual Ends Radio Group Section */}
               <div className="flex flex-col gap-3.5 p-4 bg-white/60 border border-zen-lavender/40 rounded-2xl text-left shadow-sm">
                 <label className="text-xs text-zen-charcoal/60 font-semibold ml-1">Ends</label>
                 
                 <div className="flex flex-col gap-3">
-                  {/* Option 1: Never */}
                   <div className="flex items-center gap-3 h-12">
                     <input 
                       type="radio" 
@@ -544,7 +527,6 @@ export default function RecurringModal() {
                     </label>
                   </div>
 
-                  {/* Option 2: On Date */}
                   <div className="flex items-center gap-3 h-12">
                     <input 
                       type="radio" 
@@ -554,7 +536,7 @@ export default function RecurringModal() {
                       onChange={() => {
                         setUntilType('date');
                         setMaxOccurrences('');
-                        setEndDate(new Date().toISOString().split('T')[0]); // default today
+                        setEndDate(new Date().toISOString().split('T')[0]);
                       }}
                       className="w-5 h-5 accent-zen-charcoal cursor-pointer"
                     />
@@ -572,7 +554,6 @@ export default function RecurringModal() {
                     />
                   </div>
 
-                  {/* Option 3: After Occurrences */}
                   <div className="flex items-center gap-3 h-12">
                     <input 
                       type="radio" 
@@ -582,7 +563,7 @@ export default function RecurringModal() {
                       onChange={() => {
                         setUntilType('occurrences');
                         setEndDate('');
-                        setMaxOccurrences('10'); // default 10 runs
+                        setMaxOccurrences('10');
                       }}
                       className="w-5 h-5 accent-zen-charcoal cursor-pointer"
                     />

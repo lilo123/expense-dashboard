@@ -61,7 +61,7 @@ describe('ChatBox Component', () => {
     render(<ChatBox />);
 
     const input = screen.getByPlaceholderText(/e.g., I spent \$15 on coffee/i);
-    const sendButton = screen.getByRole('button');
+    const sendButton = screen.getAllByRole('button')[1]; // Fix: Resolve multiple button ambiguity
 
     // Type message
     fireEvent.change(input, { target: { value: 'spent 15 on coffee' } });
@@ -92,7 +92,7 @@ describe('ChatBox Component', () => {
     render(<ChatBox />);
 
     const input = screen.getByPlaceholderText(/e.g., I spent \$15 on coffee/i);
-    const sendButton = screen.getByRole('button');
+    const sendButton = screen.getAllByRole('button')[1];
 
     fireEvent.change(input, { target: { value: 'spent 15 on coffee' } });
     fireEvent.click(sendButton);
@@ -115,7 +115,7 @@ describe('ChatBox Component', () => {
     render(<ChatBox />);
 
     const input = screen.getByPlaceholderText(/e.g., I spent \$15 on coffee/i);
-    const sendButton = screen.getByRole('button');
+    const sendButton = screen.getAllByRole('button')[1];
 
     fireEvent.change(input, { target: { value: 'spent 15 on coffee' } });
     fireEvent.click(sendButton);
@@ -131,7 +131,7 @@ describe('ChatBox Component', () => {
   it('should close modal when clicking close button', () => {
     render(<ChatBox />);
 
-    const closeButton = screen.getByText('×');
+    const closeButton = screen.getByLabelText('Close Modal');
     fireEvent.click(closeButton);
 
     expect(mockToggleChatModal).toHaveBeenCalledTimes(1);

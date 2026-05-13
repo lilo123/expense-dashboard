@@ -120,7 +120,7 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       const activeProfile = data.profile !== undefined ? data.profile : state.profile;
       
       // Sync display currency cleanly to LocalStorage cached preference if present
-      let preferredDisplay = state.displayCurrency;
+      let preferredDisplay: SupportedCurrency | null = null;
       if (typeof window !== 'undefined') {
         const stored = localStorage.getItem('displayCurrency');
         if (stored) preferredDisplay = stored as SupportedCurrency;

@@ -1,9 +1,8 @@
 'use server'
 
 import { createClient } from '@/utils/supabase/server'
+import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
-import fs from 'fs';
-import path from 'path';
 import { Expense } from '@/types/database'
 
 export async function addExpenseAction(data: {
@@ -139,7 +138,6 @@ export async function deleteCategoryAction(id: string, fallbackCategoryId?: stri
   const supabase = await createClient()
 
   if (fallbackCategoryId) {
-    // Reassign expenses first
     const { error: updateError } = await supabase
       .from('expenses')
       .update({ category_id: fallbackCategoryId })
@@ -198,37 +196,23 @@ export async function bulkUpdateAction(
 }
 
 export async function requestInviteAction(email: string, message: string): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient()
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return { success: false, error: 'Server configuration error.' };
+  }
+
+  // Use service role client to bypass RLS securely on backend
+  const supabase = createServiceClient(supabaseUrl, supabaseServiceKey);
   
-  // 1. Attempt database log, but handle table omission gracefully
   const { error } = await supabase
     .from('invite_requests')
-    .insert([{ email, message }])
+    .insert([{ email, message }]);
 
   if (error) {
-    console.warn('[DATABASE WARNING] Could not log invite request to Supabase:', error.message);
-    console.warn('Please execute db/invite_requests_setup.sql in your Supabase SQL Editor to enable requests logging!');
+    return { success: false, error: 'Failed to log invite request.' };
   }
 
-  // 2. Log to dedicated invite_requests.log file in the project root
-  try {
-    const logDir = process.cwd();
-    const logFilePath = path.join(logDir, 'invite_requests.log');
-    
-    const logEntry = `======================================================================
-[ACCESS REQUEST] Date: ${new Date().toISOString()}
-From: ${email}
-Message:
-----------------------------------------------------------------------
-${message}
-----------------------------------------------------------------------
-`;
-    
-    fs.appendFileSync(logFilePath, logEntry, 'utf-8');
-    console.log('[INVITE LOGGED SUCCESS] Appended to invite_requests.log');
-  } catch (fileError: any) {
-    console.error('[INVITE LOG ERROR] Could not write to invite_requests.log:', fileError.message);
-  }
-
-  return { success: true }
+  return { success: true };
 }

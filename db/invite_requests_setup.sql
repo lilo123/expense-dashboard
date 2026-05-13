@@ -9,10 +9,8 @@ CREATE TABLE IF NOT EXISTS invite_requests (
 -- Enable Row Level Security (RLS)
 ALTER TABLE invite_requests ENABLE ROW LEVEL SECURITY;
 
--- Allow unauthenticated public inserts (so prospective users can request access!)
+-- Drop unrestricted public policy
 DROP POLICY IF EXISTS "Anyone can insert invite requests" ON invite_requests;
-CREATE POLICY "Anyone can insert invite requests"
-ON invite_requests FOR INSERT WITH CHECK (true);
 
 -- Allow authenticated users to view requests (for admin purposes)
 DROP POLICY IF EXISTS "Authenticated users can view invite requests" ON invite_requests;

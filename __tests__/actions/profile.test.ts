@@ -67,7 +67,8 @@ describe('Profile Server Actions', () => {
         error: null,
       });
 
-      mockSupabase.eq.mockResolvedValueOnce({ error: null });
+      // Fix: Resolve on .select() instead of .eq() to allow chained query execution
+      mockSupabase.select.mockResolvedValueOnce({ data: [{ id: 'user-123' }], error: null });
 
       const res = await updateProfile({
         display_name: 'Katherine Zen',
@@ -86,8 +87,8 @@ describe('Profile Server Actions', () => {
         error: null,
       });
 
-      // Database update throws error
-      mockSupabase.eq.mockRejectedValueOnce(new Error('DB connection failed'));
+      // Fix: Reject on .select()
+      mockSupabase.select.mockRejectedValueOnce(new Error('DB connection failed'));
 
       const res = await updateProfile({
         display_name: 'Katherine Zen',
