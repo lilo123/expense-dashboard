@@ -84,6 +84,23 @@ describe('AddExpenseModal Component', () => {
     expect(container.firstChild).toBeNull();
   });
 
+  it('should initialize currency with store baseCurrency preference', () => {
+    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
+      isAddModalOpen: true,
+      toggleAddModal: mockToggleAddModal,
+      categories: mockCategories,
+      toggleCategoryModal: mockToggleCategoryModal,
+      addExpense: mockAddExpense,
+      recurringExpenses: mockRecurringExpenses,
+      hydrate: mockHydrate,
+      baseCurrency: 'EUR', // Explicitly set to EUR to prove dynamic binding!
+      exchangeRates: { EUR: 1.0 },
+    });
+
+    render(<AddExpenseModal />);
+    expect(screen.getByRole('combobox', { name: 'Currency' })).toHaveValue('EUR');
+  });
+
   it('should render custom toggle switch', () => {
     render(<AddExpenseModal />);
 
