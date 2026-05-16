@@ -245,9 +245,14 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       };
     }),
 
-    addExpense: (expense) => set((state) => ({
-      expenses: [expense, ...state.expenses]
-    })),
+    addExpense: (expense) => set((state) => {
+      if (state.expenses.some((e) => e.id === expense.id)) {
+        return state;
+      }
+      return {
+        expenses: [expense, ...state.expenses]
+      };
+    }),
 
     deleteExpense: (id) => set((state) => ({
       expenses: state.expenses.filter((e) => e.id !== id)

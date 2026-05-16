@@ -209,4 +209,19 @@ describe('useExpenseStore', () => {
     expect(store.getState().expenses.length).toBe(2);
     expect(store.getState().expenses.find(e => e.id === 'exp-2')).toBeUndefined();
   });
+
+  it('should prevent duplicate expenses in addExpense', () => {
+    const store = createExpenseStore();
+    store.getState().hydrate({ expenses: mockExpenses });
+
+    // Try to add an expense that already exists (exp-1)
+    const duplicateExpense = { ...mockExpenses[0] };
+    store.getState().addExpense(duplicateExpense);
+
+    const state = store.getState();
+    expect(state.expenses.length).toBe(2);
+    // Ensure it didn't duplicate
+    const exp1Count = state.expenses.filter(e => e.id === 'exp-1').length;
+    expect(exp1Count).toBe(1);
+  });
 });

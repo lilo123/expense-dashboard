@@ -47,7 +47,8 @@ function ClientDashboardContent() {
     isChatModalOpen, isAddModalOpen, isRecurringModalOpen,
     reset,
     displayCurrency, setDisplayCurrency, setExchangeRates,
-    profile, setProfile, baseCurrency, user
+    profile, setProfile, baseCurrency, user,
+    addExpense, categories
   } = useExpenseStore(state => state);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -101,6 +102,46 @@ function ClientDashboardContent() {
     }
     syncTimezone();
   }, [profile, setProfile]);
+
+  // Supabase Realtime Sync for Siri/Out-of-band Expense additions
+  useEffect(() => {
+    if (!user) return;
+
+    console.log('[REALTIME SUBSCRIPTION] Initializing for user:', user.id);
+    const channel = supabase
+      .channel('realtime-expenses')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'expenses',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('[REALTIME] New expense inserted in DB:', payload.new);
+          const newExpense = payload.new as Expense;
+          
+          // Look up category name from store categories
+          const category = categories.find(c => c.id === newExpense.category_id);
+          
+          const enrichedExpense: Expense = {
+            ...newExpense,
+            categories: category ? { name: category.name } : undefined
+          };
+
+          addExpense(enrichedExpense);
+        }
+      )
+      .subscribe((status) => {
+        console.log(`[REALTIME] Subscription status for user ${user.id}: ${status}`);
+      });
+
+    return () => {
+      console.log('[REALTIME SUBSCRIPTION] Cleaning up for user:', user.id);
+      supabase.removeChannel(channel);
+    };
+  }, [user, supabase, categories, addExpense]);
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {

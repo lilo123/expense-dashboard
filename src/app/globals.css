@@ -70,7 +70,7 @@ h2 { font-size: 20px; margin-bottom: 15px; }
 .recent-header-controls .danger-btn { background: var(--danger); color: white; border-color: var(--danger); }
 
 .recent-list { display: flex; flex-direction: column; gap: 12px; }
-.expense-item { display: flex; align-items: center; background: var(--card-bg); border: 1px solid var(--border); padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s; }
+.expense-item { display: flex; align-items: center; background: var(--card-bg); border: 1px solid var(--border); padding: 15px; border-radius: 12px; cursor: pointer; transition: 0.2s; transform: translateZ(0); backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .expense-item:hover { border-color: var(--text); }
 .expense-checkbox { display: none; margin-right: 15px; width: 18px; height: 18px; cursor: pointer; }
 .select-mode .expense-checkbox { display: block; }
