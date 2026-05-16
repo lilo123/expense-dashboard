@@ -53,11 +53,7 @@ function ClientDashboardContent() {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-  // Touch states for custom Pull-to-Refresh (PWA fallback)
-  const [touchStart, setTouchStart] = useState<number | null>(null);
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const pullThreshold = 85; // px
+
   
   const router = useRouter();
   const supabase = createClient();
@@ -171,52 +167,7 @@ function ClientDashboardContent() {
     router.push('/login');
   };
 
-  // Pull-to-Refresh Touch Handlers
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (typeof window !== 'undefined' && window.scrollY === 0 && !isRefreshing) {
-      setTouchStart(e.touches[0].clientY);
-    }
-  };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStart === null || isRefreshing) return;
-
-    const currentY = e.touches[0].clientY;
-    const distance = currentY - touchStart;
-
-    if (distance > 0 && window.scrollY === 0) {
-      // Pulling down - apply resistance
-      const resistedDistance = Math.min(distance * 0.35, 120); // cap pull visual at 120px
-      setPullDistance(resistedDistance);
-
-      // Prevent iOS default rubber-band scroll if pulling
-      if (e.cancelable) {
-        e.preventDefault();
-      }
-    } else {
-      // Cancel pull if scrolling up
-      setTouchStart(null);
-      setPullDistance(0);
-    }
-  };
-
-  const handleTouchEnd = () => {
-    if (touchStart === null || isRefreshing) return;
-
-    if (pullDistance >= pullThreshold) {
-      setIsRefreshing(true);
-      setPullDistance(0);
-      setTouchStart(null);
-
-      console.log('[PULL TO REFRESH] Reloading page...');
-      if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
-    } else {
-      setPullDistance(0);
-      setTouchStart(null);
-    }
-  };
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.visualViewport) {
@@ -239,35 +190,7 @@ function ClientDashboardContent() {
   }, []);
 
   return (
-    <div 
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      className="min-h-screen w-full relative"
-    >
-      {/* Custom Pull-to-Refresh Visual Indicator */}
-      {(pullDistance > 0 || isRefreshing) && (
-        <div 
-          className="fixed left-1/2 z-50 bg-white/80 backdrop-blur-md border border-zen-lavender/30 shadow-md rounded-full w-10 h-10 flex items-center justify-center pointer-events-none transition-all duration-75 animate-fade-in"
-          style={{ 
-            top: isRefreshing ? '20px' : `${Math.min(10 + pullDistance, 90)}px`,
-            opacity: isRefreshing ? 1 : Math.min(pullDistance / pullThreshold, 1),
-            transform: `translateX(-50%) rotate(${pullDistance * 3}deg)`,
-          }}
-        >
-          {isRefreshing ? (
-            <svg className="animate-spin h-5 w-5 text-zen-charcoal" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-          ) : (
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-zen-charcoal/70">
-              <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.72 2.78L21 8"/>
-              <polyline points="21 3 21 8 16 8"/>
-            </svg>
-          )}
-        </div>
-      )}
+    <>
       <div className="container">
         <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <Link href="/" className="cursor-pointer hover:opacity-80 transition-all no-underline">
@@ -387,6 +310,6 @@ function ClientDashboardContent() {
       <ChatBox />
       <SiriModal />
       <RecurringModal />
-    </div>
+    </>
   );
 }
