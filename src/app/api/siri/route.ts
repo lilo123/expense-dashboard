@@ -36,6 +36,15 @@ export async function POST(request: Request) {
 
     const userId = tokenData.user_id;
 
+    // Fetch user's base currency from profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('base_currency')
+      .eq('id', userId)
+      .single();
+
+    const baseCurrency = profileData?.base_currency || 'CAD';
+
     // 2. Parse request body
     const body = await request.json();
     const { message } = body;
@@ -71,6 +80,9 @@ export async function POST(request: Request) {
           user_id: userId,
           item: String(item),
           amount: Number(amount),
+          original_amount: Number(amount),
+          original_currency: baseCurrency,
+          currency: baseCurrency,
           category_id: category_id,
           date: dateToInsert,
         }
