@@ -4,9 +4,31 @@ Welcome to the testing documentation for An-yen. This document outlines our test
 
 ---
 
-## 1. Execution Guide
+## 1. Execution Guide & The 4-Tier Productivity Workflow
 
-We utilize a two-tier testing architecture: **Jest** (for isolated store/component unit tests) and **Playwright** (for full-stack, browser-simulated E2E integration tests across desktop and mobile viewports).
+We utilize a two-tier testing architecture: **Jest** (for isolated store/component unit tests) and **Playwright** (for full-stack, browser-simulated E2E integration tests across desktop and mobile viewports). To maintain sub-second developer feedback loops while ensuring 100% cross-browser compatibility, our testing ecosystem is decoupled into four distinct execution tiers:
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ Tier 1: Local Watch-Mode Unit Testing (< 2s)            │
+│ (Jest / React Testing Library -> npm run test:watch)    │
+└────────────────────────────┬────────────────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────┐
+│ Tier 2: Targeted Single-Spec E2E (< 5s)                 │
+│ (Playwright Desktop Chromium -> e2e/currency.spec.ts)   │
+└────────────────────────────┬────────────────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────┐
+│ Tier 3: Automated Git Pre-Push Smoke Tests (~15s)       │
+│ (Husky / Lefthook -> Core Auth & Dashboard Specs)       │
+└────────────────────────────┬────────────────────────────┘
+                             ▼
+┌─────────────────────────────────────────────────────────┐
+│ Tier 4: Asynchronous Cloud CI/CD Auditing (Cloud CPU)   │
+│ (Full 175-Test Multi-Browser Cross-Compatibility Run)   │
+└─────────────────────────────────────────────────────────┘
+```
 
 ### A. Unit & Component Tests (Jest)
 Jest tests are completely offline, isolated, and run in milliseconds by mocking out database layers.
@@ -21,21 +43,21 @@ Jest tests are completely offline, isolated, and run in milliseconds by mocking 
     ```
 
 ### B. E2E Integration Tests (Playwright - Desktop & Mobile)
-E2E tests require your local Next.js server and your local Supabase Docker containers to be running. Playwright executes the entire suite across 5 viewports: Desktop Chromium, Desktop Firefox, Desktop Safari (WebKit), Mobile Chrome (Pixel 5 Emulation), and Mobile Safari (iPhone 12 Emulation).
+E2E tests require your local Next.js server and your local Supabase Docker containers to be running. 
 
-*   **Recommended Safe E2E Run (Automated Swap & Safe Restore)**:
-    This custom script automatically backs up your active cloud `.env.local`, swaps in local test credentials, compiles migrations, seeds the local DB, runs all 5 browser projects, and **guarantees your original cloud environment is fully restored on completion**:
+*   **Local Fast-Feedback Mode (Desktop Chromium)**:
+    This custom script automatically backs up your active cloud `.env.local`, swaps in local test credentials, compiles migrations, seeds the local DB, runs optimized tests strictly on **Desktop Chromium** in ~10 seconds, and **guarantees your original cloud environment is fully restored on completion**:
     ```bash
     npx tsx e2e/run_e2e.ts
+    ```
+*   **Full Multi-Browser CI Emulation Mode**:
+    When running under Continuous Integration (`process.env.CI`), Playwright automatically expands test execution across all 5 supported browser emulations (Desktop Chromium, Desktop Firefox, Desktop Safari, Mobile Chrome, Mobile Safari):
+    ```bash
+    CI=true npx tsx e2e/run_e2e.ts
     ```
 *   **Raw Playwright CLI** (Runs chromium project directly):
     ```bash
     npx playwright test --project=chromium
-    ```
-*   **Run Mobile Emulation Projects Directly**:
-    ```bash
-    npx playwright test --project=mobile-chrome
-    npx playwright test --project=mobile-safari
     ```
 *   **View E2E HTML Report Page**:
     Spins up a local web server on port 9323 to inspect screen recordings, network logs, and DOM snapshots of the last test run:
@@ -125,4 +147,30 @@ Our frontend tests validate that the UI correctly aligns with the An-yen Zen aes
 *   **LocalStorage Currency Persistence (`currency.spec.ts`)**: Verifies that changing a Display Currency preference is cached in local storage and safely restored upon page reloads without triggering Next.js hydration mismatch warnings.
 *   **Multi-Currency conversions**: Logs `100,000 VND`, asserts the DB stores the CAD converted equivalent (`$5.41`), while the Recent List displays the raw spent `100K ₫`.
 *   **Scheduled Expenses CRUD Scheduling (`recurring.spec.ts`)**: Verifies the complete end-to-end recurring expense CRUD flow (weekly pills, Ends After Occurrences radio selections, dynamic helper date strings) and confirms background database inserts.
-*   **Global Modals Overlap & Visual regression (`modals_ui.spec.ts`)**: Verifies structural safety (zero exit overlaps, roundness, deep charcoal accessibility text contrast) and enforces pixel-perfect visual snapshot baselines on both Desktop (`1280x800`) and Mobile (`375x812`) viewport emulations across all 6 application modals.
+*   **Global Modals Overlap & Visual regression (`modals_ui.spec.ts`)**: Verifies structural safety (zero exit overlaps, roundness, deep charcoal accessibility text contrast) on both Desktop (`1280x800`) and Mobile (`375x812`) viewport emulations across all 6 application modals.
+
+---
+
+## 5. Architectural Defenses & E2E Stability
+
+### A. Hydration Locks for Webkit Stability
+Next.js `Suspense` boundaries unmount and remount input elements upon client-side hydration. To prevent Playwright from typing into unhydrated inputs (which causes Webkit login failures), inputs utilize a native React mount lock:
+```tsx
+const [isMounted, setIsMounted] = useState(false);
+useEffect(() => setIsMounted(true), []);
+
+<input type="email" disabled={!isMounted} />
+```
+Playwright's actionability engine pauses automatically until `isMounted` resolves, guaranteeing 0% flakiness.
+
+### B. Mobile Viewport Number Compression
+Mobile viewports format numbers over $1,000$ into compressed friendly strings (e.g., `1,324.51` $\rightarrow$ `1.32K`). E2E assertions respect this layout by conditioning desktop-specific checks:
+```typescript
+await expect(totalLabel).toContainText('€');
+if (!isMobile) {
+  await expect(totalLabel).not.toContainText('K');
+}
+```
+
+### C. Same-Site Domain Resolution
+Safari/Webkit's **Intelligent Tracking Prevention (ITP)** blocks auth session cookies if the app runs on `localhost` and Supabase connects to `127.0.0.1`. E2E configurations explicitly map `NEXT_PUBLIC_SUPABASE_URL` to `http://localhost:54321` in `.env.test` to satisfy first-party same-site rules.

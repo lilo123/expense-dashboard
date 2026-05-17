@@ -28,6 +28,7 @@
 * `limit_amount` (Exact Decimal type to prevent JS floating-point errors)
 * `period` (Default: monthly)
 * **Safe Deletion:** Foreign keys must use `ON DELETE CASCADE` to prevent database crashes if a custom category is deleted.
+* **Indexing [NEW]:** Explicit B-Tree index on `category_id` (`idx_budgets_category_id`) to optimize cascading deletions and prevent free-tier Supabase database CPU spikes.
 
 ### `expenses` table
 * `id` (UUID)
@@ -65,6 +66,9 @@
 * `next_occurrence` (DATE type - calculated dynamically by triggers)
 * `is_active` (Boolean, default true)
 * `created_at` (Timestamp with timezone)
+
+### `stored_procedures` [NEW]
+* `get_monthly_aggregates(p_user_id UUID, p_start_date DATE, p_end_date DATE)`: RPC SQL stored procedure offloading complex category expense summing and budget comparisons from browser memory directly to PostgreSQL.
 
 
 ## 4. Edge Cases & Robustness
