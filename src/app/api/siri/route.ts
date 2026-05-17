@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 import { extractExpenseFromMessage } from '@/lib/ai';
+import { syncExchangeRates } from '@/app/actions/rates';
+import { convertAmount, formatFriendlyCurrency } from '@/lib/utils';
 
 export async function POST(request: Request) {
   try {
@@ -64,37 +66,42 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No categories found for user.' }, { status: 400 });
     }
 
-    // 4. Extract via unified AI service
-    const extracted = await extractExpenseFromMessage(message, categoriesList);
+    // 4. Extract via unified AI service (forces tool schema execution)
+    const extracted = await extractExpenseFromMessage(message, categoriesList, baseCurrency, { forceTool: true });
     if ('error' in extracted) {
       return NextResponse.json({ error: extracted.error }, { status: extracted.status || 400 });
     }
 
-    const { amount, category_id, item, dateToInsert, finalCategoryName } = extracted;
+    const { amount, currency, category_id, item, dateToInsert, finalCategoryName } = extracted;
 
-    // 5. Save to Database
-    const { data: savedRecord, error: insertError } = await supabase
+    // Calculate converted baseline amount if transaction differs from profile base currency
+    let finalAmount = amount;
+    if (currency !== baseCurrency) {
+      const rates = await syncExchangeRates();
+      finalAmount = convertAmount(amount, currency, baseCurrency, rates);
+    }
+
+    // 5. Save to Database (maintaining absolute dual-currency schema alignment)
+    const { error: insertError } = await supabase
       .from('expenses')
       .insert([
         {
           user_id: userId,
           item: String(item),
-          amount: Number(amount),
+          amount: Number(finalAmount),
           original_amount: Number(amount),
-          original_currency: baseCurrency,
-          currency: baseCurrency,
+          original_currency: currency,
+          currency: currency,
           category_id: category_id,
           date: dateToInsert,
         }
-      ])
-      .select('*, categories(name)')
-      .single();
+      ]);
 
     if (insertError) {
       return NextResponse.json({ error: 'Failed to save expense' }, { status: 500 });
     }
 
-    return new NextResponse(`I've logged $${Number(amount).toFixed(2)} for ${item} under ${finalCategoryName}.`);
+    return new NextResponse(`I've logged ${formatFriendlyCurrency(amount, currency)} for ${item} under ${finalCategoryName}.`);
 
   } catch (error) {
     console.error('Error in Siri API:', error);

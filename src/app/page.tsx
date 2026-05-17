@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import AnyenOrb from "@/components/marketing/AnyenOrb";
+import FrostedOrb from "@/components/ui/FrostedOrb";
 
 export default function LandingPage() {
   return (
@@ -16,7 +16,7 @@ export default function LandingPage() {
       <div className="flex flex-col items-center z-10 relative mt-12">
         {/* The Animated Morphing Orb sits behind the text */}
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 w-72 h-72 opacity-50 blur-xl">
-           <AnyenOrb className="w-full h-full" />
+           <FrostedOrb className="w-full h-full" />
         </div>
 
         <h1 className="text-6xl sm:text-7xl font-extrabold text-zen-charcoal mb-6 tracking-tight text-center">

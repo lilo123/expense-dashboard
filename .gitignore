@@ -47,9 +47,10 @@ node_modules/
 *.pid
 .next_dev.log
 
-# Local Scratch html & text dumps
+# Local Scratch html, SQL, & text dumps
 *.html
 *.txt
+*.sql
 db_setup.sql
 
 # Local Visual Backups Subdirectory

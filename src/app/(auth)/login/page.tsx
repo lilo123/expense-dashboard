@@ -20,6 +20,7 @@ export default function LoginPage() {
 }
 
 function LoginCard() {
+  const [isMounted, setIsMounted] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -42,6 +43,7 @@ function LoginCard() {
 
   // Handle URL hash on load for deep linking
   useEffect(() => {
+    setIsMounted(true);
     const hash = window.location.hash;
     if (hash === '#toggle-to-signup') {
       setIsSignUp(true);
@@ -139,20 +141,21 @@ function LoginCard() {
           <div className="relative">
             <input 
               type="email" 
+              disabled={!isMounted}
               placeholder="Email Address" 
               autoComplete="email" 
               inputMode="email" 
               required 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-5 py-4 rounded-full bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
+              className="w-full px-5 py-4 rounded-full bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 disabled:opacity-50"
             />
           </div>
           
           {/* Conditionally render Invitation Request message box when in invite-only signup mode */}
           {isSignUp && isInviteFormActive ? (
             <div className="relative">
-              <textarea 
+               <textarea 
                 placeholder="Tell us why you'd like to join An-yen..." 
                 required 
                 rows={4}
@@ -166,12 +169,13 @@ function LoginCard() {
             <div className="relative">
               <input 
                 type={showPassword ? "text" : "password"} 
+                disabled={!isMounted}
                 placeholder="Password" 
                 autoComplete={isSignUp ? "new-password" : "current-password"} 
                 required 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-5 py-4 rounded-full bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
+                className="w-full px-5 py-4 rounded-full bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 disabled:opacity-50"
               />
               <button 
                 type="button" 

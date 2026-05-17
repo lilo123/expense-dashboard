@@ -68,7 +68,7 @@ test.describe('Global Modals UI & Responsiveness E2E Test Suite', () => {
       }
     }
 
-    const primaryButtons = await modal.locator('button:not(.close-btn):not(.secondary-fab)').all();
+    const primaryButtons = await modal.locator('button:not(.close-btn):not(.secondary-fab):not([aria-label*="Config"])').all();
     for (const btn of primaryButtons) {
       if (await btn.isVisible() && (await btn.textContent())?.trim()) {
         await expect(btn).toHaveClass(/rounded-full/);

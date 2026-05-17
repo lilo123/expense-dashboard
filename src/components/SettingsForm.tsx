@@ -24,7 +24,6 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
   const [email, setEmail] = useState(userEmail);
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('CAD');
   const [budgetResetDay, setBudgetResetDay] = useState(1);
-  const [aiTone, setAiTone] = useState('nurturing');
   const [tempDisplayCurrency, setTempDisplayCurrency] = useState<SupportedCurrency>('CAD');
 
   // 3. Password Form States
@@ -46,7 +45,6 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
       setDisplayName(profile.display_name || '');
       setBaseCurrency(profile.base_currency || 'CAD');
       setBudgetResetDay(profile.budget_reset_day || 1);
-      setAiTone(profile.ai_tone || 'nurturing');
     }
   }, [profile]);
 
@@ -80,7 +78,6 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
       setDisplayName(profile.display_name || '');
       setBaseCurrency(profile.base_currency || 'CAD');
       setBudgetResetDay(profile.budget_reset_day || 1);
-      setAiTone(profile.ai_tone || 'nurturing');
     }
     setTempDisplayCurrency(displayCurrency);
     setProfileMessage(null);
@@ -112,7 +109,6 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
         display_name: displayName,
         base_currency: baseCurrency,
         budget_reset_day: budgetResetDay,
-        ai_tone: aiTone, // Saved under the hood!
       });
 
       if (response.success) {
@@ -127,7 +123,6 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
               display_name: displayName,
               base_currency: baseCurrency,
               budget_reset_day: budgetResetDay,
-              ai_tone: aiTone,
             }
           });
         }

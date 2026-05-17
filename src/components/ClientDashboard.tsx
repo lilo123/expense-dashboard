@@ -8,17 +8,21 @@ import { syncExchangeRates } from '@/app/actions/rates';
 import { getProfile, updateProfile } from '@/app/actions/profile';
 import { Category } from '@/types/database';
 import { Expense, User } from '@/types/database';
+import dynamic from 'next/dynamic';
+
 import Tabs from './Tabs';
 import DashboardTab from './DashboardTab';
-import ChatBox from './ChatBox';
 import ExpenseList from './ExpenseList';
 import YearlyTab from './YearlyTab';
-import AddExpenseModal from './AddExpenseModal';
-import EditExpenseModal from './EditExpenseModal';
-import BulkEditModal from './BulkEditModal';
-import SiriModal from './SiriModal';
-import RecurringModal from './RecurringModal';
 import Logo from './Logo';
+
+// Dynamic lazy-loaded modals for optimal code-splitting and free-tier Vercel optimization
+const AddExpenseModal = dynamic(() => import('./AddExpenseModal'), { ssr: false });
+const EditExpenseModal = dynamic(() => import('./EditExpenseModal'), { ssr: false });
+const BulkEditModal = dynamic(() => import('./BulkEditModal'), { ssr: false });
+const SiriModal = dynamic(() => import('./SiriModal'), { ssr: false });
+const RecurringModal = dynamic(() => import('./RecurringModal'), { ssr: false });
+const ChatBox = dynamic(() => import('./ChatBox'), { ssr: false });
 
 interface ClientDashboardProps {
   initialExpenses: Expense[];

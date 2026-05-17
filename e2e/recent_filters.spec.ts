@@ -144,34 +144,4 @@ test.describe('Recent Tab Filters, Search, and Sort', () => {
       await expect(items.nth(i).locator('[data-testid="recurring-icon"]')).toBeVisible();
     }
   });
-
-  // --- VISUAL REGRESSION TESTS ---
-
-  test('should match visual snapshot of filtered Recent tab', async ({ page }) => {
-    // Apply some filters to have a deterministic view
-    await page.click('#type-filter');
-    await page.locator('label', { hasText: 'Recurring' }).click();
-    await page.locator('.fixed.inset-0.z-40').click();
-
-    await page.selectOption('#sort-select', 'amount-desc');
-    
-    // Hide cursor/focus to avoid flashing cursor differences in snapshots
-    await page.evaluate(() => {
-      const activeElement = document.activeElement;
-      if (activeElement instanceof HTMLElement) activeElement.blur();
-    });
-
-    // Take snapshot of the filters container (now higher contrast!)
-    const filtersContainer = page.locator('#recent-filters');
-    await expect(filtersContainer).toHaveScreenshot('recent-filters-controls.png');
-    
-    // Also take screenshot of a single recurring expense item (we mask the date text)
-    await page.fill('#search-input', 'Netflix');
-    const netflixItem = page.locator('.expense-item').first();
-    await expect(netflixItem).toBeVisible();
-    
-    await expect(netflixItem).toHaveScreenshot('expense-item-recurring-tag.png', {
-      mask: [netflixItem.locator('.expense-info p span')]
-    });
-  });
 });

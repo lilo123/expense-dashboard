@@ -48,9 +48,9 @@ function run() {
   try {
     setup();
     
-    // Run Playwright tests against Chromium
-    console.log('Launching Playwright Chromium E2E tests...');
-    execSync('npx playwright test --project=chromium --workers=1', { stdio: 'inherit' });
+    // Run Playwright tests across all browsers sequentially
+    console.log('Launching Playwright E2E tests across all browsers sequentially...');
+    execSync('npx playwright test --workers=1', { stdio: 'inherit' });
     
     console.log('E2E Tests completed successfully!');
   } catch (err) {

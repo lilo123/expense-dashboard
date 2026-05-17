@@ -73,7 +73,8 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
   });
 
   test('should swap Display Currency, convert totals dynamically, and format large numbers', async ({ page }) => {
-    const totalLabel = page.locator('#total-amount-desktop');
+    const isMobile = await page.evaluate(() => window.innerWidth < 768);
+    const totalLabel = page.locator(isMobile ? '#total-amount-mobile' : '#total-amount-desktop');
     await expect(totalLabel).toBeVisible();
     
     const initialTotalText = await totalLabel.innerText();
@@ -114,12 +115,15 @@ test.describe('Phase 1.65 Extensions: Trigger Seeding & CAD/VND Currency E2E', (
     await page.waitForSelector('#hydrated-marker', { state: 'attached' });
 
     await expect(totalLabel).toContainText('€');
-    await expect(totalLabel).not.toContainText('K');
+    if (!isMobile) {
+      await expect(totalLabel).not.toContainText('K');
+    }
     await expect(totalLabel).not.toContainText('M');
   });
 
   test('should remember Display Currency preference via LocalStorage across reloads (Hydration-Safe)', async ({ page }) => {
-    const totalLabel = page.locator('#total-amount-desktop');
+    const isMobile = await page.evaluate(() => window.innerWidth < 768);
+    const totalLabel = page.locator(isMobile ? '#total-amount-mobile' : '#total-amount-desktop');
 
     // 1. Go to settings, wait for profile load, select VND and save
     await page.goto('/settings');

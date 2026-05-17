@@ -33,7 +33,16 @@ export async function getHistoricalExpenses(startDateUTC?: string, endDateUTC?: 
   return data as Expense[];
 }
 
-export async function saveExpense(amount: number, category_id: string, item: string, user_id: string, dateUTC: string = new Date().toISOString()): Promise<Expense> {
+export async function saveExpense(
+  amount: number, 
+  category_id: string, 
+  item: string, 
+  user_id: string, 
+  dateUTC: string = new Date().toISOString(),
+  originalAmount?: number,
+  originalCurrency?: string,
+  currency?: string
+): Promise<Expense> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -45,6 +54,9 @@ export async function saveExpense(amount: number, category_id: string, item: str
         amount,
         category_id,
         date: dateUTC,
+        original_amount: originalAmount !== undefined ? originalAmount : amount,
+        original_currency: originalCurrency || 'USD',
+        currency: currency || 'USD'
       }
     ])
     .select('*, categories(name)')

@@ -83,10 +83,11 @@ test.describe('Dashboard Core Flows', () => {
   test('should support bulk selection and bulk deletion', async ({ page }) => {
     await page.click('#action-elem-2'); // Recent Tab
 
+    const uniqueId = Date.now();
     // Log 2 separate expenses for bulk actions
     for (let i = 1; i <= 2; i++) {
       await page.click('#fab');
-      await page.fill('#add-item', `Bulk Exp ${i}`);
+      await page.fill('#add-item', `Bulk Exp ${i} - ${uniqueId}`);
       await page.fill('#add-amount', `${i * 10}`);
       await page.locator('#add-category').selectOption({ index: 1 });
       await page.click('#add-expense-btn');
@@ -94,8 +95,8 @@ test.describe('Dashboard Core Flows', () => {
     }
 
     // Verify both logged
-    const item1 = page.locator('.expense-item', { hasText: 'Bulk Exp 1' });
-    const item2 = page.locator('.expense-item', { hasText: 'Bulk Exp 2' });
+    const item1 = page.locator('.expense-item', { hasText: `Bulk Exp 1 - ${uniqueId}` }).first();
+    const item2 = page.locator('.expense-item', { hasText: `Bulk Exp 2 - ${uniqueId}` }).first();
     await expect(item1).toBeVisible();
     await expect(item2).toBeVisible();
 

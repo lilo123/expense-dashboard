@@ -52,6 +52,11 @@ export async function addExpenseAction(data: {
 
 export async function deleteExpenseAction(id: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError || !userData?.user) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
   const { error } = await supabase.from('expenses').delete().eq('id', id)
   
   if (error) {
@@ -77,6 +82,11 @@ export async function updateExpenseAction(
   }>
 ): Promise<{ success: boolean; data?: Expense; error?: string }> {
   const supabase = await createClient()
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError || !userData?.user) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
   const { data, error } = await supabase
     .from('expenses')
     .update(updates)
@@ -119,6 +129,11 @@ export async function addCategoryAction(name: string): Promise<{ success: boolea
 
 export async function updateCategoryAction(id: string, name: string): Promise<{ success: boolean; data?: { id: string, name: string }; error?: string }> {
   const supabase = await createClient()
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError || !userData?.user) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
   const { data, error } = await supabase
     .from('categories')
     .update({ name })
@@ -136,6 +151,10 @@ export async function updateCategoryAction(id: string, name: string): Promise<{ 
 
 export async function deleteCategoryAction(id: string, fallbackCategoryId?: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError || !userData?.user) {
+    return { success: false, error: 'Unauthorized' }
+  }
 
   if (fallbackCategoryId) {
     const { error: updateError } = await supabase
@@ -160,6 +179,11 @@ export async function deleteCategoryAction(id: string, fallbackCategoryId?: stri
 
 export async function bulkDeleteAction(ids: string[]): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError || !userData?.user) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
   const { error } = await supabase.from('expenses').delete().in('id', ids)
   
   if (error) {
@@ -185,6 +209,11 @@ export async function bulkUpdateAction(
   }>
 ): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient()
+  const { data: userData, error: userError } = await supabase.auth.getUser()
+  if (userError || !userData?.user) {
+    return { success: false, error: 'Unauthorized' }
+  }
+
   const { error } = await supabase.from('expenses').update(updates).in('id', ids)
   
   if (error) {
@@ -216,3 +245,31 @@ export async function requestInviteAction(email: string, message: string): Promi
 
   return { success: true };
 }
+
+export async function getMonthlyAggregatesAction(startDate: string, endDate: string): Promise<{ success: boolean; data?: unknown[]; error?: string }> {
+  const supabase = await createClient();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  // Convert 'YYYY-MM' to local DATE boundaries
+  const startLocalDate = `${startDate}-01`;
+  
+  const [year, month] = endDate.split('-').map(Number);
+  const lastDay = new Date(year, month, 0).getDate();
+  const endLocalDate = `${endDate}-${String(lastDay).padStart(2, '0')}`;
+
+  const { data, error } = await supabase.rpc('get_monthly_aggregates', {
+    p_user_id: userData.user.id,
+    p_start_date: startLocalDate,
+    p_end_date: endLocalDate
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, data };
+}
+

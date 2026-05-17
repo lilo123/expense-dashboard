@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { MDXRemote } from 'next-mdx-remote/rsc';
 import { Playfair_Display, Inter } from 'next/font/google';
 import { getPostBySlug, getAllPosts } from '@/lib/content';
-import AnyenAvatar from '@/components/AnyenAvatar';
+import FrostedOrb from '@/components/ui/FrostedOrb';
 import Logo from '@/components/Logo';
 
 const playfair = Playfair_Display({ 
@@ -18,7 +18,7 @@ const inter = Inter({
 });
 
 const mdxComponents = {
-  AnyenAvatar,
+  AnyenAvatar: FrostedOrb,
   Logo,
 };
 

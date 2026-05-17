@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { saveExpense } from '@/lib/expenses';
 import { extractExpenseFromMessage } from '@/lib/ai';
+import { syncExchangeRates } from '@/app/actions/rates';
+import { convertAmount, formatFriendlyCurrency } from '@/lib/utils';
 
 export async function POST(request: Request) {
   try {
@@ -19,6 +21,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
+    // Fetch user's base currency from profile
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('base_currency')
+      .eq('id', user.id)
+      .single();
+
+    const baseCurrency = profileData?.base_currency || 'CAD';
+
     const { data: userCategories } = await supabase
       .from('categories')
       .select('id, name')
@@ -29,19 +40,36 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No categories found for user.' }, { status: 400 });
     }
 
-    const extracted = await extractExpenseFromMessage(message, categoriesList);
+    // Extract via unified AI service (passes baseline currency)
+    const extracted = await extractExpenseFromMessage(message, categoriesList, baseCurrency);
     if ('error' in extracted) {
       if (extracted.status === 200) return NextResponse.json({ reply: extracted.error });
       return NextResponse.json({ error: extracted.error }, { status: extracted.status || 400 });
     }
 
-    const { amount, category_id, item, dateToInsert, finalCategoryName } = extracted;
+    const { amount, currency, category_id, item, dateToInsert, finalCategoryName } = extracted;
 
-    const savedRecord = await saveExpense(amount, category_id, item, user.id, dateToInsert);
+    // Convert baseline amount if transaction differs from base currency
+    let finalAmount = amount;
+    if (currency !== baseCurrency) {
+      const rates = await syncExchangeRates();
+      finalAmount = convertAmount(amount, currency, baseCurrency, rates);
+    }
+
+    const savedRecord = await saveExpense(
+      finalAmount, 
+      category_id, 
+      item, 
+      user.id, 
+      dateToInsert, 
+      amount, 
+      currency, 
+      currency
+    );
     const expenseData = Array.isArray(savedRecord) ? savedRecord[0] : savedRecord;
 
     return NextResponse.json({
-      reply: `Got it! I've added $${amount.toFixed(2)} for ${item} under ${finalCategoryName}.`,
+      reply: `Got it! I've added ${formatFriendlyCurrency(amount, currency)} for ${item} under ${finalCategoryName}.`,
       expense: expenseData
     });
 
