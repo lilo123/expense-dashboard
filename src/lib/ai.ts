@@ -2,7 +2,7 @@ export async function extractExpenseFromMessage(
   message: string, 
   categoriesList: { id: string; name: string }[],
   baseCurrency: string = 'CAD',
-  options?: { forceTool?: boolean }
+  options?: { forceTool?: boolean; userTimezone?: string }
 ): Promise<{ 
   amount: number; 
   currency: string; 
@@ -11,7 +11,25 @@ export async function extractExpenseFromMessage(
   dateToInsert: string; 
   finalCategoryName: string; 
 } | { error: string; status?: number }> {
-  const todayStr = new Date().toISOString().split('T')[0];
+  const userTZ = options?.userTimezone || 'UTC';
+  const now = new Date();
+  const formatTZ = (dateObj: Date) => {
+    const parts = new Intl.DateTimeFormat('en-US', { 
+      timeZone: userTZ, 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit' 
+    }).formatToParts(dateObj);
+    const y = parts.find(p => p.type === 'year')?.value;
+    const m = parts.find(p => p.type === 'month')?.value;
+    const d = parts.find(p => p.type === 'day')?.value;
+    return `${y}-${m}-${d}`;
+  };
+
+  const todayStr = formatTZ(now);
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = formatTZ(yesterday);
   const categoryNames = categoriesList.map(c => c.name);
   const groqApiKey = process.env.GROQ_API_KEY;
   const supportedCurrencies = ['CAD', 'VND', 'USD', 'EUR', 'JPY', 'GBP', 'SGD'];
@@ -107,9 +125,7 @@ If you return JSON, it MUST be raw JSON without any markdown wrapping. Interpret
 
   const dateStrLower = String(resolvedDate).toLowerCase().trim();
   if (dateStrLower === 'yesterday') {
-    const d = new Date(); 
-    d.setDate(d.getDate() - 1); 
-    resolvedDate = d.toISOString().split('T')[0];
+    resolvedDate = yesterdayStr;
   } else if (dateStrLower === 'today') {
     resolvedDate = todayStr;
   }

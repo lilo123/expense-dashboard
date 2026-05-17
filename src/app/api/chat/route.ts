@@ -21,14 +21,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
 
-    // Fetch user's base currency from profile
+    // Fetch user's base currency and timezone from profile
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('base_currency')
+      .select('base_currency, timezone')
       .eq('id', user.id)
       .single();
 
     const baseCurrency = profileData?.base_currency || 'CAD';
+    const userTimezone = profileData?.timezone || 'UTC';
 
     const { data: userCategories } = await supabase
       .from('categories')
@@ -40,8 +41,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No categories found for user.' }, { status: 400 });
     }
 
-    // Extract via unified AI service (passes baseline currency)
-    const extracted = await extractExpenseFromMessage(message, categoriesList, baseCurrency);
+    // Extract via unified AI service (passes baseline currency and user timezone)
+    const extracted = await extractExpenseFromMessage(message, categoriesList, baseCurrency, { userTimezone });
     if ('error' in extracted) {
       if (extracted.status === 200) return NextResponse.json({ reply: extracted.error });
       return NextResponse.json({ error: extracted.error }, { status: extracted.status || 400 });

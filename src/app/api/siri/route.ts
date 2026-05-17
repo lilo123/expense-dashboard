@@ -38,14 +38,15 @@ export async function POST(request: Request) {
 
     const userId = tokenData.user_id;
 
-    // Fetch user's base currency from profile
+    // Fetch user's base currency and timezone from profile
     const { data: profileData } = await supabase
       .from('profiles')
-      .select('base_currency')
+      .select('base_currency, timezone')
       .eq('id', userId)
       .single();
 
     const baseCurrency = profileData?.base_currency || 'CAD';
+    const userTimezone = profileData?.timezone || 'UTC';
 
     // 2. Parse request body
     const body = await request.json();
@@ -66,8 +67,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No categories found for user.' }, { status: 400 });
     }
 
-    // 4. Extract via unified AI service (forces tool schema execution)
-    const extracted = await extractExpenseFromMessage(message, categoriesList, baseCurrency, { forceTool: true });
+    // 4. Extract via unified AI service (forces tool schema execution and passes user timezone)
+    const extracted = await extractExpenseFromMessage(message, categoriesList, baseCurrency, { forceTool: true, userTimezone });
     if ('error' in extracted) {
       return NextResponse.json({ error: extracted.error }, { status: extracted.status || 400 });
     }
