@@ -4,7 +4,7 @@ import { useExpenseStore } from '@/store/useExpenseStore';
 import { bulkUpdateAction } from '@/app/actions';
 import { getRecurringExpensesAction } from '@/app/actions/recurring';
 import { Category, RecurringExpense } from '@/types/database';
-import { toUTCISOString } from '@/lib/utils';
+import { toUTCISOString, convertAmount } from '@/lib/utils';
 
 export default function BulkEditModal() {
   const { 
@@ -14,7 +14,10 @@ export default function BulkEditModal() {
     categories, 
     recurringExpenses,
     hydrate,
-    updateBulkExpenses 
+    updateBulkExpenses,
+    baseCurrency,
+    displayCurrency,
+    exchangeRates
   } = useExpenseStore();
 
   const [date, setDate] = useState('');
@@ -58,7 +61,17 @@ export default function BulkEditModal() {
       const updates: any = {};
       if (date) updates.date = toUTCISOString(date);
       if (item) updates.item = item;
-      if (amount) updates.amount = parseFloat(amount);
+      if (amount) {
+        const rawAmount = parseFloat(amount);
+        let finalAmount = rawAmount;
+        if (displayCurrency !== baseCurrency) {
+          finalAmount = convertAmount(rawAmount, displayCurrency, baseCurrency, exchangeRates);
+        }
+        updates.amount = finalAmount;
+        updates.original_amount = rawAmount;
+        updates.original_currency = displayCurrency;
+        updates.currency = displayCurrency;
+      }
       if (categoryId) updates.category_id = categoryId;
 
       // Handle Type Update Payload (Decoupled)
