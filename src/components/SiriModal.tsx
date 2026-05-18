@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { generateSiriTokenAction } from '@/app/actions/siri';
 
@@ -8,6 +8,18 @@ export default function SiriModal() {
   const [token, setToken] = useState('');
   const [isCopied, setIsCopied] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Lock background body scroll when modal is open
+  useEffect(() => {
+    if (isSiriModalOpen) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [isSiriModalOpen]);
 
   if (!isSiriModalOpen) return null;
 
@@ -20,7 +32,7 @@ export default function SiriModal() {
       } else {
         alert(res.error || 'Failed to generate token');
       }
-    } catch (err) {
+    } catch {
       alert('Failed to generate token');
     } finally {
       setIsLoading(false);
@@ -33,7 +45,7 @@ export default function SiriModal() {
         await navigator.clipboard.writeText(token);
         setIsCopied(true);
         setTimeout(() => setIsCopied(false), 1500);
-      } catch (err) {
+      } catch {
         // Fallback copy
       }
     }
@@ -87,8 +99,8 @@ export default function SiriModal() {
                 <h3 className="text-zen-charcoal font-bold m-0" style={{ fontSize: '16px', marginBottom: '10px' }}>How to set up:</h3>
                 <ol style={{ paddingLeft: '20px', fontSize: '14px', color: 'var(--secondary-text)', lineHeight: '1.6' }}>
                     <li><strong>Generate and Copy</strong> your token above.</li>
-                    <li>Open the <strong>Shortcuts app</strong> on your iPhone and tap <strong>+</strong>. Name it "Log Expense".</li>
-                    <li>Add an <strong>Ask for Input</strong> action. Set the prompt to <em>"What did you spend?"</em></li>
+                    <li>Open the <strong>Shortcuts app</strong> on your iPhone and tap <strong>+</strong>. Name it &ldquo;Log Expense&rdquo;.</li>
+                    <li>Add an <strong>Ask for Input</strong> action. Set the prompt to <em>&ldquo;What did you spend?&rdquo;</em></li>
                     <li>Add a <strong>Get Contents of URL</strong> action and configure it:
                         <ul className="pl-6 pr-3 py-3 my-2 bg-white/60 border border-zen-lavender/40 rounded-2xl list-disc text-left shadow-sm">
                             <li><strong>URL:</strong> <code id="siri-endpoint-url" className="bg-zen-lavender/30 px-2 py-0.5 rounded font-mono text-sm">https://expense-dashboard-blond.vercel.app/api/siri</code></li>
@@ -102,7 +114,7 @@ export default function SiriModal() {
                             </li>
                         </ul>
                     </li>
-                    <li>Save it. Now just say: <em>"Hey Siri, Log Expense!"</em></li>
+                    <li>Save it. Now just say: <em>&ldquo;Hey Siri, Log Expense!&rdquo;</em></li>
                 </ol>
             </div>
         </div>
