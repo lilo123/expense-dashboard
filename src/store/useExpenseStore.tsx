@@ -1,8 +1,6 @@
 import { createContext, useContext, useRef, useLayoutEffect, useEffect } from 'react';
 import { createStore, useStore } from 'zustand';
 import { Expense, Category, User, SupportedCurrency, Profile, RecurringExpense, Budget } from '@/types/database';
-import { reallocateFundsAction } from '@/app/actions/budget';
-
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 export interface ExpenseState {
@@ -27,13 +25,10 @@ export interface ExpenseState {
   isSiriModalOpen: boolean;
   isRecurringModalOpen: boolean;
   isOnboardingOpen: boolean;
-  isReallocationOpen: boolean;
   isBudgetView: boolean;
   
   activeTab: 'dashboard' | 'recent' | 'yearly';
   editingExpenseId: string | null;
-  reallocationSourceId: string | null;
-  reallocationMonth: string | null;
   activeCategoryFilter: string | null;
   activeMonthFilter: string | null;
 
@@ -70,7 +65,6 @@ export interface ExpenseState {
   toggleSiriModal: () => void;
   toggleRecurringModal: () => void;
   toggleOnboarding: () => void;
-  toggleReallocation: (sourceId?: string | null, month?: string | null) => void;
   
   reset: () => void;
   
@@ -91,7 +85,6 @@ export interface ExpenseState {
   addRecurringExpense: (config: RecurringExpense) => void;
   removeRecurringExpense: (id: string) => void;
   updateBudgetLimit: (categoryId: string | null, month: string, amount: number) => void;
-  executeReallocation: (sourceId: string | null, targetId: string, amount: number, month: string) => Promise<boolean>;
 }
 
 export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) => 
@@ -114,12 +107,9 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     isSiriModalOpen: false,
     isRecurringModalOpen: false,
     isOnboardingOpen: false,
-    isReallocationOpen: false,
     isBudgetView: initialState.isBudgetView || false,
     activeTab: 'dashboard',
     editingExpenseId: null,
-    reallocationSourceId: null,
-    reallocationMonth: null,
     activeCategoryFilter: null,
     activeMonthFilter: null,
     isSelectMode: false,
@@ -175,11 +165,6 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     toggleSiriModal: () => set((state) => ({ isSiriModalOpen: !state.isSiriModalOpen })),
     toggleRecurringModal: () => set((state) => ({ isRecurringModalOpen: !state.isRecurringModalOpen })),
     toggleOnboarding: () => set((state) => ({ isOnboardingOpen: !state.isOnboardingOpen })),
-    toggleReallocation: (sourceId, month) => set((state) => ({
-      isReallocationOpen: !state.isReallocationOpen,
-      reallocationSourceId: sourceId !== undefined ? sourceId : null,
-      reallocationMonth: month !== undefined ? month : null
-    })),
     
     reset: () => set({ 
       expenses: [], 
@@ -200,11 +185,8 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       isSiriModalOpen: false, 
       isRecurringModalOpen: false, 
       isOnboardingOpen: false,
-      isReallocationOpen: false,
       isBudgetView: false,
       editingExpenseId: null, 
-      reallocationSourceId: null,
-      reallocationMonth: null,
       activeCategoryFilter: null, 
       activeMonthFilter: null, 
       isSelectMode: false, 
@@ -305,40 +287,7 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
 
     updateBudgetLimit: (catId, month, amt) => set((state) => ({
       budgets: state.budgets.map(b => (b.category_id === catId && b.month === month) ? { ...b, limit_amount: amt } : b)
-    })),
-
-    executeReallocation: async (sourceId, targetId, amount, month) => {
-      const previousBudgets = [...get().budgets];
-
-      // Optimistic update
-      set((state) => {
-        const newBudgets = state.budgets.map(b => {
-          if (b.month !== month) return b;
-          if (b.category_id === sourceId) {
-            return { ...b, limit_amount: b.limit_amount - amount };
-          }
-          if (b.category_id === targetId) {
-            return { ...b, limit_amount: b.limit_amount + amount };
-          }
-          return b;
-        });
-        return { budgets: newBudgets };
-      });
-
-      // Background sync
-      const res = await reallocateFundsAction({
-        month,
-        source_category_id: sourceId,
-        target_category_id: targetId,
-        amount
-      });
-
-      if (!res.success) {
-        set({ budgets: previousBudgets, globalError: res.error || 'Reallocation failed.' });
-        return false;
-      }
-      return true;
-    }
+    }))
   }));
 
 // Create React Context for Request-Scoped Store

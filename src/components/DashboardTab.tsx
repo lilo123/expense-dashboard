@@ -14,7 +14,6 @@ import {
 import { Bar } from 'react-chartjs-2';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import BudgetView from './BudgetView';
-import ReallocationModal from './ReallocationModal';
 import { formatUTCToLocal, formatFriendlyDate, wrapLabel } from '@/lib/utils';
 
 ChartJS.register(
@@ -304,7 +303,6 @@ export default function DashboardTab() {
         <BudgetView />
       )}
 
-      <ReallocationModal />
     </div>
   );
 }

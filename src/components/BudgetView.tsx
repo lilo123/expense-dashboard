@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { convertAmount, formatNoDecimalCurrency } from '@/lib/utils';
-import { RefreshCw, Tag } from 'lucide-react';
+import { Tag } from 'lucide-react';
 import AdjustMasterBudgetModal from './AdjustMasterBudgetModal';
 
 export default function BudgetView() {
@@ -13,7 +13,7 @@ export default function BudgetView() {
     displayCurrency, 
     baseCurrency, 
     exchangeRates,
-    toggleReallocation
+    toggleOnboarding
   } = useExpenseStore();
 
   const [isMounted, setIsMounted] = useState(false);
@@ -141,9 +141,8 @@ export default function BudgetView() {
           </div>
           
           <button 
-            onClick={() => toggleReallocation(null, selectedMonth)}
-            disabled={surplusAmount <= 0}
-            className="mt-4 px-6 py-2.5 bg-zen-charcoal text-zen-base rounded-full font-bold text-xs hover:bg-zen-charcoal/90 transition-all cursor-pointer border-none shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={() => toggleOnboarding()}
+            className="mt-4 px-6 py-2.5 bg-zen-charcoal text-zen-base rounded-full font-bold text-xs hover:bg-zen-charcoal/90 transition-all cursor-pointer border-none shadow-md disabled:opacity-40"
           >
             Allocate
           </button>
@@ -195,14 +194,6 @@ export default function BudgetView() {
                   <span className="text-xs font-bold text-zen-charcoal/70">
                     Spent {formatNoDecimalCurrency(displaySpent, displayCurrency)} of {formatNoDecimalCurrency(displayLimit, displayCurrency)}
                   </span>
-                  <button 
-                    onClick={() => toggleReallocation(cat.id, selectedMonth)}
-                    title="Reassign Budget"
-                    aria-label={`Reassign budget for ${cat.name}`}
-                    className="w-11 h-11 rounded-full bg-transparent hover:bg-white/20 border border-zen-lavender/40 flex items-center justify-center text-zen-charcoal transition-colors cursor-pointer shadow-xs p-0"
-                  >
-                    <RefreshCw size={16} />
-                  </button>
                 </div>
               </div>
 

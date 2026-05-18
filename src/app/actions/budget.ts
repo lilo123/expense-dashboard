@@ -71,39 +71,6 @@ export async function saveInitialBudgets(budgets: { category_id: string | null; 
     return { success: false, error: 'Failed to save budget setup.' };
   }
 }
-
-export async function reallocateFundsAction(data: {
-  month: string;
-  source_category_id: string | null;
-  target_category_id: string;
-  amount: number;
-}): Promise<{ success: boolean; error?: string }> {
-  const supabase = await createClient();
-  try {
-    const { data: userData, error: userError } = await supabase.auth.getUser();
-    if (userError || !userData?.user) return { success: false, error: 'Unauthorized' };
-
-    // Call PostgreSQL RPC function to guarantee atomic ACID transaction
-    const { error } = await supabase.rpc('reallocate_budget', {
-      p_user_id: userData.user.id,
-      p_month: data.month,
-      p_source_category_id: data.source_category_id,
-      p_target_category_id: data.target_category_id,
-      p_amount: data.amount
-    });
-
-    if (error) {
-      console.error('[RPC reallocate_budget ERROR]:', error);
-      return { success: false, error: error.message || 'Insufficient surplus or invalid allocation.' };
-    }
-
-    return { success: true };
-  } catch (err: any) {
-    console.error('[SERVER ACTION reallocateFundsAction FAILURE]:', err);
-    return { success: false, error: 'Uh oh, the system tripped up! Don\'t worry, your data is safe. Let\'s try that again.' };
-  }
-}
-
 import { revalidatePath } from 'next/cache';
 
 export async function saveBulkBudgets(
