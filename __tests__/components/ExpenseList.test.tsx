@@ -101,7 +101,7 @@ describe('ExpenseList Component', () => {
 
     expect(screen.getByText('Lunch')).toBeInTheDocument();
     expect(screen.getByText('Food • Fri, May 8')).toBeInTheDocument();
-    expect(screen.getByText('$15.50')).toBeInTheDocument();
+    expect(screen.getByText('C$15.50')).toBeInTheDocument();
   });
 
   it('should verify glassmorphism classes are applied to items', () => {

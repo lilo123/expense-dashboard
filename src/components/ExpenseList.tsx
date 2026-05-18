@@ -86,9 +86,15 @@ export default function ExpenseList() {
           const timeB = new Date(b.date).getTime();
           return sortDirection === 'highest' ? timeB - timeA : timeA - timeB;
         } else {
-          const amtA = Number(a.amount) || 0;
-          const amtB = Number(b.amount) || 0;
-          return sortDirection === 'highest' ? amtB - amtA : amtA - amtB;
+          const amtOriginalA = a.original_amount !== null && a.original_amount !== undefined ? Number(a.original_amount) : (Number(a.amount) || 0);
+          const curOriginalA = a.original_currency || a.currency || baseCurrency;
+          const amtDisplayA = convertAmount(amtOriginalA, curOriginalA as any, displayCurrency, exchangeRates);
+
+          const amtOriginalB = b.original_amount !== null && b.original_amount !== undefined ? Number(b.original_amount) : (Number(b.amount) || 0);
+          const curOriginalB = b.original_currency || b.currency || baseCurrency;
+          const amtDisplayB = convertAmount(amtOriginalB, curOriginalB as any, displayCurrency, exchangeRates);
+
+          return sortDirection === 'highest' ? amtDisplayB - amtDisplayA : amtDisplayA - amtDisplayB;
         }
       });
   }, [expenses, searchQuery, selectedCategories, selectedTypes, sortMetric, sortDirection]);
@@ -282,16 +288,11 @@ export default function ExpenseList() {
               </div>
             ) : (
               filteredAndSortedExpenses.map((exp: Expense) => {
-                const amtBase = parseFloat(exp.amount as any) || 0;
+                const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+                const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+                const displayAmt = convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
+                const displayCurr = displayCurrency;
                 const dateStr = formatFriendlyDate(exp.date);
-                
-                let displayAmt = exp.original_amount || amtBase;
-                let displayCurr = exp.original_currency || exp.currency || 'USD';
-
-                if (displayCurrency !== baseCurrency) {
-                  displayAmt = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
-                  displayCurr = displayCurrency;
-                }
 
                 return (
                   <div 

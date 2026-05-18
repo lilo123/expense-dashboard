@@ -64,8 +64,9 @@ export default function DashboardTab() {
   }, [expenses, startDate, endDate]);
 
   const total = filteredExpenses.reduce((sum, exp) => {
-    const amtBase = parseFloat(exp.amount as any) || 0;
-    const amtDisplay = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
+    const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+    const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+    const amtDisplay = convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
     return sum + amtDisplay;
   }, 0);
 
@@ -74,8 +75,9 @@ export default function DashboardTab() {
     filteredExpenses.forEach(exp => {
       const catName = exp.categories?.name || "Uncategorized";
       if (!byCategory[catName]) byCategory[catName] = { total: 0, items: [] };
-      const amtBase = parseFloat(exp.amount as any) || 0;
-      const amtDisplay = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
+      const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+      const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+      const amtDisplay = convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
       byCategory[catName].total += amtDisplay;
       byCategory[catName].items.push(exp);
     });
@@ -288,7 +290,11 @@ export default function DashboardTab() {
                       </div>
                       <div className="expense-amount">
                         {formatFriendlyCurrency(
-                          convertAmount(parseFloat(exp.amount as any) || 0, baseCurrency, displayCurrency, exchangeRates),
+                          (() => {
+                            const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+                            const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+                            return convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
+                          })(),
                           displayCurrency
                         )}
                       </div>

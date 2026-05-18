@@ -77,8 +77,9 @@ export default function BudgetView() {
     selectedMonthExpenses.forEach(exp => {
       const catId = exp.category_id;
       if (!map[catId]) map[catId] = 0;
-      const amtBase = Number(exp.amount) || 0;
-      const amtDisplay = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
+      const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+      const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+      const amtDisplay = convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
       map[catId] += amtDisplay;
     });
     return map;

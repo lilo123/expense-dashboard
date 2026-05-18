@@ -109,8 +109,9 @@ export default function YearlyTab() {
         oneOffByMonth[m] = 0;
       }
       
-      const amtBase = parseFloat(exp.amount as any) || 0;
-      const amtDisplay = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
+      const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+      const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+      const amtDisplay = convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
       
       const isRecurring = !!exp.recurring_expense_id;
       
@@ -347,8 +348,9 @@ export default function YearlyTab() {
     activeMonthExpenses.forEach(exp => {
       const catId = exp.category_id;
       if (!map[catId]) map[catId] = 0;
-      const amtBase = parseFloat(exp.amount as any) || 0;
-      const amtDisplay = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
+      const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+      const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+      const amtDisplay = convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
       map[catId] += amtDisplay;
     });
     return map;
@@ -538,7 +540,11 @@ export default function YearlyTab() {
                                   </div>
                                   <span className="text-zen-charcoal font-bold">
                                     {formatFriendlyCurrency(
-                                      convertAmount(Number(exp.amount) || 0, baseCurrency, displayCurrency, exchangeRates),
+                                      (() => {
+                                        const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+                                        const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+                                        return convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
+                                      })(),
                                       displayCurrency
                                     )}
                                   </span>
@@ -564,7 +570,11 @@ export default function YearlyTab() {
                         </div>
                         <div className="expense-amount">
                           {formatFriendlyCurrency(
-                            convertAmount(parseFloat(exp.amount as any) || 0, baseCurrency, displayCurrency, exchangeRates),
+                            (() => {
+                              const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+                              const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+                              return convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
+                            })(),
                             displayCurrency
                           )}
                         </div>
