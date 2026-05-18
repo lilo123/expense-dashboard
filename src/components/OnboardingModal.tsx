@@ -1,10 +1,11 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useTransition } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { saveInitialBudgets } from '@/app/actions/budget';
 import { addCategoryAction, deleteCategoryAction } from '@/app/actions';
-import { formatFriendlyCurrency } from '@/lib/utils';
-import { Tag, Trash2, Plus } from 'lucide-react';
+import { updateProfile } from '@/app/actions/profile';
+import { formatFriendlyCurrency, getCurrencySymbol, CURRENCY_CONFIG } from '@/lib/utils';
+import { Tag, Trash2, Plus, Info } from 'lucide-react';
 
 const DEFAULT_CATEGORIES = ['Housing', 'Food & Dining', 'Transportation', 'Utilities', 'Personal/Entertainment'];
 
@@ -29,6 +30,21 @@ export default function OnboardingModal() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
+  const [isSkipPending, startSkipTransition] = useTransition();
+
+  const handleSkip = () => {
+    startSkipTransition(async () => {
+      const res = await updateProfile({ onboarding_status: 'completed' });
+      if (res.success) {
+        if (profile) {
+          setProfile({ ...profile, onboarding_status: 'completed' });
+        }
+        toggleOnboarding();
+      } else {
+        alert(res.error || 'Failed to skip onboarding.');
+      }
+    });
+  };
 
   const currentMonth = useMemo(() => {
     const d = new Date();
@@ -217,28 +233,42 @@ export default function OnboardingModal() {
             </p>
 
             <div className="flex items-center bg-white/60 border border-zen-lavender/60 rounded-full h-14 px-6 box-border focus-within:ring-2 focus-within:ring-zen-sage shadow-inner">
-              <span className="text-zen-charcoal font-bold text-lg pr-3 border-r border-zen-lavender/40">
-                {displayCurrency}
+              <span className="text-zen-charcoal font-bold text-lg pr-3 border-r border-zen-lavender/40 select-none">
+                {getCurrencySymbol(displayCurrency)}
               </span>
               <input 
-                type="number" 
+                type="text" 
+                inputMode="decimal"
+                pattern="^[0-9]*\.?[0-9]*$"
                 placeholder="0.00" 
-                value={totalBudgetStr}
+                value={totalBudgetStr === '0' ? '' : totalBudgetStr}
+                onFocus={e => e.target.select()}
                 onChange={e => setTotalBudgetStr(e.target.value)}
                 className="flex-1 border-none bg-transparent text-zen-charcoal text-lg font-bold px-4 m-0 outline-none appearance-none"
                 autoFocus
               />
             </div>
 
-            <button 
-              onClick={() => {
-                if (totalBudget > 0) setStep(2);
-                else alert('Please enter a valid amount.');
-              }}
-              className="w-full py-4 bg-zen-charcoal text-zen-base rounded-full font-bold text-lg hover:bg-zen-charcoal/90 transition-all cursor-pointer border-none shadow-md mt-2"
-            >
-              Continue
-            </button>
+            <div className="flex flex-col gap-2 mt-2">
+              <button 
+                onClick={() => {
+                  if (totalBudget > 0) setStep(2);
+                  else alert('Please enter a valid amount.');
+                }}
+                className="w-full py-4 bg-zen-charcoal text-zen-base rounded-full font-bold text-lg hover:bg-zen-charcoal/90 transition-all cursor-pointer border-none shadow-md"
+              >
+                Continue
+              </button>
+              
+              <button 
+                type="button"
+                disabled={isSkipPending}
+                onClick={handleSkip}
+                className="w-full py-3 bg-transparent text-zen-charcoal/60 hover:text-zen-charcoal rounded-full font-semibold text-sm transition-all cursor-pointer border-none disabled:opacity-40"
+              >
+                {isSkipPending ? 'Skipping...' : 'Skip and set up later'}
+              </button>
+            </div>
           </div>
         ) : (
           // STEP 2: CATEGORY SLIDERS & SURPLUS COUNTER
@@ -258,23 +288,32 @@ export default function OnboardingModal() {
                 const val = allocations[cat.id] || 0;
                 return (
                   <div key={cat.id} className="flex flex-col gap-2 bg-white/40 p-4 rounded-2xl border border-white/20">
-                    <div className="flex justify-between items-center">
-                      <span className="font-bold text-sm text-zen-charcoal flex items-center gap-2">
-                        {cat.icon && <Tag size={16} className="text-zen-charcoal/60" />}
-                        {cat.name}
+                    <div className="flex justify-between items-center gap-2">
+                      <span className="font-bold text-sm text-zen-charcoal flex items-center gap-2 truncate min-w-0 flex-1">
+                        {cat.icon && <Tag size={16} className="text-zen-charcoal/60 shrink-0" />}
+                        <span className="truncate">{cat.name}</span>
                       </span>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center bg-white/60 border border-zen-lavender/40 rounded-xl px-3 py-1">
-                          <span className="text-xs font-bold text-zen-charcoal mr-1">$</span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center bg-white/60 border border-zen-lavender/40 rounded-xl px-3 py-1.5 min-h-[44px] box-border shrink-0">
+                          {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
+                            <span className="text-xs font-bold text-zen-charcoal mr-1">{getCurrencySymbol(displayCurrency)}</span>
+                          )}
                           <input 
-                            type="number" 
-                            value={val === 0 ? 0 : val} 
+                            type="text" 
+                            inputMode="decimal"
+                            pattern="^[0-9]*\.?[0-9]*$"
+                            value={val === 0 ? '' : val} 
+                            onFocus={e => e.target.select()}
                             onChange={e => handleAllocationChange(cat.id, e.target.value)}
                             className="w-16 bg-transparent border-none text-right text-sm font-bold text-zen-charcoal outline-none appearance-none"
                             placeholder="0"
                           />
+                          {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
+                            <span className="text-xs font-bold text-zen-charcoal ml-1">{getCurrencySymbol(displayCurrency)}</span>
+                          )}
                         </div>
                         <button 
+                          type="button"
                           onClick={() => handleDeleteCategory(cat.id, cat.name)}
                           aria-label={`Delete ${cat.name}`}
                           className="w-8 h-8 rounded-full bg-transparent hover:bg-zen-peach/30 text-zen-charcoal flex items-center justify-center cursor-pointer border border-zen-lavender/40 transition-colors p-0"
@@ -284,7 +323,7 @@ export default function OnboardingModal() {
                       </div>
                     </div>
                     
-                    {/* Slider Input */}
+                    {/* Slider Input - Hidden on Desktop for estate optimization */}
                     <input 
                       type="range" 
                       min="0" 
@@ -292,7 +331,7 @@ export default function OnboardingModal() {
                       step="10"
                       value={val}
                       onChange={e => handleAllocationChange(cat.id, e.target.value)}
-                      className="w-full accent-zen-sage cursor-pointer"
+                      className="w-full accent-zen-sage cursor-pointer md:hidden"
                     />
                   </div>
                 );
@@ -317,6 +356,14 @@ export default function OnboardingModal() {
               </button>
             </div>
 
+            {/* Explanatory Info Footnote Card */}
+            <div className="bg-zen-lavender/20 border border-zen-lavender/40 rounded-2xl p-4 flex items-start gap-3 text-left my-1">
+              <Info size={18} className="text-zen-charcoal/70 shrink-0 mt-0.5" />
+              <p className="text-xs text-zen-charcoal/70 leading-relaxed m-0 select-none">
+                This budget will be automatically set for the rest of the months in {new Date().getFullYear()}. Don't worry, you can easily adjust it later at any time!
+              </p>
+            </div>
+
             {/* Actions */}
             <div className="flex gap-3 mt-2">
               <button 
@@ -332,6 +379,15 @@ export default function OnboardingModal() {
                 Save Budget
               </button>
             </div>
+
+            <button 
+              type="button"
+              disabled={isSkipPending}
+              onClick={handleSkip}
+              className="w-full py-3 bg-transparent text-zen-charcoal/60 hover:text-zen-charcoal rounded-full font-semibold text-sm transition-all cursor-pointer border-none disabled:opacity-40 mt-1"
+            >
+              {isSkipPending ? 'Skipping...' : 'Skip and set up later'}
+            </button>
           </div>
         )}
       </div>

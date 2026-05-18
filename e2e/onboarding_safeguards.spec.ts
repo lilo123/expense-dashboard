@@ -30,7 +30,7 @@ test.describe('OnboardingModal Inline Category Management & Safeguards E2E', () 
     await newCatInput.fill('E2E Inline Category');
     await modal.locator('button:has-text("Add")').click();
 
-    await expect(modal.locator('span', { hasText: 'E2E Inline Category' })).toBeVisible();
+    await expect(modal.locator('span.truncate', { hasText: 'E2E Inline Category' }).first()).toBeVisible();
   });
 
   test('should safeguard active categories and block deletion if active expenses exist', async ({ page }) => {
@@ -52,5 +52,22 @@ test.describe('OnboardingModal Inline Category Management & Safeguards E2E', () 
 
     expect(dialogMessage).toContain('contains expenses. Please use the Category Management tab');
     await expect(housingDeleteBtn).toBeFocused();
+  });
+
+  test('should allow skipping onboarding setup and persist the status', async ({ page }) => {
+    const modal = page.locator('.modal-content').first();
+    await expect(modal).toBeVisible();
+
+    const skipBtn = modal.locator('button:has-text("Skip and set up later")');
+    await expect(skipBtn).toBeVisible();
+    await skipBtn.click();
+
+    // Modal should close
+    await expect(modal).not.toBeVisible();
+
+    // Reload to verify it persisted onboarding Completed status
+    await page.reload();
+    await page.waitForSelector('#hydrated-marker', { state: 'attached' });
+    await expect(page.locator('.modal-content')).not.toBeVisible();
   });
 });
