@@ -290,6 +290,16 @@ async function seed() {
       process.exit(1);
     }
 
+    // 6. Mark onboarding as completed so existing E2E tests can navigate without modal interception
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .update({ onboarding_status: 'completed' })
+      .eq('id', userId);
+
+    if (profileError) {
+      console.warn('Warning: failed to mark onboarding completed:', profileError.message);
+    }
+
     console.log(`Successfully generated & inserted ${expensesToInsert.length} expenses!`);
     console.log('Database seeded beautifully! Ready for local exploration and E2E tests.\n');
 

@@ -109,27 +109,32 @@ The application branding centers around the `Logo.tsx` component, which renders 
 
 ### Next.js App Router & React 19 Foundation
 The frontend leverages Next.js 16 paired with React 19 concurrent rendering models.
-- **App Router Routing (`src/app`)**: Houses top-level page definitions, root layout wrappers, and API route webhooks.
+- **App Router Routing (`src/app`)**: Houses top-level page definitions, root layout wrappers, and API route webhooks. Integrates **nested sub-layouts (`/budget/layout.tsx`)** to enforce strict max-width structural container isolation across dynamic route streams, fully immunizing skeletons and pages against Cumulative Layout Shift (CLS).
 - **Component Modularization (`src/components`)**: Encapsulates visual features into highly focused, reusable React building blocks.
 - **Server vs. Client Boundaries**: Strict separation of rendering environments. Core page layouts operate on the server, while interactive stateful components (charts, modals, filters) declare `'use client'` at their module boundaries.
 
 ### Zustand Client Store Lifecycle (`src/store/useExpenseStore.tsx`)
-Client state is governed by a robust Zustand store instance instantiated within a request-scoped React Context (`StoreProvider`).
+Client state is governed by a robust Zustand store instance instantiated within a request-scoped React Context (`StoreProvider`). 
+
+To prevent React 19 render-phase state warnings, store hydration is synchronized using an **Isomorphic Layout Effect wrapper (`useIsomorphicLayoutEffect`)** which executes store updates synchronously *after* component commit but *before* browser paint. Deep comparative check `areInitialDataEqual` gates hydration to run only when incoming Server Component prop properties truly change, eliminating redundant state updates.
 
 ```mermaid
 sequenceDiagram
     participant Server as Next.js Server Component
     participant Client as StoreProvider (React Context)
+    participant Effect as useIsomorphicLayoutEffect
     participant Store as Zustand State Store
     participant Storage as Browser LocalStorage
 
     Server->>Client: Pass Initial Data (Expenses, Categories, Profile)
-    Client->>Store: hydrate({ expenses, categories, profile })
+    Client->>Effect: Trigger layout effect on data changes
+    Effect->>Store: hydrate({ expenses, categories, profile }) if unequal
     Store->>Storage: Check cached 'displayCurrency'
     Storage-->>Store: Return cached currency (e.g. 'CAD')
     Store->>Store: Resolve baseCurrency = profile.base_currency
     Store->>Store: Resolve displayCurrency = cached || profile.base_currency
     Store-->>Client: State Initialized & Synchronized
+```
 ```
 
 #### Dual Currency Hydration Lifecycle

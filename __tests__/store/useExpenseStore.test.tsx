@@ -1,5 +1,10 @@
 import { createExpenseStore } from '@/store/useExpenseStore';
 import { Expense, Category, User } from '@/types/database';
+import { reallocateFundsAction } from '@/app/actions/budget';
+
+jest.mock('@/app/actions/budget', () => ({
+  reallocateFundsAction: jest.fn()
+}));
 
 describe('useExpenseStore', () => {
   const mockUser: User = { id: 'user-123', email: 'test@example.com' };
@@ -16,6 +21,7 @@ describe('useExpenseStore', () => {
       category_id: 'cat-1',
       date: '2026-05-10',
       created_at: '2026-05-10T00:00:00Z',
+      is_recurring: false,
       categories: { name: 'Food' },
     },
     {
@@ -26,6 +32,7 @@ describe('useExpenseStore', () => {
       category_id: 'cat-2',
       date: '2026-05-10',
       created_at: '2026-05-10T01:00:00Z',
+      is_recurring: false,
       categories: { name: 'Transport' },
     },
   ];
@@ -66,8 +73,11 @@ describe('useExpenseStore', () => {
       display_name: 'Katherine Zen',
       avatar_url: null,
       base_currency: 'VND' as const,
+      display_currency: 'VND' as const,
       budget_reset_day: 15,
       ai_tone: 'encouraging',
+      timezone: 'Asia/Ho_Chi_Minh',
+      onboarding_status: 'completed' as const,
       updated_at: '2026-05-10T00:00:00Z',
     };
 
@@ -198,6 +208,7 @@ describe('useExpenseStore', () => {
       category_id: 'cat-1',
       date: '2026-05-10',
       created_at: '2026-05-10T02:00:00Z',
+      is_recurring: false,
       categories: { name: 'Food' },
     };
     store.getState().addExpense(newExpense);
@@ -223,5 +234,36 @@ describe('useExpenseStore', () => {
     // Ensure it didn't duplicate
     const exp1Count = state.expenses.filter(e => e.id === 'exp-1').length;
     expect(exp1Count).toBe(1);
+  });
+
+  it('should perform optimistic reallocation and rollback on failure', async () => {
+    const store = createExpenseStore();
+    const mockBudgets = [
+      { id: 'b1', user_id: 'u1', category_id: null, limit_amount: 500, currency: 'CAD', month: '2026-05' },
+      { id: 'b2', user_id: 'u1', category_id: 'cat-1', limit_amount: 200, currency: 'CAD', month: '2026-05' },
+    ];
+    store.getState().hydrate({ budgets: mockBudgets });
+
+    // Mock success
+    (reallocateFundsAction as jest.Mock).mockResolvedValueOnce({ success: true });
+
+    const success = await store.getState().executeReallocation(null, 'cat-1', 100, '2026-05');
+    expect(success).toBe(true);
+
+    let state = store.getState();
+    expect(state.budgets.find(b => b.category_id === null)?.limit_amount).toBe(400);
+    expect(state.budgets.find(b => b.category_id === 'cat-1')?.limit_amount).toBe(300);
+
+    // Mock failure
+    (reallocateFundsAction as jest.Mock).mockResolvedValueOnce({ success: false, error: 'Server error' });
+
+    const failSuccess = await store.getState().executeReallocation(null, 'cat-1', 50, '2026-05');
+    expect(failSuccess).toBe(false);
+
+    state = store.getState();
+    // Should rollback to previous state (400 and 300)
+    expect(state.budgets.find(b => b.category_id === null)?.limit_amount).toBe(400);
+    expect(state.budgets.find(b => b.category_id === 'cat-1')?.limit_amount).toBe(300);
+    expect(state.globalError).toBe('Server error');
   });
 });

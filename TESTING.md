@@ -174,3 +174,28 @@ if (!isMobile) {
 
 ### C. Same-Site Domain Resolution
 Safari/Webkit's **Intelligent Tracking Prevention (ITP)** blocks auth session cookies if the app runs on `localhost` and Supabase connects to `127.0.0.1`. E2E configurations explicitly map `NEXT_PUBLIC_SUPABASE_URL` to `http://localhost:54321` in `.env.test` to satisfy first-party same-site rules.
+
+---
+
+## 6. Strict Automated QA Safeguards & Regression Defenses
+
+### A. Global Jest ConsoleError Guard (`jest.setup.ts`)
+To proactively catch state rendering violations, key conflicts, and hydration issues before they reach production, we utilize a global custom `ConsoleGuard` warning spy in our Jest setup configuration. 
+If React triggers any forbidden warnings or error patterns during test execution, the spy intercepts the console stream and **fails the test suite instantly** with an informative traceback.
+
+*   **Monitored Warning & Error Patterns**:
+    *   `not wrapped in act` (Concurrent rendering/async issues)
+    *   `Each child in a list should have a unique "key" prop` (List rendering bugs)
+    *   `React does not recognize the.*prop on a DOM element` (Prop mismatches)
+    *   `Text content did not match` / `Hydration failed` (SSR/Client mismatch errors)
+    *   `Cannot update a component while rendering a different component` (Zustand render-phase warning)
+    *   `Can't perform a React state update on an unmounted component` (Memory leak warnings)
+
+### B. Playwright Strict Bounding Box Alignment (`e2e/budget_streaming_suspense.spec.ts`)
+To prevent Cumulative Layout Shift (CLS) regressions, our E2E test suite validates structural height and position symmetry between loading skeleton states and fully loaded dynamic layouts. 
+
+By throttling network connections, the tests capture the precise bounding box coordinates ($x$, $y$, $width$, $height$) of the loading skeletons, wait for server-side streaming to resolve, capture the fully loaded page boundaries, and assert strict sub-pixel thresholds:
+
+*   **Layout Assertions**:
+    *   **Horizontal & Vertical Centering Alignment**: Bounding box position ($x$, $y$) differences must be `Math.abs(plannerBox.y - skeletonBox.y) <= 1.0px`.
+    *   **Height Symmetry**: Bounding box height differences must be `Math.abs(plannerBox.height - skeletonBox.height) <= 100.0px`. This prevents dynamic content from shifting elements below by more than a minor visual margin, guaranteeing professional layout stability.

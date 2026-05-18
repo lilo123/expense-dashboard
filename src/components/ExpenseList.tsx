@@ -56,7 +56,7 @@ export default function ExpenseList() {
       .filter((exp: Expense) => {
         const matchesSearch = exp.item.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesCategory = selectedCategories.size === 0 || selectedCategories.has(exp.category_id);
-        const isRecurring = exp.is_recurring;
+        const isRecurring = exp.is_recurring || !!exp.recurring_expense_id;
         const expType = isRecurring ? 'recurring' : 'one-off';
         const matchesType = selectedTypes.size === 0 || selectedTypes.has(expType);
         return matchesSearch && matchesCategory && matchesType;
@@ -278,7 +278,7 @@ export default function ExpenseList() {
                           <h4>{exp.item}</h4>
                           <p className="flex items-center flex-wrap gap-1">
                             <span className="text-zen-charcoal/60 text-sm">{exp.categories?.name || "Uncategorized"} &bull; {dateStr}</span>
-                            {exp.is_recurring && (
+                            {(exp.is_recurring || !!exp.recurring_expense_id) && (
                               <span 
                                 className="inline-flex items-center ml-1 text-zen-sage/80 hover:text-zen-sage transition-colors duration-200 cursor-help" 
                                 title="Recurring Expense"

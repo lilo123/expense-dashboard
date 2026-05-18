@@ -30,9 +30,11 @@ export async function getProfile(): Promise<{ success: boolean; data?: Profile; 
 export async function updateProfile(data: Partial<{
   display_name: string;
   base_currency: SupportedCurrency;
+  display_currency: SupportedCurrency;
   budget_reset_day: number;
   ai_tone: string;
   timezone: string;
+  onboarding_status: 'pending' | 'completed';
 }>): Promise<{ success: boolean; message?: string; error?: string }> {
   const supabase = await createClient();
 
@@ -50,9 +52,11 @@ export async function updateProfile(data: Partial<{
     };
     if (data.display_name !== undefined) updatePayload.display_name = data.display_name;
     if (data.base_currency !== undefined) updatePayload.base_currency = data.base_currency;
+    if (data.display_currency !== undefined) updatePayload.display_currency = data.display_currency;
     if (data.budget_reset_day !== undefined) updatePayload.budget_reset_day = data.budget_reset_day;
     if (data.ai_tone !== undefined) updatePayload.ai_tone = data.ai_tone;
     if (data.timezone !== undefined) updatePayload.timezone = data.timezone;
+    if (data.onboarding_status !== undefined) updatePayload.onboarding_status = data.onboarding_status;
 
     // Update Metadata in public.profiles Table and select the mutated row
     const { data: updatedData, error: profileUpdateError } = await supabase

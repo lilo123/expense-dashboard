@@ -12,7 +12,8 @@ const MIGRATION_FILES = [
   'supabase/migrations/20260510170000_phase_1_7.sql',
   'supabase/migrations/20260511000000_phase_1_8_recurring.sql',
   'supabase/migrations/20260512000000_decouple_recurring.sql',
-  'supabase/migrations/20260516232346_add_budgets_category_idx.sql'
+  'supabase/migrations/20260516232346_add_budgets_category_idx.sql',
+  'supabase/migrations/20260518000000_mvp_v2_foundation.sql'
 ];
 
 async function initDb() {

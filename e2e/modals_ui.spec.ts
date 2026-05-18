@@ -140,9 +140,10 @@ test.describe('Global Modals UI & Responsiveness E2E Test Suite', () => {
 
       if (searchBox && catBox && typeBox && sortBox) {
         console.log(`[HEIGHT CHECK] Search: ${searchBox.height}px, Category: ${catBox.height}px, Type: ${typeBox.height}px, Sort: ${sortBox.height}px`);
-        expect(catBox.height).toBe(searchBox.height);
-        expect(typeBox.height).toBe(searchBox.height);
-        expect(sortBox.height).toBe(searchBox.height);
+        // Prevent headless font-scaling sub-pixel deviations from breaking exact builds:
+        expect(Math.abs(catBox.height - searchBox.height)).toBeLessThanOrEqual(1.0);
+        expect(Math.abs(typeBox.height - searchBox.height)).toBeLessThanOrEqual(1.0);
+        expect(Math.abs(sortBox.height - searchBox.height)).toBeLessThanOrEqual(1.0);
       }
     });
   });

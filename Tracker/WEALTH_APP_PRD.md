@@ -141,10 +141,13 @@
         * **Responsive Layout Shifting**: Duplicate-render the Sort dropdown (Desktop instance inside the filters box; Mobile instance on the left edge of the controls row next to shortened `"Edit"` and `"Delete"` action buttons). Hide the desktop instance on mobile to eliminate layout duplicates.
         * **Transparent Overlay Select Pattern**: Style a custom button displaying `Sort by [Selected Option]` dynamically (e.g., `Sort by Date: Newest` as the default prompt), overlaying a fully transparent native `<select>` on top of it. This locks standard desktop/mobile responsive picker menus with custom visual prefixes beautifully.
         * **Automated Height Validation Guardrails**: Lock the vertical height of all filter search dropdown buttons to exactly `36px` (`h-9`) with explicit `minHeight: 0` and `box-border` overrides. Enforce this visual symmetry by compiling a mathematical E2E height comparison test case inside the test runner.
-* **Phase 2: Budget "Health Bars" (MVP v2):**
+* **Phase 2: Budget "Health Bars" & Route Refinements (MVP v2) - [COMPLETED]:**
   * **State & Database:** Integrate `budgets` data fetches into store.
-  * **Frontend Components:** Implement RPG-style budget "health bars" that transition dynamically from Green (100%) to Yellow (25%).
-  * **No Game Overs Philosophy:** When a budget hits 0%, render a Cool Blue/Purple ("Borrowed") status instead of red. Ensure AI companion companionably prompts the user to "Reallocate" funds rather than using negative jargon.
+  * **Zustand Hydration Synchronization (`useIsomorphicLayoutEffect`) [NEW]**: Resolved React 19 console state warnings cleanly by wrapping store hydration in an isomorphic layout effect wrapper (`useLayoutEffect` on client; `useEffect` on server). Incorporated the `areInitialDataEqual` deep comparison helper to prevent redundant store updates during server-side revalidations.
+  * **Next.js 15 Nested Sub-Layout (`/budget/layout.tsx`) [NEW]**: Isolated all gutter, padding, Safe Area, and max-width styles inside a dedicated nested layout component. Both page (`page.tsx`) and skeleton (`loading.tsx`) render nested in the layout children slot, naturally inheriting container dimensions.
+  * **Dynamic Skeleton Alignment (Zero CLS) [NEW]**: Redesigned `loading.tsx` to pre-render January's accordion as expanded, mirroring the fully loaded initial page state perfectly to eliminate a massive 521px height CLS layout shift.
+  * **RPG-Style Health Bars**: Implement RPG-style budget "health bars" that transition dynamically from Green (100%) to Yellow (25%).
+  * **No Game Overs Philosophy**: When a budget hits 0%, render a Cool Blue/Purple ("Borrowed") status instead of red. Ensure AI companion companionably prompts the user to "Reallocate" funds rather than using negative jargon.
 * **Phase 3:**
   * **Budget Rollover Functionality:** Allowing unspent budget to carry over to the next month (deferred from MVP v2 to keep initial launch simple).
   * **Advanced Gamification:** Leveling up Savings Avatars, unlocking new tiers.

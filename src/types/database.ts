@@ -2,6 +2,7 @@ export interface Category {
   id: string;
   user_id?: string;
   name: string;
+  icon?: string;
 }
 
 export interface Expense {
@@ -41,10 +42,21 @@ export interface Profile {
   display_name: string | null;
   avatar_url: string | null;
   base_currency: SupportedCurrency;
+  display_currency: SupportedCurrency;
   budget_reset_day: number;
   ai_tone: string;
   timezone: string;
+  onboarding_status: 'pending' | 'completed';
   updated_at: string;
+}
+
+export interface Budget {
+  id: string;
+  user_id: string;
+  category_id: string | null;
+  limit_amount: number;
+  currency: string;
+  month: string;
 }
 
 export interface RecurringExpense {

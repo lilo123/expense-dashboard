@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
@@ -7,7 +7,8 @@ import { useExpenseStore, StoreProvider } from '@/store/useExpenseStore';
 import { syncExchangeRates } from '@/app/actions/rates';
 import { getProfile, updateProfile } from '@/app/actions/profile';
 import { Category } from '@/types/database';
-import { Expense, User } from '@/types/database';
+import { Expense, User, Profile, Budget } from '@/types/database';
+import { Settings, Sliders, Repeat, Mic, LogOut, Bot, Plus } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 import Tabs from './Tabs';
@@ -23,22 +24,39 @@ const BulkEditModal = dynamic(() => import('./BulkEditModal'), { ssr: false });
 const SiriModal = dynamic(() => import('./SiriModal'), { ssr: false });
 const RecurringModal = dynamic(() => import('./RecurringModal'), { ssr: false });
 const ChatBox = dynamic(() => import('./ChatBox'), { ssr: false });
+const OnboardingModal = dynamic(() => import('./OnboardingModal'), { ssr: false });
 
 interface ClientDashboardProps {
   initialExpenses: Expense[];
   initialCategories: Category[];
   initialUser: User | null;
   initialError: string | null;
+  initialProfile?: Profile | null;
+  initialExchangeRates?: Record<string, number>;
+  initialBudgets?: Budget[];
 }
 
 export default function ClientDashboard({
   initialExpenses,
   initialCategories,
   initialUser,
-  initialError
+  initialError,
+  initialProfile,
+  initialExchangeRates,
+  initialBudgets
 }: ClientDashboardProps) {
   return (
-    <StoreProvider initialData={{ expenses: initialExpenses, categories: initialCategories, user: initialUser, globalError: initialError }}>
+    <StoreProvider initialData={{ 
+      expenses: initialExpenses, 
+      categories: initialCategories, 
+      user: initialUser, 
+      globalError: initialError,
+      profile: initialProfile || null,
+      exchangeRates: initialExchangeRates || { CAD: 1.0 },
+      displayCurrency: initialProfile?.display_currency || 'CAD',
+      baseCurrency: initialProfile?.base_currency || 'CAD',
+      budgets: initialBudgets || []
+    }}>
       <ClientDashboardContent />
     </StoreProvider>
   );
@@ -47,8 +65,8 @@ export default function ClientDashboard({
 function ClientDashboardContent() {
   const { 
     globalError, activeTab, 
-    toggleAddModal, toggleChatModal, toggleSiriModal, toggleRecurringModal,
-    isChatModalOpen, isAddModalOpen, isRecurringModalOpen,
+    toggleAddModal, toggleChatModal, toggleSiriModal, toggleRecurringModal, toggleOnboarding,
+    isChatModalOpen, isAddModalOpen, isRecurringModalOpen, isOnboardingOpen,
     reset,
     displayCurrency, setDisplayCurrency, setExchangeRates,
     profile, setProfile, baseCurrency, user,
@@ -57,31 +75,8 @@ function ClientDashboardContent() {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
-
-  
   const router = useRouter();
   const supabase = createClient();
-
-  // Sync Exchange Rates & Profile on Mount
-  useEffect(() => {
-    async function fetchRatesAndProfile() {
-      try {
-        // 1. Sync FX rates cache
-        const rates = await syncExchangeRates();
-        setExchangeRates(rates);
-
-        // 2. Hydrate user settings profile from database
-        const profileRes = await getProfile();
-        if (profileRes.success && profileRes.data) {
-          console.log('[PROFILE HYDRATION] Loaded database settings successfully.');
-          setProfile(profileRes.data);
-        }
-      } catch (err) {
-        console.error('[UI INITIAL SYNC ERROR] Failed to sync live rates or profile:', err);
-      }
-    }
-    fetchRatesAndProfile();
-  }, [setExchangeRates, setProfile]);
 
   // Timezone Sync Effect
   useEffect(() => {
@@ -89,16 +84,10 @@ function ClientDashboardContent() {
       if (profile) {
         const localTZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
         if (profile.timezone !== localTZ) {
-          console.log(`[TIMEZONE SYNC] Browser timezone (${localTZ}) differs from profile (${profile.timezone}). Syncing...`);
           try {
-            const res = await updateProfile({
-              timezone: localTZ
-            });
+            const res = await updateProfile({ timezone: localTZ });
             if (res.success) {
               setProfile({ ...profile, timezone: localTZ });
-              console.log('[TIMEZONE SYNC SUCCESS] Database and store updated.');
-            } else {
-              console.error('[TIMEZONE SYNC FAILED]:', res.error);
             }
           } catch (err) {
             console.error('[TIMEZONE SYNC ERROR]:', err);
@@ -109,11 +98,16 @@ function ClientDashboardContent() {
     syncTimezone();
   }, [profile, setProfile]);
 
+  // Stable Ref for categories to prevent Supabase Realtime subscription churn
+  const categoriesRef = useRef(categories);
+  useEffect(() => {
+    categoriesRef.current = categories;
+  }, [categories]);
+
   // Supabase Realtime Sync for Siri/Out-of-band Expense additions
   useEffect(() => {
     if (!user) return;
 
-    console.log('[REALTIME SUBSCRIPTION] Initializing for user:', user.id);
     const channel = supabase
       .channel('realtime-expenses')
       .on(
@@ -125,41 +119,53 @@ function ClientDashboardContent() {
           filter: `user_id=eq.${user.id}`,
         },
         (payload) => {
-          console.log('[REALTIME] New expense inserted in DB:', payload.new);
           const newExpense = payload.new as Expense;
-          
-          // Look up category name from store categories
-          const category = categories.find(c => c.id === newExpense.category_id);
-          
+          const category = categoriesRef.current.find(c => c.id === newExpense.category_id);
           const enrichedExpense: Expense = {
             ...newExpense,
             categories: category ? { name: category.name } : undefined
           };
-
           addExpense(enrichedExpense);
         }
       )
-      .subscribe((status) => {
-        console.log(`[REALTIME] Subscription status for user ${user.id}: ${status}`);
-      });
+      .subscribe();
 
     return () => {
-      console.log('[REALTIME SUBSCRIPTION] Cleaning up for user:', user.id);
       supabase.removeChannel(channel);
     };
-  }, [user, supabase, categories, addExpense]);
+  }, [user, supabase, addExpense]);
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  // Cleanly redirect to login if unauthenticated (Hydration-Safe fallback for Server Action transitions)
+  useEffect(() => {
+    if (isMounted && !user) {
+      window.location.href = '/login';
+    }
+  }, [isMounted, user]);
+
+  // Trigger Onboarding Modal if pending
+  useEffect(() => {
+    if (isMounted && profile && profile.onboarding_status === 'pending' && !isOnboardingOpen) {
+      toggleOnboarding();
+    }
+  }, [isMounted, profile, isOnboardingOpen, toggleOnboarding]);
+
+  // E2E test simulation listener for OnboardingModal
+  useEffect(() => {
+    const handleSim = () => toggleOnboarding();
+    window.addEventListener('onboarding-sim', handleSim);
+    return () => window.removeEventListener('onboarding-sim', handleSim);
+  }, [toggleOnboarding]);
+
   // Hydration-Safe Restore preferred display currency
   useEffect(() => {
     if (isMounted) {
       const stored = localStorage.getItem('displayCurrency');
       if (stored) {
-        console.log('[FX STORAGE HIT] Restoring preferred display currency:', stored);
         setDisplayCurrency(stored as any);
       }
     }
@@ -170,8 +176,6 @@ function ClientDashboardContent() {
     reset();
     router.push('/login');
   };
-
-
 
   useEffect(() => {
     if (typeof window !== 'undefined' && window.visualViewport) {
@@ -203,7 +207,6 @@ function ClientDashboardContent() {
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }} className="relative">
             {isMounted ? (
               <div className="relative">
-                {/* 1. Profile Initials Avatar button */}
                 <button 
                   id="profile-btn"
                   aria-label="Profile Menu"
@@ -216,7 +219,6 @@ function ClientDashboardContent() {
                     : (user?.email ? user.email.substring(0, 2).toUpperCase() : 'U')}
                 </button>
 
-                {/* 2. Floating Glassmorphic Dropdown Menu */}
                 {isDropdownOpen && (
                   <div 
                     id="profile-dropdown"
@@ -226,34 +228,40 @@ function ClientDashboardContent() {
                     <Link 
                       href="/settings" 
                       onClick={() => setIsDropdownOpen(false)}
-                      className="block px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
                     >
-                      Account Overview
+                      <Settings size={16} /> Account Overview
+                    </Link>
+
+                    <Link 
+                      href="/budget"
+                      onClick={() => setIsDropdownOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
+                    >
+                      <Sliders size={16} /> Set Monthly Budget
                     </Link>
 
                     <button 
                       onClick={() => { setIsDropdownOpen(false); toggleRecurringModal(); }}
-                      className="flex items-center text-left px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all cursor-pointer border-none bg-transparent w-full"
+                      className="flex items-center gap-2 text-left px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all cursor-pointer border-none bg-transparent w-full"
                     >
-                      Recurring Expense
+                      <Repeat size={16} /> Recurring Expense
                     </button>
                     
                     <button 
                       onClick={() => { setIsDropdownOpen(false); toggleSiriModal(); }}
-                      className="flex items-center text-left px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all cursor-pointer border-none bg-transparent w-full"
+                      className="flex items-center gap-2 text-left px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all cursor-pointer border-none bg-transparent w-full"
                     >
-                      Siri Setup
+                      <Mic size={16} /> Siri Setup
                     </button>
-
-
 
                     <hr className="border-t border-zen-lavender/20 my-1" />
 
                     <button 
                       onClick={() => { setIsDropdownOpen(false); handleSignOut(); }}
-                      className="flex items-center text-left px-3 py-2 rounded-xl hover:bg-zen-peach/30 text-zen-charcoal font-bold text-sm transition-all cursor-pointer border-none bg-transparent w-full"
+                      className="flex items-center gap-2 text-left px-3 py-2 rounded-xl hover:bg-zen-peach/30 text-zen-charcoal font-bold text-sm transition-all cursor-pointer border-none bg-transparent w-full"
                     >
-                      Sign Out
+                      <LogOut size={16} /> Sign Out
                     </button>
                   </div>
                 )}
@@ -294,17 +302,17 @@ function ClientDashboardContent() {
       <div className="fab-container">
         <button 
           id="action-elem-8" 
-          className={`fab secondary-fab transition-all duration-200 rounded-full ${isChatModalOpen ? 'bg-zen-sage text-zen-charcoal shadow-md border-none' : 'bg-white/60 text-zen-charcoal/60 border border-zen-lavender/30 hover:bg-white/80'}`}
+          className={`fab secondary-fab transition-all duration-200 rounded-full flex items-center justify-center ${isChatModalOpen ? 'bg-zen-sage text-zen-charcoal shadow-md border-none' : 'bg-white/60 text-zen-charcoal/60 border border-zen-lavender/30 hover:bg-white/80'}`}
           onClick={() => { console.log("FAB_CLICKED_SUCCESSFULLY"); toggleChatModal(); }}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path></svg>
+          <Bot size={24} />
         </button>
         <button 
           id="fab" 
-          className={`fab transition-all duration-200 rounded-full shadow-md border-none cursor-pointer ${isAddModalOpen ? 'bg-zen-sage text-zen-charcoal rotate-45' : 'bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90'}`}
+          className={`fab transition-all duration-200 rounded-full shadow-md border-none cursor-pointer flex items-center justify-center ${isAddModalOpen ? 'bg-zen-sage text-zen-charcoal rotate-45' : 'bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90'}`}
           onClick={toggleAddModal}
         >
-          +
+          <Plus size={24} />
         </button>
       </div>
       
@@ -314,6 +322,7 @@ function ClientDashboardContent() {
       <ChatBox />
       <SiriModal />
       <RecurringModal />
+      <OnboardingModal />
     </>
   );
 }

@@ -1,11 +1,15 @@
-import { createContext, useContext, useRef } from 'react';
+import { createContext, useContext, useRef, useLayoutEffect, useEffect } from 'react';
 import { createStore, useStore } from 'zustand';
-import { Expense, Category, User, SupportedCurrency, Profile, RecurringExpense } from '@/types/database';
+import { Expense, Category, User, SupportedCurrency, Profile, RecurringExpense, Budget } from '@/types/database';
+import { reallocateFundsAction } from '@/app/actions/budget';
+
+const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 export interface ExpenseState {
   expenses: Expense[];
   categories: Category[];
   recurringExpenses: RecurringExpense[];
+  budgets: Budget[];
   user: User | null;
   globalError: string | null;
   
@@ -22,9 +26,14 @@ export interface ExpenseState {
   isBulkEditModalOpen: boolean;
   isSiriModalOpen: boolean;
   isRecurringModalOpen: boolean;
+  isOnboardingOpen: boolean;
+  isReallocationOpen: boolean;
+  isBudgetView: boolean;
   
   activeTab: 'dashboard' | 'recent' | 'yearly';
   editingExpenseId: string | null;
+  reallocationSourceId: string | null;
+  reallocationMonth: string | null;
   activeCategoryFilter: string | null;
   activeMonthFilter: string | null;
 
@@ -33,16 +42,19 @@ export interface ExpenseState {
   
   setActiveCategoryFilter: (cat: string | null) => void;
   setActiveMonthFilter: (month: string | null) => void;
+  setBudgetView: (view: boolean) => void;
 
   setDisplayCurrency: (curr: SupportedCurrency) => void;
   setProfile: (prof: Profile | null) => void;
   setBaseCurrency: (curr: SupportedCurrency) => void;
   setExchangeRates: (rates: Record<string, number>) => void;
+  setBudgets: (budgets: Budget[]) => void;
 
   hydrate: (data: { 
     expenses?: Expense[]; 
     categories?: Category[]; 
     recurringExpenses?: RecurringExpense[];
+    budgets?: Budget[];
     user?: User | null; 
     error?: string;
     displayCurrency?: SupportedCurrency;
@@ -57,6 +69,8 @@ export interface ExpenseState {
   toggleBulkEditModal: () => void;
   toggleSiriModal: () => void;
   toggleRecurringModal: () => void;
+  toggleOnboarding: () => void;
+  toggleReallocation: (sourceId?: string | null, month?: string | null) => void;
   
   reset: () => void;
   
@@ -76,13 +90,16 @@ export interface ExpenseState {
   deleteExpense: (id: string) => void;
   addRecurringExpense: (config: RecurringExpense) => void;
   removeRecurringExpense: (id: string) => void;
+  updateBudgetLimit: (categoryId: string | null, month: string, amount: number) => void;
+  executeReallocation: (sourceId: string | null, targetId: string, amount: number, month: string) => Promise<boolean>;
 }
 
 export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) => 
-  createStore<ExpenseState>((set) => ({
+  createStore<ExpenseState>((set, get) => ({
     expenses: initialState.expenses || [],
     categories: initialState.categories || [],
     recurringExpenses: initialState.recurringExpenses || [],
+    budgets: initialState.budgets || [],
     user: initialState.user || null,
     globalError: initialState.globalError || null,
     displayCurrency: initialState.displayCurrency || 'CAD',
@@ -96,8 +113,13 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     isBulkEditModalOpen: false,
     isSiriModalOpen: false,
     isRecurringModalOpen: false,
+    isOnboardingOpen: false,
+    isReallocationOpen: false,
+    isBudgetView: initialState.isBudgetView || false,
     activeTab: 'dashboard',
     editingExpenseId: null,
+    reallocationSourceId: null,
+    reallocationMonth: null,
     activeCategoryFilter: null,
     activeMonthFilter: null,
     isSelectMode: false,
@@ -105,6 +127,7 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
 
     setActiveCategoryFilter: (cat) => set({ activeCategoryFilter: cat }),
     setActiveMonthFilter: (month) => set({ activeMonthFilter: month }),
+    setBudgetView: (view) => set({ isBudgetView: view }),
     
     setDisplayCurrency: (curr) => set(() => {
       if (typeof window !== 'undefined') {
@@ -115,6 +138,7 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     setProfile: (prof) => set({ profile: prof }),
     setBaseCurrency: (curr) => set({ baseCurrency: curr }),
     setExchangeRates: (rates) => set({ exchangeRates: rates }),
+    setBudgets: (b) => set({ budgets: b }),
     
     hydrate: (data) => set((state) => {
       const activeProfile = data.profile !== undefined ? data.profile : state.profile;
@@ -133,6 +157,7 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
         expenses: data.expenses !== undefined ? [...data.expenses] : state.expenses, 
         categories: data.categories !== undefined ? [...data.categories] : state.categories, 
         recurringExpenses: data.recurringExpenses !== undefined ? [...data.recurringExpenses] : state.recurringExpenses,
+        budgets: data.budgets !== undefined ? [...data.budgets] : state.budgets,
         user: data.user !== undefined ? data.user : state.user, 
         globalError: data.error !== undefined ? data.error : state.globalError,
         profile: activeProfile,
@@ -149,11 +174,18 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
     toggleBulkEditModal: () => set((state) => ({ isBulkEditModalOpen: !state.isBulkEditModalOpen })),
     toggleSiriModal: () => set((state) => ({ isSiriModalOpen: !state.isSiriModalOpen })),
     toggleRecurringModal: () => set((state) => ({ isRecurringModalOpen: !state.isRecurringModalOpen })),
+    toggleOnboarding: () => set((state) => ({ isOnboardingOpen: !state.isOnboardingOpen })),
+    toggleReallocation: (sourceId, month) => set((state) => ({
+      isReallocationOpen: !state.isReallocationOpen,
+      reallocationSourceId: sourceId !== undefined ? sourceId : null,
+      reallocationMonth: month !== undefined ? month : null
+    })),
     
     reset: () => set({ 
       expenses: [], 
       categories: [], 
       recurringExpenses: [],
+      budgets: [],
       user: null, 
       globalError: null, 
       displayCurrency: 'CAD',
@@ -167,7 +199,12 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       isBulkEditModalOpen: false, 
       isSiriModalOpen: false, 
       isRecurringModalOpen: false, 
+      isOnboardingOpen: false,
+      isReallocationOpen: false,
+      isBudgetView: false,
       editingExpenseId: null, 
+      reallocationSourceId: null,
+      reallocationMonth: null,
       activeCategoryFilter: null, 
       activeMonthFilter: null, 
       isSelectMode: false, 
@@ -264,11 +301,85 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
 
     removeRecurringExpense: (id) => set((state) => ({
       recurringExpenses: state.recurringExpenses.filter((r) => r.id !== id)
-    }))
+    })),
+
+    updateBudgetLimit: (catId, month, amt) => set((state) => ({
+      budgets: state.budgets.map(b => (b.category_id === catId && b.month === month) ? { ...b, limit_amount: amt } : b)
+    })),
+
+    executeReallocation: async (sourceId, targetId, amount, month) => {
+      const previousBudgets = [...get().budgets];
+
+      // Optimistic update
+      set((state) => {
+        const newBudgets = state.budgets.map(b => {
+          if (b.month !== month) return b;
+          if (b.category_id === sourceId) {
+            return { ...b, limit_amount: b.limit_amount - amount };
+          }
+          if (b.category_id === targetId) {
+            return { ...b, limit_amount: b.limit_amount + amount };
+          }
+          return b;
+        });
+        return { budgets: newBudgets };
+      });
+
+      // Background sync
+      const res = await reallocateFundsAction({
+        month,
+        source_category_id: sourceId,
+        target_category_id: targetId,
+        amount
+      });
+
+      if (!res.success) {
+        set({ budgets: previousBudgets, globalError: res.error || 'Reallocation failed.' });
+        return false;
+      }
+      return true;
+    }
   }));
 
 // Create React Context for Request-Scoped Store
 const StoreContext = createContext<ReturnType<typeof createExpenseStore> | null>(null);
+
+function areInitialDataEqual(a: Partial<ExpenseState>, b: Partial<ExpenseState>): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  
+  const keysToCompare: (keyof ExpenseState)[] = [
+    'expenses', 'categories', 'recurringExpenses', 'budgets', 'user', 'profile',
+    'displayCurrency', 'baseCurrency', 'exchangeRates'
+  ];
+  
+  for (const key of keysToCompare) {
+    const valA = a[key];
+    const valB = b[key];
+    
+    if (valA === valB) continue;
+    if (!valA || !valB) return false;
+    
+    if (Array.isArray(valA) && Array.isArray(valB)) {
+      if (valA.length !== valB.length) return false;
+      for (let i = 0; i < valA.length; i++) {
+        if (valA[i]?.id !== valB[i]?.id) return false;
+        if (key === 'budgets') {
+          const itemA = valA[i] as any;
+          const itemB = valB[i] as any;
+          if (itemA?.limit_amount !== itemB?.limit_amount || itemA?.month !== itemB?.month) {
+            return false;
+          }
+        }
+      }
+    } else if (typeof valA === 'object' && typeof valB === 'object') {
+      if (JSON.stringify(valA) !== JSON.stringify(valB)) return false;
+    } else {
+      if (valA !== valB) return false;
+    }
+  }
+  return true;
+}
 
 // Export StoreProvider Context Component
 export function StoreProvider({ children, initialData }: { children: React.ReactNode, initialData: Partial<ExpenseState> }) {
@@ -276,6 +387,16 @@ export function StoreProvider({ children, initialData }: { children: React.React
   if (!storeRef.current) {
     storeRef.current = createExpenseStore(initialData);
   }
+  
+  const prevInitialDataRef = useRef<Partial<ExpenseState>>(initialData);
+
+  useIsomorphicLayoutEffect(() => {
+    if (prevInitialDataRef.current !== initialData && !areInitialDataEqual(prevInitialDataRef.current, initialData)) {
+      storeRef.current?.getState().hydrate(initialData);
+      prevInitialDataRef.current = initialData;
+    }
+  }, [initialData]);
+
   return (
     <StoreContext.Provider value={storeRef.current}>
       {children}

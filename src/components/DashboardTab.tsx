@@ -13,6 +13,8 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
+import BudgetView from './BudgetView';
+import ReallocationModal from './ReallocationModal';
 import { formatUTCToLocal, formatFriendlyDate, wrapLabel } from '@/lib/utils';
 
 ChartJS.register(
@@ -35,7 +37,7 @@ const now = new Date();
 }
 
 export default function DashboardTab() {
-  const { expenses, activeCategoryFilter, setActiveCategoryFilter, displayCurrency, baseCurrency, exchangeRates } = useExpenseStore();
+  const { expenses, activeCategoryFilter, setActiveCategoryFilter, displayCurrency, baseCurrency, exchangeRates, isBudgetView, setBudgetView } = useExpenseStore();
   
   const { firstDay, todayStr } = getCurrentMonthDatesLocal();
   
@@ -112,7 +114,6 @@ export default function DashboardTab() {
       const x = event.x;
       const y = event.y;
       
-      // Check if click was on the Y-axis tick area
       if (x >= yScale.left && x <= yScale.right) {
         const idx = Math.round(yScale.getValueForPixel(y));
         if (idx >= 0 && idx < labels.length) {
@@ -200,85 +201,110 @@ export default function DashboardTab() {
 
   return (
     <div id="tab-dashboard" className="tab-content active" style={{ display: "block" }}>
-      <div className="filter-container flex flex-col gap-3 w-full mb-5">
-        {/* Row 1: Full-Width Flex-Grow Inputs */}
-        <div className="flex flex-row items-center justify-between gap-3 w-full">
-          <input 
-            type="month" 
-            id="start-date" 
-            value={startDate} 
-            onChange={e => setStartDate(e.target.value)} 
-            className="flex-1 min-w-0 rounded-full bg-white/50 border border-zen-lavender/60 px-4 py-2 text-sm text-zen-charcoal focus:outline-none focus:ring-2 focus:ring-zen-sage outline-none h-9 text-center"
-          />
-          <span className="flex-shrink-0 text-zen-charcoal/60 font-medium px-1">
-            to
-          </span>
-          <input 
-            type="month" 
-            id="end-date" 
-            value={endDate} 
-            onChange={e => setEndDate(e.target.value)} 
-            className="flex-1 min-w-0 rounded-full bg-white/50 border border-zen-lavender/60 px-4 py-2 text-sm text-zen-charcoal focus:outline-none focus:ring-2 focus:ring-zen-sage outline-none h-9 text-center"
-          />
-        </div>
-        
-        {/* Row 2: Centered Clear Button */}
-        <div className="flex justify-center w-full">
+      
+      {/* VIEW TOGGLE */}
+      <div className="flex justify-center mb-6">
+        <div className="flex items-center bg-white/60 border border-zen-lavender/40 rounded-full p-1 shadow-inner w-fit">
           <button 
-            type="button" 
-            onClick={handleClear} 
-            className="px-6 py-2 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-all text-xs cursor-pointer border-none h-8 flex items-center justify-center"
-            style={{ minWidth: '80px' }}
+            onClick={() => setBudgetView(false)}
+            className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer border-none ${!isBudgetView ? 'bg-zen-charcoal text-zen-base shadow-md' : 'bg-transparent text-zen-charcoal/60 hover:text-zen-charcoal'}`}
           >
-            Clear Filter
+            Expense View
+          </button>
+          <button 
+            onClick={() => setBudgetView(true)}
+            className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all cursor-pointer border-none ${isBudgetView ? 'bg-zen-charcoal text-zen-base shadow-md' : 'bg-transparent text-zen-charcoal/60 hover:text-zen-charcoal'}`}
+          >
+            Budget View
           </button>
         </div>
       </div>
 
-      <div className="bg-white/40 backdrop-blur-md border border-white/20 shadow-sm text-zen-charcoal p-6 rounded-2xl text-center mb-6">
-          <h3 className="text-zen-charcoal/70 font-medium text-sm mb-2">Total Expense</h3>
-          <div id="total-amount" className="text-zen-charcoal text-4xl font-extrabold flex justify-center items-center">
-            <span id="total-amount-mobile" className="block md:hidden">{formatChartFriendlyCurrency(total, displayCurrency)}</span>
-            <span id="total-amount-desktop" className="hidden md:block">{formatFriendlyCurrency(total, displayCurrency)}</span>
+      {!isBudgetView ? (
+        <>
+          <div className="filter-container flex flex-col gap-3 w-full mb-5">
+            <div className="flex flex-row items-center justify-between gap-3 w-full">
+              <input 
+                type="month" 
+                id="start-date" 
+                value={startDate} 
+                onChange={e => setStartDate(e.target.value)} 
+                className="flex-1 min-w-0 rounded-full bg-white/50 border border-zen-lavender/60 px-4 py-2 text-sm text-zen-charcoal focus:outline-none focus:ring-2 focus:ring-zen-sage outline-none h-9 text-center"
+              />
+              <span className="flex-shrink-0 text-zen-charcoal/60 font-medium px-1">
+                to
+              </span>
+              <input 
+                type="month" 
+                id="end-date" 
+                value={endDate} 
+                onChange={e => setEndDate(e.target.value)} 
+                className="flex-1 min-w-0 rounded-full bg-white/50 border border-zen-lavender/60 px-4 py-2 text-sm text-zen-charcoal focus:outline-none focus:ring-2 focus:ring-zen-sage outline-none h-9 text-center"
+              />
+            </div>
+            
+            <div className="flex justify-center w-full">
+              <button 
+                type="button" 
+                onClick={handleClear} 
+                className="px-6 py-2 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-all text-xs cursor-pointer border-none h-8 flex items-center justify-center"
+                style={{ minWidth: '80px' }}
+              >
+                Clear Filter
+              </button>
+            </div>
           </div>
-      </div>
 
-      <h2 className="font-bold">By Category</h2>
-      <div className="chart-container" style={{ height: Math.max(300, labels.length * 40 + 50) + 'px' }}>
-          {isMounted && labels.length > 0 ? (
-            <Bar data={chartData} options={options as any} plugins={[ChartDataLabels]} />
-          ) : (
-            <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              {isMounted ? 'No expenses in this range.' : 'Loading Chart...'}
-            </div>
-          )}
-      </div>
-      <div id="category-details-container" ref={detailsRef} style={{ marginTop: '20px' }}>
-        {activeCategoryFilter && (
-          <div className="category-details p-5 bg-white/40 backdrop-blur-md border border-white/20 rounded-3xl mb-5 shadow-sm text-left">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <h3 className="font-bold text-zen-charcoal">{activeCategoryFilter} Details</h3>
-              <button onClick={() => setActiveCategoryFilter(null)} className="px-3 py-1 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-colors text-sm cursor-pointer border-none">Close</button>
-            </div>
-            <div className="recent-list">
-              {detailExpenses.map(exp => (
-                <div key={exp.id} className="expense-item">
-                  <div className="expense-info">
-                    <h4>{exp.item}</h4>
-                    <p>{formatFriendlyDate(exp.date)}</p>
-                  </div>
-                  <div className="expense-amount">
-                    {formatFriendlyCurrency(
-                      convertAmount(parseFloat(exp.amount as any) || 0, baseCurrency, displayCurrency, exchangeRates),
-                      displayCurrency
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="bg-white/40 backdrop-blur-md border border-white/20 shadow-sm text-zen-charcoal p-6 rounded-2xl text-center mb-6">
+              <h3 className="text-zen-charcoal/70 font-medium text-sm mb-2">Total Expense</h3>
+              <div id="total-amount" className="text-zen-charcoal text-4xl font-extrabold flex justify-center items-center">
+                <span id="total-amount-mobile" className="block md:hidden">{formatChartFriendlyCurrency(total, displayCurrency)}</span>
+                <span id="total-amount-desktop" className="hidden md:block">{formatFriendlyCurrency(total, displayCurrency)}</span>
+              </div>
           </div>
-        )}
-      </div>
+
+          <h2 className="font-bold">By Category</h2>
+          <div className="chart-container" style={{ height: Math.max(300, labels.length * 40 + 50) + 'px' }}>
+              {isMounted && labels.length > 0 ? (
+                <Bar data={chartData} options={options as any} plugins={[ChartDataLabels]} />
+              ) : (
+                <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  {isMounted ? 'No expenses in this range.' : 'Loading Chart...'}
+                </div>
+              )}
+          </div>
+          <div id="category-details-container" ref={detailsRef} style={{ marginTop: '20px' }}>
+            {activeCategoryFilter && (
+              <div className="category-details p-5 bg-white/40 backdrop-blur-md border border-white/20 rounded-3xl mb-5 shadow-sm text-left">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <h3 className="font-bold text-zen-charcoal">{activeCategoryFilter} Details</h3>
+                  <button onClick={() => setActiveCategoryFilter(null)} className="px-3 py-1 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-colors text-sm cursor-pointer border-none">Close</button>
+                </div>
+                <div className="recent-list">
+                  {detailExpenses.map(exp => (
+                    <div key={exp.id} className="expense-item">
+                      <div className="expense-info">
+                        <h4>{exp.item}</h4>
+                        <p>{formatFriendlyDate(exp.date)}</p>
+                      </div>
+                      <div className="expense-amount">
+                        {formatFriendlyCurrency(
+                          convertAmount(parseFloat(exp.amount as any) || 0, baseCurrency, displayCurrency, exchangeRates),
+                          displayCurrency
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <BudgetView />
+      )}
+
+      <ReallocationModal />
     </div>
   );
 }

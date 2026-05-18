@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { updateProfile, updateEmail, updatePassword, getProfile } from '@/app/actions/profile';
 import { SupportedCurrency } from '@/types/database';
+import { Info, Lock, ArrowLeft, Edit3 } from 'lucide-react';
 import CategoryManager from './CategoryManager';
 
 interface SettingsFormProps {
@@ -209,10 +210,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
           href="/dashboard" 
           className="flex items-center gap-2 text-zen-charcoal hover:opacity-80 transition-all text-sm font-semibold no-underline cursor-pointer"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="19" y1="12" x2="5" y2="12"></line>
-            <polyline points="12 19 5 12 12 5"></polyline>
-          </svg>
+          <ArrowLeft size={16} />
           <span>Back to Dashboard</span>
         </Link>
         <h1 className="text-zen-charcoal font-bold text-xl margin-0">Account Overview</h1>
@@ -231,10 +229,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
               onClick={() => setIsEditingProfile(true)}
               className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold text-xs cursor-pointer transition-all"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
+              <Edit3 size={14} />
               <span>Edit</span>
             </button>
           ) : (
@@ -315,22 +310,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
             </select>
           </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-zen-charcoal/60 font-semibold ml-1">Budget Reset Day</label>
-            <select 
-              value={budgetResetDay} 
-              disabled={!isEditingProfile}
-              aria-label="Budget Reset Day"
-              onChange={e => setBudgetResetDay(parseInt(e.target.value, 10))}
-              className={`w-full px-4 py-3 rounded-full bg-white/50 border focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal text-base appearance-none h-12 box-border transition-all ${
-                !isEditingProfile ? 'border-transparent opacity-75 bg-transparent cursor-default pointer-events-none' : 'border-zen-lavender/60 cursor-pointer'
-              }`}
-            >
-              {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                <option key={day} value={day}>Day {day} of the month</option>
-              ))}
-            </select>
-          </div>
+
 
           {/* NOTE: AI Coach Persona Tone setting remains fully active on the backend, but is completely hidden from the end-user UI here */}
 
@@ -359,10 +339,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
               onClick={() => setIsEditingEmail(true)}
               className="flex items-center gap-1 px-3 py-1.5 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-semibold text-xs cursor-pointer transition-all"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-                <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-              </svg>
+              <Edit3 size={14} />
               <span>Change</span>
             </button>
           ) : (
@@ -400,8 +377,9 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
               }`}
             />
             {isEditingEmail && (
-              <p className="text-xs text-zen-charcoal/50 ml-2 mt-1 leading-relaxed">
-                ℹ️ Changing your email requires clicking the verification links sent to both your old and new email addresses. Your profile settings will update once fully verified.
+              <p className="text-xs text-zen-charcoal/50 ml-2 mt-1 leading-relaxed flex items-start gap-1.5">
+                <Info size={16} className="text-zen-charcoal/50 shrink-0" />
+                <span>Changing your email requires clicking the verification links sent to both your old and new email addresses. Your profile settings will update once fully verified.</span>
               </p>
             )}
           </div>
@@ -437,9 +415,9 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
           <button 
             id="change-password-btn"
             onClick={() => setIsEditingPassword(true)}
-            className="w-full py-4 bg-white/60 border border-zen-lavender/40 hover:bg-white/80 text-zen-charcoal rounded-full font-bold text-base cursor-pointer transition-all"
+            className="w-full py-4 bg-white/60 border border-zen-lavender/40 hover:bg-white/80 text-zen-charcoal rounded-full font-bold text-base cursor-pointer transition-all flex items-center justify-center gap-2"
           >
-            🔐 Change Account Password
+            <Lock size={16} /> Change Account Password
           </button>
         ) : (
           <form onSubmit={handleSavePassword} className="flex flex-col gap-4">

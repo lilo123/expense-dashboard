@@ -60,7 +60,7 @@ test.describe('Recent Tab Filters, Search, and Sort', () => {
     await page.click('#type-filter');
 
     // 2. Select "Recurring" checkbox
-    await page.locator('label', { hasText: 'Recurring' }).click();
+    await page.locator('label[for="checkbox-type-filter-recurring"]').click();
 
     // 3. Close dropdown
     await page.locator('.fixed.inset-0.z-40').click();
@@ -129,7 +129,7 @@ test.describe('Recent Tab Filters, Search, and Sort', () => {
   test('should support combined search, filter, and sort', async ({ page }) => {
     // 1. Filter by type "recurring"
     await page.click('#type-filter');
-    await page.locator('label', { hasText: 'Recurring' }).click();
+    await page.locator('label[for="checkbox-type-filter-recurring"]').click();
     await page.locator('.fixed.inset-0.z-40').click();
     
     // 2. Search for "Netflix" (should match Netflix)

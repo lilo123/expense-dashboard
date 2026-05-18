@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { addCategoryAction, updateCategoryAction, deleteCategoryAction } from '@/app/actions';
 import { Category } from '@/types/database';
+import { Trash2, Edit3, Plus, AlertTriangle } from 'lucide-react';
 
 export default function CategoryManager() {
   const { 
@@ -105,9 +106,9 @@ export default function CategoryManager() {
         />
         <button 
           onClick={handleAdd} 
-          className="px-6 bg-zen-charcoal text-zen-base rounded-full font-bold hover:bg-zen-charcoal/90 transition-all text-base cursor-pointer h-12 flex items-center justify-center border-none shadow-sm"
+          className="px-6 bg-zen-charcoal text-zen-base rounded-full font-bold hover:bg-zen-charcoal/90 transition-all text-base cursor-pointer h-12 flex items-center justify-center gap-1 border-none shadow-sm"
         >
-          Add
+          <Plus size={16} /> Add
         </button>
       </div>
 
@@ -139,7 +140,7 @@ export default function CategoryManager() {
                   aria-label="Edit Category"
                   className="cursor-pointer p-1.5 text-zen-charcoal/60 hover:text-zen-sage bg-transparent border-none transition-colors flex items-center justify-center"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path><path d="m15 5 4 4"></path></svg>
+                  <Edit3 size={16} />
                 </button>
               )}
               <button 
@@ -147,7 +148,7 @@ export default function CategoryManager() {
                 aria-label="Delete Category"
                 className="cursor-pointer p-1.5 text-zen-charcoal/60 hover:text-zen-peach bg-transparent border-none transition-colors flex items-center justify-center"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+                <Trash2 size={16} />
               </button>
             </div>
           </li>
@@ -188,8 +189,9 @@ export default function CategoryManager() {
             )}
 
             {!isDeletingEmpty && !hasOtherCategories && (
-              <div className="my-4 p-3.5 bg-zen-peach/20 border border-zen-peach/45 text-zen-charcoal rounded-2xl text-sm text-center font-semibold">
-                ⚠️ Please create at least one other category first before you can delete this one.
+              <div className="my-4 p-3.5 bg-zen-peach/20 border border-zen-peach/45 text-zen-charcoal rounded-2xl text-sm text-center font-semibold flex items-center gap-2">
+                <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                <span>Please create at least one other category first before you can delete this one.</span>
               </div>
             )}
 

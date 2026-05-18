@@ -11,7 +11,7 @@ This document tracks the status of all development phases, milestones, and featu
 - [x] **Phase 1.65:** Postgres Trigger Categories Auto-Seeding & Multi-Currency conversion pipeline.
 - [x] **Phase 1.7:** User Profile Management, Protected settings routes, and transactional category seeding.
 - [x] **Phase 1.8:** Background Chron Automation, pg_cron hourly workers, janitor purges, Yearly Stacked Breakdown Charts, and Advanced Touch Gestures long-press bulk selection.
-- [ ] **Phase 2:** RPG-style Budget "Health Bars" (MVP v2).
+- [x] **Phase 2:** RPG-style Budget "Health Bars" & Next.js 15 Route Refinements (MVP v2).
 - [ ] **Phase 3:** Budget Rollovers and Avatars Gamification.
 
 ---
