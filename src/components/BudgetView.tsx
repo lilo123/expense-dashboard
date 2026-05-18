@@ -1,8 +1,8 @@
 'use client';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { convertAmount, formatNoDecimalCurrency } from '@/lib/utils';
-import { Tag } from 'lucide-react';
+import { Tag, ListFilter, ChevronDown } from 'lucide-react';
 import AdjustMasterBudgetModal from './AdjustMasterBudgetModal';
 
 export default function BudgetView() {
@@ -18,10 +18,30 @@ export default function BudgetView() {
 
   const [isMounted, setIsMounted] = useState(false);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
+  const [sortDirection, setSortDirection] = useState<'highest' | 'lowest'>('highest');
+  const [sortMetric, setSortMetric] = useState<'budget' | 'spend' | 'remaining'>('budget');
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortPopoverRef = useRef<HTMLDivElement>(null);
+
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  // Dismiss sort popover panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sortPopoverRef.current && !sortPopoverRef.current.contains(e.target as Node)) {
+        setIsSortOpen(false);
+      }
+    };
+    if (isSortOpen) {
+      window.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      window.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSortOpen]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -81,6 +101,35 @@ export default function BudgetView() {
     Object.values(spentByCategory).forEach(s => spent += s);
     return { totalLimits: limits, totalSpent: spent };
   }, [selectedMonthBudgets, spentByCategory]);
+
+  const sortedCategories = useMemo(() => {
+    const items = categories.map(cat => {
+      const budget = selectedMonthBudgets.find(b => b.category_id === cat.id);
+      const limit = budget ? budget.limit_amount : 0;
+      const spent = spentByCategory[cat.id] || 0;
+      const remaining = Math.max(0, limit - spent);
+      return { category: cat, limit, spent, remaining };
+    });
+
+    const activeItems = items.filter(item => !(item.limit === 0 && item.spent === 0));
+
+    activeItems.sort((a, b) => {
+      let metricA = 0;
+      let metricB = 0;
+      if (sortMetric === 'budget') {
+        metricA = a.limit;
+        metricB = b.limit;
+      } else if (sortMetric === 'spend') {
+        metricA = a.spent;
+        metricB = b.spent;
+      } else if (sortMetric === 'remaining') {
+        metricA = a.remaining;
+        metricB = b.remaining;
+      }
+      return sortDirection === 'highest' ? metricB - metricA : metricA - metricB;
+    });
+    return activeItems;
+  }, [categories, selectedMonthBudgets, spentByCategory, sortMetric, sortDirection]);
 
   // Pre-reconcile integers before subtraction to guarantee A - B = C in UI displays
   const displayTotalLimits = Math.round(totalLimits);
@@ -161,24 +210,103 @@ export default function BudgetView() {
 
       {/* Capacity Indicators List */}
       <div className="flex flex-col gap-4">
-        <h3 className="font-bold text-lg text-zen-charcoal m-0">Category Budgets</h3>
+        <div className="flex justify-between items-center relative">
+          <h3 className="font-bold text-lg text-zen-charcoal m-0">Category Budgets</h3>
+          
+          {/* Sort popover trigger pill */}
+          <div ref={sortPopoverRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setIsSortOpen(!isSortOpen)}
+              style={{ minHeight: 0 }}
+              className="px-4 py-2 rounded-full border border-zen-lavender/30 bg-white/60 backdrop-blur-md text-zen-charcoal text-xs font-bold flex items-center gap-1.5 hover:bg-white/80 transition-all shadow-xs cursor-pointer"
+            >
+              <ListFilter size={14} className="text-zen-charcoal/60" />
+              <span className="capitalize">
+                Sort: {sortDirection} {sortMetric}
+              </span>
+              <ChevronDown size={12} className={`text-zen-charcoal/50 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Absolute 2-Axis Sort Popover */}
+            {isSortOpen && (
+              <div className="absolute right-0 top-10 z-50 bg-white/95 backdrop-blur-xl border border-zen-lavender/40 shadow-xl rounded-3xl p-4 flex items-stretch gap-4 text-xs text-zen-charcoal font-semibold min-w-[220px] animate-scale-up">
+                {/* Column 1: Direction */}
+                <div className="flex flex-col gap-2.5 flex-1">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="budgetSortDir"
+                      checked={sortDirection === 'highest'}
+                      onChange={() => setSortDirection('highest')}
+                      className="w-3.5 h-3.5 accent-zen-sage"
+                    />
+                    Highest
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="budgetSortDir"
+                      checked={sortDirection === 'lowest'}
+                      onChange={() => setSortDirection('lowest')}
+                      className="w-3.5 h-3.5 accent-zen-sage"
+                    />
+                    Lowest
+                  </label>
+                </div>
+
+                {/* Divider */}
+                <div className="w-[1px] bg-zen-lavender/30 self-stretch mx-1" />
+
+                {/* Column 2: Metric */}
+                <div className="flex flex-col gap-2.5 flex-1">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="budgetSortMetric"
+                      checked={sortMetric === 'budget'}
+                      onChange={() => setSortMetric('budget')}
+                      className="w-3.5 h-3.5 accent-zen-sage"
+                    />
+                    Budget
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="budgetSortMetric"
+                      checked={sortMetric === 'spend'}
+                      onChange={() => setSortMetric('spend')}
+                      className="w-3.5 h-3.5 accent-zen-sage"
+                    />
+                    Spend
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="radio"
+                      name="budgetSortMetric"
+                      checked={sortMetric === 'remaining'}
+                      onChange={() => setSortMetric('remaining')}
+                      className="w-3.5 h-3.5 accent-zen-sage"
+                    />
+                    Remaining
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
         
-        {categories.map(cat => {
-          const budget = selectedMonthBudgets.find(b => b.category_id === cat.id);
-          const limit = budget ? budget.limit_amount : 0;
-          const spent = spentByCategory[cat.id] || 0;
+        {sortedCategories.map(({ category: cat, limit, spent }) => {
           const isOver = spent > limit && limit > 0;
           
           // Pre-reconcile integers before subtraction
           const displayLimit = Math.round(limit);
           const displaySpent = Math.round(spent);
-          const remaining = Math.max(0, displayLimit - displaySpent);
+          const displayRemaining = Math.max(0, displayLimit - displaySpent);
           
           // Decoupled actual percentage from progress bar width clamping for accessible semantics
           const actualPercentage = limit > 0 ? Math.round((spent / limit) * 100) : 0;
           const barWidth = Math.min(100, actualPercentage);
-
-          if (limit === 0 && spent === 0) return null; // Hide unbudgeted inactive categories
 
           return (
             <div key={cat.id} className="bg-white/60 backdrop-blur-xl border border-white/30 p-5 rounded-3xl flex flex-col gap-3 shadow-sm">
@@ -218,11 +346,8 @@ export default function BudgetView() {
                   {isOver ? (
                     <span className="text-amber-600 font-bold">Over Budget</span>
                   ) : (
-                    <span>{formatNoDecimalCurrency(remaining, displayCurrency)} remaining</span>
+                    <span>{formatNoDecimalCurrency(displayRemaining, displayCurrency)} remaining</span>
                   )}
-                </span>
-                <span>
-                  {isOver && 'Reassign budget from another category'}
                 </span>
               </div>
 

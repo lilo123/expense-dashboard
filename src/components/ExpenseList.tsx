@@ -1,10 +1,11 @@
 'use client';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { convertAmount, formatFriendlyCurrency } from '@/lib/utils';
 import { bulkDeleteAction } from '@/app/actions';
 import { Expense } from '@/types/database';
 import { formatFriendlyDate } from '@/lib/utils';
+import { ListFilter, ChevronDown } from 'lucide-react';
 
 import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
 
@@ -29,7 +30,25 @@ export default function ExpenseList() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
-  const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc'>('date-desc');
+  const [sortDirection, setSortDirection] = useState<'highest' | 'lowest'>('highest');
+  const [sortMetric, setSortMetric] = useState<'date' | 'amount'>('date');
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const sortPopoverRef = useRef<HTMLDivElement>(null);
+
+  // Dismiss sort popover panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (sortPopoverRef.current && !sortPopoverRef.current.contains(e.target as Node)) {
+        setIsSortOpen(false);
+      }
+    };
+    if (isSortOpen) {
+      window.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      window.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isSortOpen]);
 
   const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return;
@@ -62,23 +81,17 @@ export default function ExpenseList() {
         return matchesSearch && matchesCategory && matchesType;
       })
       .sort((a, b) => {
-        if (sortBy === 'date-desc') {
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
+        if (sortMetric === 'date') {
+          const timeA = new Date(a.date).getTime();
+          const timeB = new Date(b.date).getTime();
+          return sortDirection === 'highest' ? timeB - timeA : timeA - timeB;
+        } else {
+          const amtA = Number(a.amount) || 0;
+          const amtB = Number(b.amount) || 0;
+          return sortDirection === 'highest' ? amtB - amtA : amtA - amtB;
         }
-        if (sortBy === 'date-asc') {
-          return new Date(a.date).getTime() - new Date(b.date).getTime();
-        }
-        const amtA = parseFloat(a.amount as any) || 0;
-        const amtB = parseFloat(b.amount as any) || 0;
-        if (sortBy === 'amount-desc') {
-          return amtB - amtA;
-        }
-        if (sortBy === 'amount-asc') {
-          return amtA - amtB;
-        }
-        return 0;
       });
-  }, [expenses, searchQuery, selectedCategories, selectedTypes, sortBy]);
+  }, [expenses, searchQuery, selectedCategories, selectedTypes, sortMetric, sortDirection]);
 
   const categoryOptions = useMemo(() => {
     return categories.map(cat => ({ id: cat.id, name: cat.name }));
@@ -127,41 +140,75 @@ export default function ExpenseList() {
     }
   };
 
-  const getSortLabel = (val: string) => {
-    switch (val) {
-      case 'date-desc': return 'Date: Newest';
-      case 'date-asc': return 'Date: Oldest';
-      case 'amount-desc': return 'Amount: Highest';
-      case 'amount-asc': return 'Amount: Lowest';
-      default: return 'Date: Newest';
-    }
-  };
-
   const renderSortSelect = (customClass = 'inline-block w-[200px]') => (
-    <div className={`relative cursor-pointer h-9 ${customClass}`}>
+    <div ref={sortPopoverRef} className={`relative h-9 ${customClass}`}>
       <button 
         type="button"
+        onClick={() => setIsSortOpen(!isSortOpen)}
         style={{ minHeight: 0 }}
-        className="w-full h-full px-4 py-0 rounded-full border border-zen-lavender/30 bg-white text-zen-charcoal !text-sm font-semibold flex items-center justify-between gap-1.5 hover:bg-white/90 transition-all shadow-sm box-border h-9 min-h-0 shrink-0"
+        className="w-full h-full px-4 py-0 rounded-full border border-zen-lavender/30 bg-white text-zen-charcoal !text-sm font-semibold flex items-center justify-between gap-1.5 hover:bg-white/90 transition-all shadow-sm box-border h-9 min-h-0 shrink-0 cursor-pointer"
       >
-        <span className="truncate">Sort by {getSortLabel(sortBy)}</span>
-        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-zen-charcoal/50 shrink-0">
-          <path d="m6 9 6 6 6-6"/>
-        </svg>
+        <span className="truncate capitalize">
+          Sort: {sortDirection} {sortMetric}
+        </span>
+        <ChevronDown size={14} className={`text-zen-charcoal/50 shrink-0 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
       </button>
-      <select 
-        id="sort-select"
-        aria-label="Sort Expenses"
-        value={sortBy} 
-        onChange={e => setSortBy(e.target.value as any)}
-        style={{ minHeight: 0 }}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10 min-h-0"
-      >
-        <option value="date-desc">Date: Newest</option>
-        <option value="date-asc">Date: Oldest</option>
-        <option value="amount-desc">Amount: Highest</option>
-        <option value="amount-asc">Amount: Lowest</option>
-      </select>
+
+      {/* Absolute 2-Axis Sort Popover */}
+      {isSortOpen && (
+        <div className="absolute right-0 top-10 z-50 bg-white/95 backdrop-blur-xl border border-zen-lavender/40 shadow-xl rounded-3xl p-4 flex items-stretch gap-4 text-xs text-zen-charcoal font-semibold min-w-[220px] animate-scale-up">
+          {/* Column 1: Direction */}
+          <div className="flex flex-col gap-2.5 flex-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="expenseSortDir"
+                checked={sortDirection === 'highest'}
+                onChange={() => setSortDirection('highest')}
+                className="w-3.5 h-3.5 accent-zen-sage"
+              />
+              Highest
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="expenseSortDir"
+                checked={sortDirection === 'lowest'}
+                onChange={() => setSortDirection('lowest')}
+                className="w-3.5 h-3.5 accent-zen-sage"
+              />
+              Lowest
+            </label>
+          </div>
+
+          {/* Divider */}
+          <div className="w-[1px] bg-zen-lavender/30 self-stretch mx-1" />
+
+          {/* Column 2: Metric */}
+          <div className="flex flex-col gap-2.5 flex-1">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="expenseSortMetric"
+                checked={sortMetric === 'date'}
+                onChange={() => setSortMetric('date')}
+                className="w-3.5 h-3.5 accent-zen-sage"
+              />
+              Date
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="radio"
+                name="expenseSortMetric"
+                checked={sortMetric === 'amount'}
+                onChange={() => setSortMetric('amount')}
+                className="w-3.5 h-3.5 accent-zen-sage"
+              />
+              Amount
+            </label>
+          </div>
+        </div>
+      )}
     </div>
   );
 
