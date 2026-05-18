@@ -57,6 +57,10 @@ export default function CategoryManager() {
   };
 
   const initiateDelete = (cat: Category) => {
+    if (categories.length <= 1) {
+      alert("You must maintain at least one category in your dashboard.");
+      return;
+    }
     const hasExpenses = expenses.some((e) => e.category_id === cat.id);
     
     setCategoryToDelete(cat);
