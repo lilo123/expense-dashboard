@@ -145,13 +145,22 @@ describe('Recurring Expenses Server Actions Unit Tests', () => {
 
   describe('deleteRecurringExpenseAction', () => {
     it('should successfully call database delete and revalidate', async () => {
-      mockSupabase.eq.mockResolvedValueOnce({ error: null });
+      mockSupabase.auth.getUser.mockResolvedValueOnce({
+        data: { user: { id: 'user-123' } },
+        error: null,
+      });
+      
+      // Support double chaining of .eq().eq()
+      mockSupabase.eq
+        .mockImplementationOnce(function(this: any) { return this; }) // 1st eq (id)
+        .mockResolvedValueOnce({ error: null });                      // 2nd eq (user_id)
 
       const res = await deleteRecurringExpenseAction('flow-123');
       expect(res.success).toBe(true);
       expect(mockSupabase.from).toHaveBeenCalledWith('recurring_expenses');
       expect(mockSupabase.delete).toHaveBeenCalled();
       expect(mockSupabase.eq).toHaveBeenCalledWith('id', 'flow-123');
+      expect(mockSupabase.eq).toHaveBeenCalledWith('user_id', 'user-123');
       expect(revalidatePath).toHaveBeenCalledWith('/');
     });
   });

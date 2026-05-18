@@ -57,7 +57,11 @@ export async function deleteExpenseAction(id: string): Promise<{ success: boolea
     return { success: false, error: 'Unauthorized' }
   }
 
-  const { error } = await supabase.from('expenses').delete().eq('id', id)
+  const { error } = await supabase
+    .from('expenses')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userData.user.id)
   
   if (error) {
     return { success: false, error: error.message }
@@ -91,6 +95,7 @@ export async function updateExpenseAction(
     .from('expenses')
     .update(updates)
     .eq('id', id)
+    .eq('user_id', userData.user.id)
     .select('*, categories(name)')
     .single()
 
@@ -161,13 +166,18 @@ export async function deleteCategoryAction(id: string, fallbackCategoryId?: stri
       .from('expenses')
       .update({ category_id: fallbackCategoryId })
       .eq('category_id', id)
+      .eq('user_id', userData.user.id)
 
     if (updateError) {
       return { success: false, error: updateError.message }
     }
   }
 
-  const { error } = await supabase.from('categories').delete().eq('id', id)
+  const { error } = await supabase
+    .from('categories')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userData.user.id)
   
   if (error) {
     return { success: false, error: error.message }
@@ -184,7 +194,11 @@ export async function bulkDeleteAction(ids: string[]): Promise<{ success: boolea
     return { success: false, error: 'Unauthorized' }
   }
 
-  const { error } = await supabase.from('expenses').delete().in('id', ids)
+  const { error } = await supabase
+    .from('expenses')
+    .delete()
+    .in('id', ids)
+    .eq('user_id', userData.user.id)
   
   if (error) {
     return { success: false, error: error.message }

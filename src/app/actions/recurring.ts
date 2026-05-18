@@ -113,10 +113,17 @@ export async function getRecurringExpensesAction(): Promise<{ success: boolean; 
 
 export async function deleteRecurringExpenseAction(id: string): Promise<{ success: boolean; error?: string }> {
   const supabase = await createClient();
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  
+  if (userError || !userData?.user) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
   const { error } = await supabase
     .from('recurring_expenses')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .eq('user_id', userData.user.id);
 
   if (error) {
     return { success: false, error: error.message };
