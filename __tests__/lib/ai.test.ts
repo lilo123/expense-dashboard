@@ -139,4 +139,52 @@ describe('AI Extraction Service & Orchestration Gate', () => {
       function: { name: 'extract_expense' },
     });
   });
+
+  describe('Date stability and fallbacks', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-05-18T14:50:00Z')); // Freeze clock
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('should fall back safely to current system date when AI returns an invalid/unparseable date string', async () => {
+      const mockLlmResponse = {
+        choices: [{
+          message: {
+            tool_calls: [{
+              function: {
+                name: 'extract_expense',
+                arguments: JSON.stringify({
+                  amount: 15.00,
+                  currency: 'USD',
+                  category: 'Groceries',
+                  item: 'Coffee',
+                  date: 'invalid-date-value', // Triggers Date RangeError or NaN
+                }),
+              },
+            }],
+          },
+        }],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockLlmResponse),
+      });
+
+      const res = await extractExpenseFromMessage(
+        'spent 15 USD on coffee', 
+        mockCategories, 
+        'CAD'
+      );
+
+      expect(res).not.toHaveProperty('error');
+      const successRes = res as any;
+      expect(successRes.dateToInsert).toBe('2026-05-18T14:50:00.000Z'); // Defaulted safely to fake system clock ISO string!
+    });
+  });
 });
+

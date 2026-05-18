@@ -28,6 +28,7 @@ export default function OnboardingModal() {
   const [totalBudgetStr, setTotalBudgetStr] = useState('');
   const [allocations, setAllocations] = useState<Record<string, number>>({});
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [inputValues, setInputValues] = useState<Record<string, string>>({});
   const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
   const [hasHydrated, setHasHydrated] = useState(false);
   const [isSkipPending, startSkipTransition] = useTransition();
@@ -60,16 +61,20 @@ export default function OnboardingModal() {
         setTotalBudgetStr(total.toString());
         
         const allocMap: Record<string, number> = {};
+        const inputMap: Record<string, string> = {};
         currentMonthBudgets.forEach(b => {
           if (b.category_id) {
             allocMap[b.category_id] = b.limit_amount;
+            inputMap[b.category_id] = b.limit_amount === 0 ? '' : b.limit_amount.toString();
           }
         });
         setAllocations(allocMap);
+        setInputValues(inputMap);
         setStep(2);
       } else {
         setTotalBudgetStr('2000');
         setAllocations({});
+        setInputValues({});
         setStep(1);
       }
       setHasHydrated(true);
@@ -96,18 +101,22 @@ export default function OnboardingModal() {
 
   const handleAllocationChange = (categoryId: string, value: string) => {
     const amt = parseFloat(value) || 0;
-    setAllocations(prev => {
-      const currentOtherTotal = Object.entries(prev)
-        .filter(([id]) => id !== categoryId)
-        .reduce((sum, [, v]) => sum + v, 0);
+    const currentOtherTotal = Object.entries(allocations)
+      .filter(([id]) => id !== categoryId)
+      .reduce((sum, [, v]) => sum + v, 0);
 
-      // Clamp amount so it doesn't exceed available total budget
-      const maxAllowed = Math.max(0, totalBudget - currentOtherTotal);
-      const clampedAmt = Math.min(amt, maxAllowed);
+    const maxAllowed = Math.max(0, totalBudget - currentOtherTotal);
+    const clampedAmt = Math.min(amt, maxAllowed);
 
-      return { ...prev, [categoryId]: clampedAmt };
-    });
+    setAllocations(prev => ({ ...prev, [categoryId]: clampedAmt }));
+
+    if (amt > maxAllowed) {
+      setInputValues(prev => ({ ...prev, [categoryId]: clampedAmt.toString() }));
+    } else {
+      setInputValues(prev => ({ ...prev, [categoryId]: value }));
+    }
   };
+
 
   const handleAddCategory = async () => {
     if (!newCategoryName.trim()) return;
@@ -302,7 +311,7 @@ export default function OnboardingModal() {
                             type="text" 
                             inputMode="decimal"
                             pattern="^[0-9]*\.?[0-9]*$"
-                            value={val === 0 ? '' : val} 
+                            value={inputValues[cat.id] ?? ''} 
                             onFocus={e => e.target.select()}
                             onChange={e => handleAllocationChange(cat.id, e.target.value)}
                             className="w-16 bg-transparent border-none text-right text-sm font-bold text-zen-charcoal outline-none appearance-none"

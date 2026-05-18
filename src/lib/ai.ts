@@ -130,7 +130,15 @@ If you return JSON, it MUST be raw JSON without any markdown wrapping. Interpret
     resolvedDate = todayStr;
   }
 
-  const dateToInsert = new Date(resolvedDate).toISOString();
+  let dateToInsert = new Date().toISOString();
+  try {
+    const parsedDate = new Date(resolvedDate);
+    if (!isNaN(parsedDate.getTime())) {
+      dateToInsert = parsedDate.toISOString();
+    }
+  } catch (e) {
+    // Silently default to today's execution date to preventRangeErrors
+  }
 
   if (!categoryNameFromLLM || amount === undefined || amount === null || isNaN(Number(amount))) {
     return { error: `I couldn't determine the category or amount. Please try again.`, status: 400 };
