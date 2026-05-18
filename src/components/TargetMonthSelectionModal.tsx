@@ -1,5 +1,5 @@
 'use client';
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useRef } from 'react';
 import { saveBulkBudgets } from '@/app/actions/budget';
 import { X, AlertCircle } from 'lucide-react';
 
@@ -29,6 +29,11 @@ const MONTH_LABELS = [
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
+interface FormState {
+  success: boolean;
+  error?: string;
+}
+
 export default function TargetMonthSelectionModal({
   isOpen,
   onClose,
@@ -41,8 +46,9 @@ export default function TargetMonthSelectionModal({
   setAnnouncement,
   onSuccess
 }: TargetMonthSelectionModalProps) {
-  const [state, formAction, isPending] = useActionState(
-    async (prevState: any, formData: FormData) => {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const [state, formAction, isPending] = useActionState<FormState, FormData>(
+    async (prevState: FormState | null, formData: FormData) => {
       const targetMonths = formData.getAll('targetMonths') as string[];
       if (targetMonths.length === 0) {
         return { success: false, error: 'Please select at least one target month.' };
@@ -86,6 +92,39 @@ export default function TargetMonthSelectionModal({
     }
   }, [state.success, onSuccess]);
 
+  useEffect(() => {
+    if (isOpen) {
+      const previousActiveElement = document.activeElement as HTMLElement;
+      const modalElement = modalRef.current;
+      modalElement?.focus();
+
+      const handleFocusTrap = (e: KeyboardEvent) => {
+        if (e.key !== 'Tab' || !modalElement) return;
+        
+        const focusableElements = modalElement.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex="0"]'
+        );
+        if (focusableElements.length === 0) return;
+        const firstElement = focusableElements[0] as HTMLElement;
+        const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement;
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          lastElement.focus();
+          e.preventDefault();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          firstElement.focus();
+          e.preventDefault();
+        }
+      };
+
+      window.addEventListener('keydown', handleFocusTrap);
+      return () => {
+        window.removeEventListener('keydown', handleFocusTrap);
+        previousActiveElement?.focus();
+      };
+    }
+  }, [isOpen]);
+
   if (!isOpen) return null;
 
   return (
@@ -94,10 +133,12 @@ export default function TargetMonthSelectionModal({
       onClick={e => { if (e.target === e.currentTarget && !isPending) onClose(); }}
     >
       <div 
+        ref={modalRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="selection-modal-title"
-        className="bg-white/90 border border-white/50 shadow-2xl rounded-3xl p-8 w-full max-w-md flex flex-col gap-6 text-zen-charcoal text-left animate-scale-up max-h-[90dvh] overflow-y-auto"
+        tabIndex={-1}
+        className="bg-white/90 border border-white/50 shadow-2xl rounded-3xl p-8 w-full max-w-md flex flex-col gap-6 text-zen-charcoal text-left animate-scale-up max-h-[90dvh] overflow-y-auto focus:outline-none"
       >
         <div className="flex items-center justify-between border-b border-zen-lavender/20 pb-4">
           <h2 id="selection-modal-title" className="text-xl font-extrabold m-0 text-zen-charcoal">

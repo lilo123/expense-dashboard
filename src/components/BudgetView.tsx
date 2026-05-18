@@ -24,6 +24,7 @@ export default function BudgetView() {
   });
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
 
@@ -56,7 +57,7 @@ export default function BudgetView() {
     selectedMonthExpenses.forEach(exp => {
       const catId = exp.category_id;
       if (!map[catId]) map[catId] = 0;
-      const amtBase = parseFloat(exp.amount as any) || 0;
+      const amtBase = Number(exp.amount) || 0;
       const amtDisplay = convertAmount(amtBase, baseCurrency, displayCurrency, exchangeRates);
       map[catId] += amtDisplay;
     });
@@ -187,6 +188,7 @@ export default function BudgetView() {
                 <span className="font-bold text-base text-zen-charcoal flex items-center gap-2">
                   {cat.icon && <Tag size={16} className="text-zen-charcoal/60" />}
                   {cat.name}
+                  <span className="text-xs font-normal text-zen-charcoal/60">({actualPercentage}%)</span>
                 </span>
                 
                 <div className="flex items-center gap-2">
@@ -204,22 +206,33 @@ export default function BudgetView() {
                 </div>
               </div>
 
-              {/* Capacity Bar */}
-              <div className="relative w-full h-6 bg-zen-lavender/20 rounded-full overflow-hidden border border-zen-lavender/30 shadow-inner">
+              {/* Fully Accessible Capacity Bar */}
+              <div 
+                role="progressbar"
+                aria-valuenow={Math.min(100, actualPercentage)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label={`Budget utilization for ${cat.name}`}
+                className="relative w-full h-3 bg-zen-lavender/20 rounded-full overflow-hidden border border-zen-lavender/30 shadow-inner"
+              >
                 <div 
                   className={`h-full transition-all duration-500 rounded-full ${isOver ? 'bg-amber-500' : 'bg-zen-sage'}`}
-                  style={{ width: `${Math.max(5, barWidth)}%` }}
+                  style={{ width: `${barWidth}%` }}
                 />
-                
-                {/* Text Overlay with strict WCAG AA contrast */}
-                <div className="absolute inset-0 flex items-center justify-between px-4 pointer-events-none text-xs font-extrabold">
-                  <span className="text-zen-charcoal">
-                    {actualPercentage}%
-                  </span>
-                  <span className="text-zen-charcoal">
-                    {isOver ? 'Reassign budget from another category' : `${formatNoDecimalCurrency(remaining, displayCurrency)} left`}
-                  </span>
-                </div>
+              </div>
+
+              {/* Accessibility Context / Descriptive Status Text */}
+              <div className="flex justify-between items-center text-xs font-medium text-zen-charcoal/80">
+                <span>
+                  {isOver ? (
+                    <span className="text-amber-600 font-bold">Over Budget</span>
+                  ) : (
+                    <span>{formatNoDecimalCurrency(remaining, displayCurrency)} remaining</span>
+                  )}
+                </span>
+                <span>
+                  {isOver && 'Reassign budget from another category'}
+                </span>
               </div>
 
             </div>
