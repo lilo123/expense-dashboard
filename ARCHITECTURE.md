@@ -194,7 +194,10 @@ Siri webhook authentication is isolated within a dedicated `siri_tokens` table (
 ### PL/pgSQL Automated Recurring Schedule Worker
 Automated recurring expenses are processed by an advanced PostgreSQL database worker function `process_recurring_expenses()`.
 - **Timezone-Aware Logging**: The worker joins recurring configurations with user profiles (`p.timezone`) to evaluate due dates against the user's exact geographic timezone date (`timezone(p.timezone, now())::date`), guaranteeing precise midnight execution.
-- **Expiration Bounds**: The worker increments `num_occurrences` on every execution and automatically toggles `is_active = false` when schedules exceed `max_occurrences` caps or cross `end_date` calendar boundaries.
+- **Concurrency Row Locking**: The worker executes atomic row-level locking (`FOR UPDATE OF r` on the select query) to isolate concurrent triggers, preventing race conditions and duplicate expense logging under concurrent worker executions.
+- **Relational Data Integrity**: The worker explicitly inserts the `is_recurring = true` flag on automated entries, preventing downstream visual discrepancies and safeguarding relationship templates from silent clearing on subsequent frontend updates.
+- **Null-Safety Advancement**: Increments are protected via `COALESCE` (evaluating `COALESCE(num_occurrences, 0) + 1`) to prevent null values from stalling advancement parameters or visual loops.
+- **Expiration Bounds**: The worker automatically toggles `is_active = false` when schedules exceed `max_occurrences` caps or cross `end_date` calendar boundaries.
 
 ---
 
