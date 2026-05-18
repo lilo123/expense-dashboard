@@ -148,6 +148,8 @@ Our frontend tests validate that the UI correctly aligns with the An-yen Zen aes
 *   **Multi-Currency conversions**: Logs `100,000 VND`, asserts the DB stores the CAD converted equivalent (`$5.41`), while the Recent List displays the raw spent `100K ₫`.
 *   **Scheduled Expenses CRUD Scheduling (`recurring.spec.ts`)**: Verifies the complete end-to-end recurring expense CRUD flow (weekly pills, Ends After Occurrences radio selections, dynamic helper date strings) and confirms background database inserts.
 *   **Global Modals Overlap & Visual regression (`modals_ui.spec.ts`)**: Verifies structural safety (zero exit overlaps, roundness, deep charcoal accessibility text contrast) on both Desktop (`1280x800`) and Mobile (`375x812`) viewport emulations across all 6 application modals.
+*   **Onboarding Category Polish & Safeguards (`onboarding_safeguards.spec.ts`)**: Verifies inline category additions are rendered dynamically, and active categories are strictly protected from deletion if linked to active expenses.
+*   **Onboarding Skip Flow Persistence (`onboarding_safeguards.spec.ts`)**: Verifies that skipping onboarding asynchronously updates the profile's onboarding status, closes the modal, and persists the completed state successfully across manual browser reloads.
 
 ---
 
