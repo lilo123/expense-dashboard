@@ -2,6 +2,7 @@
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { useMemo, useState, useEffect, useRef } from 'react';
 import { parseLocalDate, formatFriendlyDate, convertAmount, formatFriendlyCurrency, formatChartFriendlyCurrency, formatAxisFriendlyCurrency, formatNoDecimalCurrency } from '@/lib/utils';
+import { ChevronDown } from 'lucide-react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -40,6 +41,20 @@ export default function YearlyTab() {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const detailsRef = useRef<HTMLDivElement>(null);
   const [isMounted, setIsMounted] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  const toggleCategoryAccordion = (catId: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(catId)) {
+        next.delete(catId);
+      } else {
+        next.add(catId);
+      }
+      return next;
+    });
+  };
+
   useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -417,23 +432,48 @@ export default function YearlyTab() {
           {activeMonthFilter !== null && (
             <div className="month-details p-5 bg-white/40 backdrop-blur-md border border-white/20 rounded-3xl mb-5 shadow-sm text-left">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                <h3 className="font-bold text-zen-charcoal">{labels[parseInt(activeMonthFilter, 10)]} {selectedYear} Details</h3>
+                <h3 className="font-extrabold text-zen-charcoal text-lg">
+                  {labels[parseInt(activeMonthFilter, 10)]} {selectedYear}
+                </h3>
                 <button onClick={() => setActiveMonthFilter(null)} className="px-3 py-1 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-colors text-sm cursor-pointer border-none">Close</button>
               </div>
 
               {yearlyViewMode === 'budget' ? (
                 <div className="flex flex-col gap-3 mt-2">
-                  {/* Overall Monthly Summary */}
+                  {/* Overall Monthly Summary Progress Indicator */}
                   {(() => {
                     const monthIdx = parseInt(activeMonthFilter, 10);
-                    const monthSpent = totalData[monthIdx] || 0;
-                    const monthBudget = budgetData[monthIdx] || 0;
+                    const monthSpent = Math.round(totalData[monthIdx] || 0);
+                    const monthBudget = Math.round(budgetData[monthIdx] || 0);
                     const isMonthOver = monthSpent > monthBudget && monthBudget > 0;
+                    const percentage = monthBudget > 0 ? Math.round((monthSpent / monthBudget) * 100) : 0;
+                    const barWidth = Math.min(100, percentage);
 
                     return (
-                      <div className={`text-lg font-extrabold p-4 rounded-2xl border border-white/20 shadow-sm mb-4 bg-white/60 flex items-center justify-between ${isMonthOver ? 'text-amber-700' : 'text-emerald-700'}`}>
-                        <span>Total: {formatNoDecimalCurrency(monthSpent, displayCurrency)} / {formatNoDecimalCurrency(monthBudget, displayCurrency)}</span>
-                        {isMonthOver && <span title="Overspent" className="text-amber-700 flex items-center">⚠️</span>}
+                      <div className="bg-white/60 border border-white/30 p-5 rounded-2xl flex flex-col gap-2 shadow-xs mb-4">
+                        <div className="flex justify-between items-center">
+                          <span className="font-extrabold text-base text-zen-charcoal">Total:</span>
+                          <span className="text-xs font-bold text-zen-charcoal/70">
+                            {monthBudget === 0 ? (
+                              `Spent ${formatNoDecimalCurrency(monthSpent, displayCurrency)} / No Budget`
+                            ) : (
+                              `Spent ${formatNoDecimalCurrency(monthSpent, displayCurrency)} of ${formatNoDecimalCurrency(monthBudget, displayCurrency)} (${percentage}%)`
+                            )}
+                          </span>
+                        </div>
+                        <div 
+                          role="progressbar"
+                          aria-valuenow={Math.min(100, percentage)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label="Overall monthly budget utilization"
+                          className="w-full h-3 bg-zen-lavender/20 rounded-full overflow-hidden border border-zen-lavender/30 shadow-inner"
+                        >
+                          <div 
+                            className={`h-full transition-all duration-500 rounded-full ${isMonthOver ? 'bg-amber-500' : 'bg-zen-sage'}`}
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
                       </div>
                     );
                   })()}
@@ -443,25 +483,72 @@ export default function YearlyTab() {
                     const limit = bgt ? convertAmount(bgt.limit_amount, bgt.currency as any, displayCurrency, exchangeRates) : 0;
                     const spent = activeMonthSpentByCategory[cat.id] || 0;
                     if (limit === 0 && spent === 0) return null;
+
                     const isOver = spent > limit && limit > 0;
-                    
+                    const percentage = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+                    const barWidth = Math.min(100, percentage);
+                    const isOpen = expandedCategories.has(cat.id);
+
+                    const catExpenses = activeMonthExpenses.filter(exp => exp.category_id === cat.id);
+
                     return (
-                      <div key={cat.id} className="flex justify-between items-center p-3 bg-white/60 rounded-2xl border border-white/20 shadow-xs">
-                        <span className="font-semibold text-zen-charcoal text-sm">{cat.name}</span>
-                        <div className="flex items-center gap-2">
-                          {limit === 0 ? (
-                            <span className="text-xs font-bold text-zen-charcoal/60">
-                              {formatNoDecimalCurrency(spent, displayCurrency)} / No Allocation
-                            </span>
-                          ) : (
-                            <>
-                              <span className={`text-xs font-bold ${isOver ? 'text-amber-700' : 'text-emerald-700'}`}>
-                                {formatNoDecimalCurrency(spent, displayCurrency)} / {formatNoDecimalCurrency(limit, displayCurrency)}
-                              </span>
-                              {isOver && <span title="Overspent" className="text-amber-700 text-xs flex items-center">⚠️</span>}
-                            </>
-                          )}
+                      <div key={cat.id} className="flex flex-col gap-2.5 bg-white/60 p-4 rounded-2xl border border-white/20 shadow-xs">
+                        {/* Clickable Accordion Trigger Header */}
+                        <div 
+                          onClick={() => toggleCategoryAccordion(cat.id)}
+                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-all select-none"
+                        >
+                          <span className="font-bold text-sm text-zen-charcoal flex items-center gap-2">
+                            <ChevronDown size={14} className={`text-zen-charcoal/50 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                            {cat.name}
+                          </span>
+                          <span className="text-xs font-bold text-zen-charcoal/70">
+                            {limit === 0 ? (
+                              `Spent ${formatNoDecimalCurrency(Math.round(spent), displayCurrency)} / No Allocation`
+                            ) : (
+                              `Spent ${formatNoDecimalCurrency(Math.round(spent), displayCurrency)} of ${formatNoDecimalCurrency(Math.round(limit), displayCurrency)} (${percentage}%)`
+                            )}
+                          </span>
                         </div>
+
+                        {/* Mini Utilization Progressbar */}
+                        <div 
+                          role="progressbar"
+                          aria-valuenow={Math.min(100, percentage)}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          aria-label={`${cat.name} budget utilization`}
+                          className="w-full h-2 bg-zen-lavender/10 rounded-full overflow-hidden border border-zen-lavender/20 shadow-inner"
+                        >
+                          <div 
+                            className={`h-full rounded-full transition-all duration-300 ${isOver ? 'bg-amber-500' : 'bg-zen-sage'}`}
+                            style={{ width: `${barWidth}%` }}
+                          />
+                        </div>
+
+                        {/* Expanded Category Transaction Details List */}
+                        {isOpen && (
+                          <div className="mt-2 pl-5 border-l border-zen-lavender/30 flex flex-col gap-2.5 animate-fade-in">
+                            {catExpenses.length > 0 ? (
+                              catExpenses.map(exp => (
+                                <div key={exp.id} className="flex justify-between items-center text-xs font-semibold py-1 border-b border-zen-lavender/10 last:border-none">
+                                  <div className="flex flex-col gap-0.5 text-left">
+                                    <span className="text-zen-charcoal">{exp.item}</span>
+                                    <span className="text-[10px] text-zen-charcoal/60">{formatFriendlyDate(exp.date)}</span>
+                                  </div>
+                                  <span className="text-zen-charcoal font-bold">
+                                    {formatFriendlyCurrency(
+                                      convertAmount(Number(exp.amount) || 0, baseCurrency, displayCurrency, exchangeRates),
+                                      displayCurrency
+                                    )}
+                                  </span>
+                                </div>
+                              ))
+                            ) : (
+                              <span className="text-xs text-zen-charcoal/50 text-left italic">No expenses logged in this category.</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
