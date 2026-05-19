@@ -62,9 +62,3 @@ test-results/
 
 # Unpackaged bug dumps
 UI_bug_V2.md
-
-# Audit Monitoring
-audit_state.json
-master_audit_progress.md
-audit-monitor.mjs
-

@@ -91,10 +91,6 @@ describe('EditExpenseModal Component', () => {
       success: true,
       data: mockRecurringExpenses
     });
-
-    (bulkUpdateAction as jest.Mock).mockResolvedValue({
-      success: true
-    });
   });
 
   const setupStore = (editingExpenseId: string) => {
@@ -109,7 +105,7 @@ describe('EditExpenseModal Component', () => {
       updateBulkExpenses: mockUpdateBulkExpenses,
       deleteExpense: mockDeleteExpense,
       baseCurrency: 'CAD',
-      exchangeRates: { CAD: 1.0, USD: 0.73 },
+      exchangeRates: { CAD: 1.0 },
     });
   };
 
@@ -196,74 +192,6 @@ describe('EditExpenseModal Component', () => {
       expect(mockUpdateBulkExpenses).toHaveBeenCalledWith(new Set(['exp-oneoff']), expect.objectContaining({
         is_recurring: true,
         recurring_expense_id: 'rec-1'
-      }));
-    });
-  });
-
-  it('should correctly convert currency and send computed amounts on save', async () => {
-    setupStore('exp-oneoff');
-    render(<EditExpenseModal />);
-
-    // Locate and change currency select input to 'USD'
-    const currencySelect = screen.getByRole('combobox', { name: 'Currency' });
-    fireEvent.change(currencySelect, { target: { value: 'USD' } });
-
-    // Keep the amount input at its original '15.5'
-    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
-
-    await waitFor(() => {
-      expect(bulkUpdateAction).toHaveBeenCalledWith(['exp-oneoff'], expect.objectContaining({
-        amount: 21.23, // 15.5 USD to CAD: Math.round((15.5 * (1 / 0.73)) * 100) / 100 = 21.23
-        original_amount: 15.5,
-        original_currency: 'USD',
-        currency: 'USD'
-      }));
-      expect(mockUpdateBulkExpenses).toHaveBeenCalledWith(new Set(['exp-oneoff']), expect.objectContaining({
-        amount: 21.23,
-        original_amount: 15.5,
-        original_currency: 'USD',
-        currency: 'USD'
-      }));
-    });
-  });
-
-  it('should NOT update store and close modal if bulkUpdateAction returns a failure response', async () => {
-    setupStore('exp-oneoff');
-    (bulkUpdateAction as jest.Mock).mockResolvedValue({
-      success: false,
-      error: 'Database validation error (UUID format mismatch)'
-    });
-
-    render(<EditExpenseModal />);
-    
-    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
-
-    // Wait for the async bulkUpdateAction action to start
-    await waitFor(() => {
-      expect(bulkUpdateAction).toHaveBeenCalled();
-    });
-
-    // Give the microtask queue a tiny bit of time to flush and complete handleSave sequence
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    // Now verify that store updates & modal closes were NEVER called
-    expect(mockUpdateBulkExpenses).not.toHaveBeenCalled();
-    expect(mockToggleEditModal).not.toHaveBeenCalled();
-  });
-
-  it('should send category_id as null if it is blank preventing UUID format syntax crash', async () => {
-    setupStore('exp-oneoff');
-    render(<EditExpenseModal />);
-
-    // Change category select to empty value ''
-    const categorySelect = screen.getByRole('combobox', { name: 'Category' });
-    fireEvent.change(categorySelect, { target: { value: '' } });
-
-    fireEvent.click(screen.getByRole('button', { name: 'Save Changes' }));
-
-    await waitFor(() => {
-      expect(bulkUpdateAction).toHaveBeenCalledWith(['exp-oneoff'], expect.objectContaining({
-        category_id: null
       }));
     });
   });

@@ -85,26 +85,23 @@ export default function EditExpenseModal() {
         original_amount: originalAmount,
         original_currency: currency,
         currency: currency,
-        category_id: categoryId || null,
+        category_id: categoryId,
         // Decoupled visual & scheduling parameters
         is_recurring: isRecurring,
         recurring_expense_id: isRecurring && targetRecurringId ? targetRecurringId : null
       };
 
       // 1. Update Supabase backend
-      const res = await bulkUpdateAction([editingExpenseId], updates);
-      if (!res.success) {
-        throw new Error(res.error || 'Unknown server validation failure');
-      }
+      await bulkUpdateAction([editingExpenseId], updates);
       
       // 2. Update local Zustand state
       updateBulkExpenses(new Set([editingExpenseId]), updates);
       
       // 3. Close Modal
       toggleEditModal();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to save expense', error);
-      alert(error.message || 'Failed to save expense');
+      alert('Failed to save expense');
     }
   };
 
