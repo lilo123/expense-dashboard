@@ -290,8 +290,8 @@ export default function ExpenseList() {
               filteredAndSortedExpenses.map((exp: Expense) => {
                 const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
                 const curOriginal = exp.original_currency || exp.currency || baseCurrency;
-                const displayAmt = convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
-                const displayCurr = displayCurrency;
+                const displayAmt = amtOriginal;
+                const displayCurr = curOriginal;
                 const dateStr = formatFriendlyDate(exp.date);
 
                 return (

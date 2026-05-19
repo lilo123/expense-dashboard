@@ -98,6 +98,19 @@ function ClientDashboardContent() {
     syncTimezone();
   }, [profile, setProfile]);
 
+  // Automatically sync & refresh exchange rates on startup
+  useEffect(() => {
+    async function refreshRates() {
+      try {
+        const rates = await syncExchangeRates();
+        setExchangeRates(rates);
+      } catch (err) {
+        console.error('[EXCHANGE RATES AUTO-SYNC FAILURE]:', err);
+      }
+    }
+    refreshRates();
+  }, [setExchangeRates]);
+
   // Stable Ref for categories to prevent Supabase Realtime subscription churn
   const categoriesRef = useRef(categories);
   useEffect(() => {
