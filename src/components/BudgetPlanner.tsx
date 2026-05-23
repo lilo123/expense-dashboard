@@ -401,7 +401,7 @@ function MonthAccordionForm({
 
   // Synchronously synchronize state during render when accordion opens to satisfy set-state-in-effect linter rules
   if (isOpen && !activeSubmissions.has(monthStr) && !state.error) {
-    if (currentSyncKey !== prevSyncKey || Object.keys(allocations).length === 0) {
+    if (currentSyncKey !== prevSyncKey) {
       setPrevSyncKey(currentSyncKey);
       if (monthBudgets.length > 0) {
         const total = monthBudgets.reduce((sum, b) => sum + convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates), 0);

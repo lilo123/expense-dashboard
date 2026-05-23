@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useLayoutEffect, useEffect } from 'react';
+import { createContext, useContext, useRef, useLayoutEffect, useEffect, useState } from 'react';
 import { createStore, useStore } from 'zustand';
 import { Expense, Category, User, SupportedCurrency, Profile, RecurringExpense, Budget } from '@/types/database';
 
@@ -354,5 +354,5 @@ export function useExpenseStore<T>(selector: (state: ExpenseState) => T): T;
 export function useExpenseStore<T>(selector?: (state: ExpenseState) => T): T | ExpenseState {
   const store = useContext(StoreContext);
   if (!store) throw new Error('useExpenseStore must be used within a StoreProvider');
-  return useStore(store, selector || ((state) => state as ExpenseState));
+  return useStore(store, selector || ((state) => state as unknown as T));
 }
