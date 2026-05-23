@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import Link from 'next/link';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { updateProfile, updateEmail, updatePassword, getProfile } from '@/app/actions/profile';
-import { SupportedCurrency } from '@/types/database';
+import { syncExchangeRates } from '@/app/actions/rates';
+import { SupportedCurrency, Profile } from '@/types/database';
 import { Info, Lock, ArrowLeft, Edit3 } from 'lucide-react';
 import CategoryManager from './CategoryManager';
 
@@ -12,8 +13,12 @@ interface SettingsFormProps {
   userEmail: string;
 }
 
-export default function SettingsForm({ userEmail }: SettingsFormProps) {
-  const { profile, hydrate, displayCurrency, setDisplayCurrency } = useExpenseStore();
+function SettingsForm({ userEmail }: SettingsFormProps) {
+  const profile = useExpenseStore(state => state.profile);
+  const hydrate = useExpenseStore(state => state.hydrate);
+  const displayCurrency = useExpenseStore(state => state.displayCurrency);
+  const setDisplayCurrency = useExpenseStore(state => state.setDisplayCurrency);
+  const setExchangeRates = useExpenseStore(state => state.setExchangeRates);
 
   // 1. Edit Toggle States (Accidental Changes Prevention)
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -21,11 +26,31 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
   const [isEditingPassword, setIsEditingPassword] = useState(false);
 
   // 2. Profile Form States
+  const [prevProfile, setPrevProfile] = useState<Profile | null>(null);
+  const [prevDisplayCurrency, setPrevDisplayCurrency] = useState<SupportedCurrency | null>(null);
+
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState(userEmail);
   const [baseCurrency, setBaseCurrency] = useState<SupportedCurrency>('CAD');
   const [budgetResetDay, setBudgetResetDay] = useState(1);
   const [tempDisplayCurrency, setTempDisplayCurrency] = useState<SupportedCurrency>('CAD');
+
+  // Synchronously adjust state during render when profile or display currency updates to satisfy set-state-in-effect rules
+  if (profile !== prevProfile) {
+    setPrevProfile(profile);
+    if (profile) {
+      setDisplayName(profile.display_name || '');
+      setBaseCurrency(profile.base_currency || 'CAD');
+      setBudgetResetDay(profile.budget_reset_day || 1);
+    }
+  }
+
+  if (displayCurrency !== prevDisplayCurrency) {
+    setPrevDisplayCurrency(displayCurrency);
+    if (displayCurrency) {
+      setTempDisplayCurrency(displayCurrency);
+    }
+  }
 
   // 3. Password Form States
   const [currentPassword, setCurrentPassword] = useState('');
@@ -39,22 +64,6 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingEmail, setIsSavingEmail] = useState(false);
   const [isSavingPassword, setIsSavingPassword] = useState(false);
-
-  // Sync local state with Zustand profile loaded on mount
-  useEffect(() => {
-    if (profile) {
-      setDisplayName(profile.display_name || '');
-      setBaseCurrency(profile.base_currency || 'CAD');
-      setBudgetResetDay(profile.budget_reset_day || 1);
-    }
-  }, [profile]);
-
-  // Sync tempDisplayCurrency from Zustand displayCurrency loaded on mount
-  useEffect(() => {
-    if (displayCurrency) {
-      setTempDisplayCurrency(displayCurrency);
-    }
-  }, [displayCurrency]);
 
   // Fetch profile from Supabase if not cached in store yet
   useEffect(() => {
@@ -105,10 +114,13 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
     setProfileMessage(null);
     setIsSavingProfile(true);
 
+    const isBaseCurrencyChanged = profile && baseCurrency !== profile.base_currency;
+
     try {
       const response = await updateProfile({
         display_name: displayName,
         base_currency: baseCurrency,
+        display_currency: tempDisplayCurrency,
         budget_reset_day: budgetResetDay,
       });
 
@@ -123,9 +135,21 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
               ...profile,
               display_name: displayName,
               base_currency: baseCurrency,
+              display_currency: tempDisplayCurrency,
               budget_reset_day: budgetResetDay,
             }
           });
+        }
+
+        // Dynamically update exchange rates immediately if base currency changed
+        if (isBaseCurrencyChanged) {
+          try {
+            const rates = await syncExchangeRates();
+            setExchangeRates(rates);
+            console.log('[SETTINGS SYNCHRONIZATION]: Exchange rates successfully synchronized to new base currency:', baseCurrency);
+          } catch (rateErr) {
+            console.error('[SETTINGS FX SYNC FAILURE]: Failed to sync exchange rates after base currency change:', rateErr);
+          }
         }
       } else {
         setProfileMessage({ text: response.error || 'Failed to save details.', isError: true });
@@ -274,7 +298,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
               value={baseCurrency} 
               disabled={!isEditingProfile}
               aria-label="Base Currency"
-              onChange={e => setBaseCurrency(e.target.value as any)}
+              onChange={e => setBaseCurrency(e.target.value as SupportedCurrency)}
               className={`w-full px-4 py-3 rounded-full bg-white/50 border focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal text-base appearance-none h-12 box-border transition-all ${
                 !isEditingProfile ? 'border-transparent opacity-75 bg-transparent cursor-default pointer-events-none' : 'border-zen-lavender/60 cursor-pointer'
               }`}
@@ -295,7 +319,7 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
               value={tempDisplayCurrency} 
               disabled={!isEditingProfile}
               aria-label="Display Currency"
-              onChange={e => setTempDisplayCurrency(e.target.value as any)}
+              onChange={e => setTempDisplayCurrency(e.target.value as SupportedCurrency)}
               className={`w-full px-4 py-3 rounded-full bg-white/50 border focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal text-base appearance-none h-12 box-border transition-all ${
                 !isEditingProfile ? 'border-transparent opacity-75 bg-transparent cursor-default pointer-events-none' : 'border-zen-lavender/60 cursor-pointer'
               }`}
@@ -482,3 +506,5 @@ export default function SettingsForm({ userEmail }: SettingsFormProps) {
     </div>
   );
 }
+
+export default memo(SettingsForm);

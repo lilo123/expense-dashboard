@@ -4,6 +4,7 @@ import crypto from 'crypto';
 import { extractExpenseFromMessage } from '@/lib/ai';
 import { syncExchangeRates } from '@/app/actions/rates';
 import { convertAmount, formatFriendlyCurrency } from '@/lib/utils';
+import { checkRateLimit } from '@/lib/rateLimiter';
 
 export async function POST(request: Request) {
   try {
@@ -38,6 +39,13 @@ export async function POST(request: Request) {
 
     const userId = tokenData.user_id;
 
+    // Enforce user-token rate limiting (max 60 requests per minute per user)
+    const rateLimitKey = `siri:${userId}`;
+    const { success: limitSuccess } = await checkRateLimit(rateLimitKey, 60, 60 * 1000);
+    if (!limitSuccess) {
+      return NextResponse.json({ error: 'Too many requests. Please try again in a minute.' }, { status: 429 });
+    }
+
     // Fetch user's base currency and timezone from profile
     const { data: profileData } = await supabase
       .from('profiles')
@@ -48,8 +56,14 @@ export async function POST(request: Request) {
     const baseCurrency = profileData?.base_currency || 'CAD';
     const userTimezone = profileData?.timezone || 'UTC';
 
-    // 2. Parse request body
-    const body = await request.json();
+    // 2. Parse request body safely
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Malformed or invalid JSON payload' }, { status: 400 });
+    }
+    
     const { message } = body;
 
     if (!message) {
@@ -78,7 +92,7 @@ export async function POST(request: Request) {
     // Calculate converted baseline amount if transaction differs from profile base currency
     let finalAmount = amount;
     if (currency !== baseCurrency) {
-      const rates = await syncExchangeRates();
+      const rates = await syncExchangeRates(supabase); // Pass service-role client to bypass RLS constraints
       finalAmount = convertAmount(amount, currency, baseCurrency, rates);
     }
 

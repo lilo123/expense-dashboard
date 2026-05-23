@@ -4,6 +4,9 @@ import { createClient } from '@/utils/supabase/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { Expense } from '@/types/database'
+import { z } from 'zod'
+import { headers } from 'next/headers'
+import { checkRateLimit } from '@/lib/rateLimiter'
 
 export async function addExpenseAction(data: {
   item: string
@@ -238,7 +241,27 @@ export async function bulkUpdateAction(
   return { success: true }
 }
 
+const inviteSchema = z.object({
+  email: z.string().email({ message: 'Invalid email address format.' }),
+  message: z.string().max(500, { message: 'Message must be less than 500 characters.' })
+})
+
 export async function requestInviteAction(email: string, message: string): Promise<{ success: boolean; error?: string }> {
+  const validation = inviteSchema.safeParse({ email, message });
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message };
+  }
+
+  const headerList = await headers();
+  const rawIp = headerList.get('x-forwarded-for') || '127.0.0.1';
+  const ip = rawIp.split(',')[0].trim();
+  const rateLimitKey = `invite:${ip}`;
+
+  const { success } = await checkRateLimit(rateLimitKey, 5, 60 * 60 * 1000);
+  if (!success) {
+    return { success: false, error: 'Too many requests. Please try again in an hour.' };
+  }
+
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -246,12 +269,11 @@ export async function requestInviteAction(email: string, message: string): Promi
     return { success: false, error: 'Server configuration error.' };
   }
 
-  // Use service role client to bypass RLS securely on backend
   const supabase = createServiceClient(supabaseUrl, supabaseServiceKey);
   
   const { error } = await supabase
     .from('invite_requests')
-    .insert([{ email, message }]);
+    .insert([{ email: validation.data.email, message: validation.data.message }]);
 
   if (error) {
     return { success: false, error: 'Failed to log invite request.' };

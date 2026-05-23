@@ -1,24 +1,24 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { addExpenseAction } from '@/app/actions';
 import { getRecurringExpensesAction } from '@/app/actions/recurring';
 import { toUTCISOString, convertAmount } from '@/lib/utils';
-import { RecurringExpense } from '@/types/database';
+import { RecurringExpense, SupportedCurrency } from '@/types/database';
 import Switch from '@/components/ui/Switch';
 
-export default function AddExpenseModal() {
-  const { 
-    isAddModalOpen, 
-    toggleAddModal, 
-    categories, 
-    toggleCategoryModal, 
-    addExpense, 
-    baseCurrency, 
-    exchangeRates,
-    recurringExpenses,
-    hydrate
-  } = useExpenseStore();
+function AddExpenseModal() {
+  const isAddModalOpen = useExpenseStore(state => state.isAddModalOpen);
+  const toggleAddModal = useExpenseStore(state => state.toggleAddModal);
+  const categories = useExpenseStore(state => state.categories);
+  const toggleCategoryModal = useExpenseStore(state => state.toggleCategoryModal);
+  const addExpense = useExpenseStore(state => state.addExpense);
+  const baseCurrency = useExpenseStore(state => state.baseCurrency);
+  const exchangeRates = useExpenseStore(state => state.exchangeRates);
+  const recurringExpenses = useExpenseStore(state => state.recurringExpenses);
+  const hydrate = useExpenseStore(state => state.hydrate);
+
+  const [prevIsAddModalOpen, setPrevIsAddModalOpen] = useState(false);
   
   const [date, setDate] = useState(() => {
     const d = new Date();
@@ -27,19 +27,25 @@ export default function AddExpenseModal() {
   const [item, setItem] = useState('');
   const [amount, setAmount] = useState('');
   const [category_id, setCategoryId] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState<SupportedCurrency>('USD');
 
   // Custom Tailwind Toggle & Template State (Decoupled)
   const [isRecurring, setIsRecurring] = useState(false);
   const [targetRecurringId, setTargetRecurringId] = useState('');
 
   // Fetch and hydrate recurring templates on open
-  useEffect(() => {
+  // Synchronously adjust states during render when modal opens to satisfy set-state-in-effect linter rules
+  if (isAddModalOpen !== prevIsAddModalOpen) {
+    setPrevIsAddModalOpen(isAddModalOpen);
     if (isAddModalOpen) {
       setCurrency(baseCurrency);
       setIsRecurring(false);
       setTargetRecurringId('');
+    }
+  }
 
+  useEffect(() => {
+    if (isAddModalOpen) {
       async function fetchTemplates() {
         try {
           const res = await getRecurringExpensesAction();
@@ -127,7 +133,7 @@ export default function AddExpenseModal() {
                         <select 
                           value={currency} 
                           aria-label="Currency"
-                          onChange={e => setCurrency(e.target.value as any)}
+                          onChange={e => setCurrency(e.target.value as SupportedCurrency)}
                           className="bg-transparent border-none text-zen-charcoal font-bold text-base outline-none focus:ring-0 cursor-pointer pr-5 h-full appearance-none z-10"
                         >
                           <option value="CAD">C$</option>
@@ -219,3 +225,5 @@ export default function AddExpenseModal() {
     </div>
   );
 }
+
+export default memo(AddExpenseModal);

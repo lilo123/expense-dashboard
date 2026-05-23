@@ -1,30 +1,25 @@
-'use client';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, memo } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
-import { convertAmount, formatFriendlyCurrency } from '@/lib/utils';
+import { convertAmount, formatFriendlyCurrency, formatFriendlyDate } from '@/lib/utils';
 import { bulkDeleteAction } from '@/app/actions';
 import { Expense } from '@/types/database';
-import { formatFriendlyDate } from '@/lib/utils';
-import { ListFilter, ChevronDown } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 
 import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
 
-export default function ExpenseList() {
-  const { 
-    expenses, 
-    categories,
-    isSelectMode, 
-    toggleSelectMode, 
-    selectedIds, 
-    toggleSelection, 
-    deleteSelected, 
-    toggleEditModal,
-    toggleBulkEditModal,
-    updateBulkExpenses,
-    displayCurrency,
-    baseCurrency,
-    exchangeRates
-  } = useExpenseStore();
+function ExpenseList() {
+  const expenses = useExpenseStore(state => state.expenses);
+  const categories = useExpenseStore(state => state.categories);
+  const isSelectMode = useExpenseStore(state => state.isSelectMode);
+  const toggleSelectMode = useExpenseStore(state => state.toggleSelectMode);
+  const selectedIds = useExpenseStore(state => state.selectedIds);
+  const toggleSelection = useExpenseStore(state => state.toggleSelection);
+  const deleteSelected = useExpenseStore(state => state.deleteSelected);
+  const toggleEditModal = useExpenseStore(state => state.toggleEditModal);
+  const toggleBulkEditModal = useExpenseStore(state => state.toggleBulkEditModal);
+  const displayCurrency = useExpenseStore(state => state.displayCurrency);
+  const baseCurrency = useExpenseStore(state => state.baseCurrency);
+  const exchangeRates = useExpenseStore(state => state.exchangeRates);
 
   // Filter & Sort States
   const [searchQuery, setSearchQuery] = useState('');
@@ -88,16 +83,16 @@ export default function ExpenseList() {
         } else {
           const amtOriginalA = a.original_amount !== null && a.original_amount !== undefined ? Number(a.original_amount) : (Number(a.amount) || 0);
           const curOriginalA = a.original_currency || a.currency || baseCurrency;
-          const amtDisplayA = convertAmount(amtOriginalA, curOriginalA as any, displayCurrency, exchangeRates);
+          const amtDisplayA = convertAmount(amtOriginalA, curOriginalA, displayCurrency, exchangeRates);
 
           const amtOriginalB = b.original_amount !== null && b.original_amount !== undefined ? Number(b.original_amount) : (Number(b.amount) || 0);
           const curOriginalB = b.original_currency || b.currency || baseCurrency;
-          const amtDisplayB = convertAmount(amtOriginalB, curOriginalB as any, displayCurrency, exchangeRates);
+          const amtDisplayB = convertAmount(amtOriginalB, curOriginalB, displayCurrency, exchangeRates);
 
           return sortDirection === 'highest' ? amtDisplayB - amtDisplayA : amtDisplayA - amtDisplayB;
         }
       });
-  }, [expenses, searchQuery, selectedCategories, selectedTypes, sortMetric, sortDirection]);
+  }, [expenses, searchQuery, selectedCategories, selectedTypes, sortMetric, sortDirection, baseCurrency, displayCurrency, exchangeRates]);
 
   const categoryOptions = useMemo(() => {
     return categories.map(cat => ({ id: cat.id, name: cat.name }));
@@ -353,3 +348,5 @@ export default function ExpenseList() {
     </div>
   );
 }
+
+export default memo(ExpenseList);

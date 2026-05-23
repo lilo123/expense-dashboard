@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ExpenseList from '@/components/ExpenseList';
 import { useExpenseStore } from '@/store/useExpenseStore';
@@ -78,7 +79,8 @@ describe('ExpenseList Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Default store mock
-    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
+    (useExpenseStore as unknown as jest.Mock).mockImplementation((selector: any) => {
+      const state = {
       expenses: mockExpenses,
       categories: mockCategories,
       isSelectMode: false,
@@ -91,6 +93,8 @@ describe('ExpenseList Component', () => {
       displayCurrency: 'CAD',
       baseCurrency: 'CAD',
       exchangeRates: { CAD: 1.0 },
+    };
+      return selector ? selector(state) : state;
     });
 
     global.confirm = jest.fn().mockReturnValue(true);
@@ -126,7 +130,8 @@ describe('ExpenseList Component', () => {
   });
 
   it('should handle select mode toggle', () => {
-    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
+    (useExpenseStore as unknown as jest.Mock).mockImplementation((selector: any) => {
+      const state = {
       expenses: mockExpenses,
       categories: mockCategories,
       isSelectMode: true,
@@ -139,6 +144,8 @@ describe('ExpenseList Component', () => {
       displayCurrency: 'CAD',
       baseCurrency: 'CAD',
       exchangeRates: { CAD: 1.0 },
+    };
+      return selector ? selector(state) : state;
     });
 
     render(<ExpenseList />);

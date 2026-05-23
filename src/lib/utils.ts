@@ -1,5 +1,6 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+import { useSyncExternalStore } from 'react';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -124,33 +125,40 @@ export function getCurrencySymbol(currency: string): string {
  * Compresses large VND numbers into K/M formats.
  * Formats standard currencies (USD, EUR, CAD) with exact decimals.
  */
-export function formatFriendlyCurrency(amount: number, currency: string): string {
-  const amt = parseFloat(amount as any) || 0;
-  const conf = CURRENCY_CONFIG[currency] || { symbol: '$', position: 'prefix', compression: false };
+export function formatFriendlyCurrency(amount: number | string, currency: string): string {
+  const rawAmt = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const amt = isNaN(rawAmt) ? 0 : rawAmt;
+  const conf = CURRENCY_CONFIG[currency] || { symbol: '$', position: 'prefix', compression: false, decimals: 2 };
+  const isNegative = amt < 0;
+  const absAmt = Math.abs(amt);
 
-  // Handle Large Number Compression (like VND)
+  // Handle Large Number Compression (like VND) with absolute values and sign prefixing
   if (conf.compression) {
-    if (amt >= 1000000) {
-      const formatted = (amt / 1000000).toFixed(1).replace(/\.0$/, '');
-      return `${formatted}M ${conf.symbol}`;
+    const sign = isNegative ? '-' : '';
+    if (absAmt >= 1000000) {
+      const formatted = (absAmt / 1000000).toFixed(1).replace(/\.0$/, '');
+      return `${sign}${formatted}M ${conf.symbol}`;
     }
-    if (amt >= 1000) {
-      const formatted = (amt / 1000).toFixed(0);
-      return `${formatted}K ${conf.symbol}`;
+    if (absAmt >= 1000) {
+      const formatted = (absAmt / 1000).toFixed(0);
+      return `${sign}${formatted}K ${conf.symbol}`;
     }
-    return `${amt.toFixed(0)} ${conf.symbol}`;
+    return `${sign}${absAmt.toFixed(0)} ${conf.symbol}`;
   }
 
+  const decimals = conf.decimals !== undefined ? conf.decimals : 2;
+
   // Standard decimal formatting using native Intl
-  const formattedAmt = amt.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+  const formattedAmt = absAmt.toLocaleString('en-US', {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   });
 
-  // Position glyphs based on configuration
+  const sign = isNegative ? '-' : '';
+  // Position glyphs based on configuration, ensuring negative sign goes before prefix currency symbol
   return conf.position === 'prefix' 
-    ? `${conf.symbol}${formattedAmt}` 
-    : `${formattedAmt} ${conf.symbol}`;
+    ? `${sign}${conf.symbol}${formattedAmt}` 
+    : `${sign}${formattedAmt} ${conf.symbol}`;
 }
 
 /**
@@ -158,8 +166,9 @@ export function formatFriendlyCurrency(amount: number, currency: string): string
  * If standard currency (CAD, USD, EUR), divides by 1000 and adds 'K' (e.g., C$0.5K).
  * If large currency (VND), delegates to formatFriendlyCurrency.
  */
-export function formatChartFriendlyCurrency(amount: number, currency: string): string {
-  const amt = parseFloat(amount as any) || 0;
+export function formatChartFriendlyCurrency(amount: number | string, currency: string): string {
+  const rawAmt = typeof amount === 'string' ? parseFloat(amount) : amount;
+  const amt = isNaN(rawAmt) ? 0 : rawAmt;
   const conf = CURRENCY_CONFIG[currency] || { symbol: '$', position: 'prefix', compression: false };
 
   if (conf.compression) {
@@ -167,14 +176,17 @@ export function formatChartFriendlyCurrency(amount: number, currency: string): s
     return formatFriendlyCurrency(amt, currency);
   }
 
-  // Compress standard currencies into thousands with strict 2-decimal precision (e.g., 523 -> 0.52K, 15 -> 0.02K)
-  const compressed = amt / 1000;
+  const isNegative = amt < 0;
+  const absAmt = Math.abs(amt);
+  // Compress standard currencies into thousands with strict 2-decimal precision
+  const compressed = absAmt / 1000;
   const formatted = compressed.toFixed(2);
   const formattedWithK = `${formatted}K`;
 
+  const sign = isNegative ? '-' : '';
   return conf.position === 'prefix'
-    ? `${conf.symbol}${formattedWithK}`
-    : `${formattedWithK} ${conf.symbol}`;
+    ? `${sign}${conf.symbol}${formattedWithK}`
+    : `${sign}${formattedWithK} ${conf.symbol}`;
 }
 
 /**
@@ -294,3 +306,11 @@ export function getCachedIntl(
   return newInstance;
 }
 
+const emptySubscribe = () => () => {};
+export function useIsMounted(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}

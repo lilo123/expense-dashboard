@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { Budget } from '@/types/database';
+import { revalidatePath } from 'next/cache';
 
 export async function getMonthlyBudgets(month: string): Promise<{ success: boolean; data?: Budget[]; error?: string }> {
   const supabase = await createClient();
@@ -71,7 +72,7 @@ export async function saveInitialBudgets(budgets: { category_id: string | null; 
     return { success: false, error: 'Failed to save budget setup.' };
   }
 }
-import { revalidatePath } from 'next/cache';
+
 
 export async function saveBulkBudgets(
   sourceMonth: string,

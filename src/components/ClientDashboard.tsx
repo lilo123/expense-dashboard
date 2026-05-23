@@ -36,6 +36,10 @@ interface ClientDashboardProps {
   initialBudgets?: Budget[];
 }
 
+// Define static fallbacks outside of component scope to prevent unstable references on every render
+const DEFAULT_RATES = { CAD: 1.0 };
+const DEFAULT_BUDGETS: Budget[] = [];
+
 export default function ClientDashboard({
   initialExpenses,
   initialCategories,
@@ -52,10 +56,10 @@ export default function ClientDashboard({
       user: initialUser, 
       globalError: initialError,
       profile: initialProfile || null,
-      exchangeRates: initialExchangeRates || { CAD: 1.0 },
+      exchangeRates: initialExchangeRates || DEFAULT_RATES,
       displayCurrency: initialProfile?.display_currency || 'CAD',
       baseCurrency: initialProfile?.base_currency || 'CAD',
-      budgets: initialBudgets || []
+      budgets: initialBudgets || DEFAULT_BUDGETS
     }}>
       <ClientDashboardContent />
     </StoreProvider>
@@ -63,15 +67,23 @@ export default function ClientDashboard({
 }
 
 function ClientDashboardContent() {
-  const { 
-    globalError, activeTab, 
-    toggleAddModal, toggleChatModal, toggleSiriModal, toggleRecurringModal, toggleOnboarding,
-    isChatModalOpen, isAddModalOpen, isRecurringModalOpen, isOnboardingOpen,
-    reset,
-    displayCurrency, setDisplayCurrency, setExchangeRates,
-    profile, setProfile, baseCurrency, user,
-    addExpense, categories
-  } = useExpenseStore(state => state);
+  const profile = useExpenseStore(state => state.profile);
+  const setProfile = useExpenseStore(state => state.setProfile);
+  const setExchangeRates = useExpenseStore(state => state.setExchangeRates);
+  const categories = useExpenseStore(state => state.categories);
+  const user = useExpenseStore(state => state.user);
+  const addExpense = useExpenseStore(state => state.addExpense);
+  const isOnboardingOpen = useExpenseStore(state => state.isOnboardingOpen);
+  const toggleOnboarding = useExpenseStore(state => state.toggleOnboarding);
+  const toggleRecurringModal = useExpenseStore(state => state.toggleRecurringModal);
+  const toggleSiriModal = useExpenseStore(state => state.toggleSiriModal);
+  const reset = useExpenseStore(state => state.reset);
+  const globalError = useExpenseStore(state => state.globalError);
+  const activeTab = useExpenseStore(state => state.activeTab);
+  const isChatModalOpen = useExpenseStore(state => state.isChatModalOpen);
+  const toggleChatModal = useExpenseStore(state => state.toggleChatModal);
+  const isAddModalOpen = useExpenseStore(state => state.isAddModalOpen);
+  const toggleAddModal = useExpenseStore(state => state.toggleAddModal);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
@@ -173,16 +185,6 @@ function ClientDashboardContent() {
     window.addEventListener('onboarding-sim', handleSim);
     return () => window.removeEventListener('onboarding-sim', handleSim);
   }, [toggleOnboarding]);
-
-  // Hydration-Safe Restore preferred display currency
-  useEffect(() => {
-    if (isMounted) {
-      const stored = localStorage.getItem('displayCurrency');
-      if (stored) {
-        setDisplayCurrency(stored as any);
-      }
-    }
-  }, [isMounted, setDisplayCurrency]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();

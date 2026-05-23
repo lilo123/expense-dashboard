@@ -51,6 +51,7 @@ node_modules/
 *.html
 *.txt
 *.sql
+!supabase/migrations/*.sql
 db_setup.sql
 
 # Local Visual Backups Subdirectory
@@ -62,3 +63,8 @@ test-results/
 
 # Unpackaged bug dumps
 UI_bug_V2.md
+
+# Transient audit logs and monitor tools
+audit-monitor.mjs
+audit_state.json
+master_audit_progress.md

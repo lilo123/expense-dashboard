@@ -1,6 +1,7 @@
 import { createContext, useContext, useRef, useLayoutEffect, useEffect } from 'react';
 import { createStore, useStore } from 'zustand';
 import { Expense, Category, User, SupportedCurrency, Profile, RecurringExpense, Budget } from '@/types/database';
+
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 export interface ExpenseState {
@@ -141,7 +142,7 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       }
 
       const hydratedBase = data.baseCurrency || (activeProfile ? activeProfile.base_currency : state.baseCurrency);
-      const hydratedDisplay = data.displayCurrency || preferredDisplay || (activeProfile ? activeProfile.base_currency : state.displayCurrency);
+      const hydratedDisplay = preferredDisplay || data.displayCurrency || (activeProfile ? activeProfile.display_currency : undefined) || (activeProfile ? activeProfile.base_currency : state.displayCurrency);
 
       return { 
         expenses: data.expenses !== undefined ? [...data.expenses] : state.expenses, 
@@ -310,17 +311,7 @@ function areInitialDataEqual(a: Partial<ExpenseState>, b: Partial<ExpenseState>)
     if (!valA || !valB) return false;
     
     if (Array.isArray(valA) && Array.isArray(valB)) {
-      if (valA.length !== valB.length) return false;
-      for (let i = 0; i < valA.length; i++) {
-        if (valA[i]?.id !== valB[i]?.id) return false;
-        if (key === 'budgets') {
-          const itemA = valA[i] as any;
-          const itemB = valB[i] as any;
-          if (itemA?.limit_amount !== itemB?.limit_amount || itemA?.month !== itemB?.month) {
-            return false;
-          }
-        }
-      }
+      if (JSON.stringify(valA) !== JSON.stringify(valB)) return false;
     } else if (typeof valA === 'object' && typeof valB === 'object') {
       if (JSON.stringify(valA) !== JSON.stringify(valB)) return false;
     } else {
@@ -331,7 +322,7 @@ function areInitialDataEqual(a: Partial<ExpenseState>, b: Partial<ExpenseState>)
 }
 
 // Export StoreProvider Context Component
-export function StoreProvider({ children, initialData }: { children: React.ReactNode, initialData: Partial<ExpenseState> }) {
+export function StoreProvider({ children, initialData }: { children: React.ReactNode; initialData: Partial<ExpenseState> }) {
   const storeRef = useRef<ReturnType<typeof createExpenseStore>>(undefined);
   if (!storeRef.current) {
     storeRef.current = createExpenseStore(initialData);
@@ -346,8 +337,10 @@ export function StoreProvider({ children, initialData }: { children: React.React
     }
   }, [initialData]);
 
+  const store = storeRef.current;
+
   return (
-    <StoreContext.Provider value={storeRef.current}>
+    <StoreContext.Provider value={store}>
       {children}
     </StoreContext.Provider>
   );

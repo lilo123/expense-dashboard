@@ -1,20 +1,18 @@
 'use client';
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, memo } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { convertAmount, formatNoDecimalCurrency } from '@/lib/utils';
 import { Tag, ListFilter, ChevronDown } from 'lucide-react';
 import AdjustMasterBudgetModal from './AdjustMasterBudgetModal';
 
-export default function BudgetView() {
-  const { 
-    expenses, 
-    categories, 
-    budgets, 
-    displayCurrency, 
-    baseCurrency, 
-    exchangeRates,
-    toggleOnboarding
-  } = useExpenseStore();
+function BudgetView() {
+  const expenses = useExpenseStore(state => state.expenses);
+  const categories = useExpenseStore(state => state.categories);
+  const budgets = useExpenseStore(state => state.budgets);
+  const displayCurrency = useExpenseStore(state => state.displayCurrency);
+  const baseCurrency = useExpenseStore(state => state.baseCurrency);
+  const exchangeRates = useExpenseStore(state => state.exchangeRates);
+  const toggleOnboarding = useExpenseStore(state => state.toggleOnboarding);
 
   const [isMounted, setIsMounted] = useState(false);
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
@@ -79,7 +77,7 @@ export default function BudgetView() {
       if (!map[catId]) map[catId] = 0;
       const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
       const curOriginal = exp.original_currency || exp.currency || baseCurrency;
-      const amtDisplay = convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
+      const amtDisplay = convertAmount(amtOriginal, curOriginal, displayCurrency, exchangeRates);
       map[catId] += amtDisplay;
     });
     return map;
@@ -360,3 +358,5 @@ export default function BudgetView() {
     </div>
   );
 }
+
+export default memo(BudgetView);

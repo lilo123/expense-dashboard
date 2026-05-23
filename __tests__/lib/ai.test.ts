@@ -47,6 +47,7 @@ describe('AI Extraction Service & Orchestration Gate', () => {
     );
 
     expect(res).not.toHaveProperty('error');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const successRes = res as any;
     expect(successRes.amount).toBe(25.50);
     expect(successRes.currency).toBe('CAD');
@@ -91,6 +92,7 @@ describe('AI Extraction Service & Orchestration Gate', () => {
     );
 
     expect(res).not.toHaveProperty('error');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const successRes = res as any;
     expect(successRes.amount).toBe(500000);
     expect(successRes.currency).toBe('VND');
@@ -182,9 +184,124 @@ describe('AI Extraction Service & Orchestration Gate', () => {
       );
 
       expect(res).not.toHaveProperty('error');
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const successRes = res as any;
-      expect(successRes.dateToInsert).toBe('2026-05-18T14:50:00.000Z'); // Defaulted safely to fake system clock ISO string!
+      expect(successRes.dateToInsert).toBe('2026-05-18T12:00:00.000Z'); // Defaulted safely to fake system clock local noon ISO string!
+    });
+  });
+
+  describe('Phase 3 New Robustness Guards & Interceptors', () => {
+    it('should return 400 error if categoriesList is empty', async () => {
+      const res = await extractExpenseFromMessage(
+        'spent 15 USD on coffee',
+        [],
+        'CAD'
+      );
+      expect(res).toEqual({
+        error: "No categories available to categorize this expense.",
+        status: 400
+      });
+    });
+
+    it('should return 400 error if category has no match and no generic fallback exists', async () => {
+      const mockLlmResponse = {
+        choices: [{
+          message: {
+            tool_calls: [{
+              function: {
+                name: 'extract_expense',
+                arguments: JSON.stringify({
+                  amount: 15.00,
+                  currency: 'USD',
+                  category: 'Automotive', // Not in mockCategories
+                  item: 'Oil change',
+                  date: '2026-05-16',
+                }),
+              },
+            }],
+          },
+        }],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockLlmResponse),
+      });
+
+      // We pass categoriesList without 'Misc' or 'Other'
+      const strictCategories = [
+        { id: 'cat-1', name: 'Groceries' },
+        { id: 'cat-2', name: 'Dining Out' },
+      ];
+
+      const res = await extractExpenseFromMessage(
+        'spent 15 USD on oil change',
+        strictCategories,
+        'CAD'
+      );
+
+      expect(res).toEqual({
+        error: `I couldn't automatically match the category "Automotive" for your expense. Please specify a matching category or create one first.`,
+        status: 400
+      });
+    });
+
+    it('should intercept raw JSON leak if LLM content fails JSON parsing but has JSON chars', async () => {
+      const mockLlmResponse = {
+        choices: [{
+          message: {
+            content: '{ "amount": 15, "currency": "USD", "category": ', // Broken JSON
+          },
+        }],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockLlmResponse),
+      });
+
+      const res = await extractExpenseFromMessage(
+        'spent 15 USD',
+        mockCategories,
+        'CAD'
+      );
+
+      expect(res).toEqual({
+        error: "I couldn't parse the transaction details. Please describe it again.",
+        status: 400
+      });
+    });
+
+    it('should return 504 if fetch execution is aborted due to timeout', async () => {
+      const abortError = new Error('The user aborted a request.');
+      abortError.name = 'AbortError';
+      (global.fetch as jest.Mock).mockRejectedValueOnce(abortError);
+
+      const res = await extractExpenseFromMessage(
+        'spent 15 USD',
+        mockCategories,
+        'CAD'
+      );
+
+      expect(res).toEqual({
+        error: "AI processing timed out. Please try again.",
+        status: 504
+      });
+    });
+
+    it('should return 503 if fetch fails due to connection error', async () => {
+      (global.fetch as jest.Mock).mockRejectedValueOnce(new TypeError('fetch failed'));
+
+      const res = await extractExpenseFromMessage(
+        'spent 15 USD',
+        mockCategories,
+        'CAD'
+      );
+
+      expect(res).toEqual({
+        error: "Connection to AI service failed. Please check your connection and try again.",
+        status: 503
+      });
     });
   });
 });
-

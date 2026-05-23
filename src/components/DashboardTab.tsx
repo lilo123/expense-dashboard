@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, memo } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
-import { convertAmount, formatFriendlyCurrency, formatChartFriendlyCurrency } from '@/lib/utils';
+import { convertAmount, formatFriendlyCurrency, formatChartFriendlyCurrency, formatUTCToLocal, formatFriendlyDate, wrapLabel, useIsMounted } from '@/lib/utils';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,7 +15,6 @@ import {
 import { Bar } from 'react-chartjs-2';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import BudgetView from './BudgetView';
-import { formatUTCToLocal, formatFriendlyDate, wrapLabel } from '@/lib/utils';
 
 ChartJS.register(
   CategoryScale,
@@ -35,18 +35,22 @@ const now = new Date();
   return { firstDay: currentMonth, todayStr: currentMonth };
 }
 
-export default function DashboardTab() {
-  const { expenses, activeCategoryFilter, setActiveCategoryFilter, displayCurrency, baseCurrency, exchangeRates, isBudgetView, setBudgetView } = useExpenseStore();
+function DashboardTab() {
+  const expenses = useExpenseStore(state => state.expenses);
+  const activeCategoryFilter = useExpenseStore(state => state.activeCategoryFilter);
+  const setActiveCategoryFilter = useExpenseStore(state => state.setActiveCategoryFilter);
+  const displayCurrency = useExpenseStore(state => state.displayCurrency);
+  const baseCurrency = useExpenseStore(state => state.baseCurrency);
+  const exchangeRates = useExpenseStore(state => state.exchangeRates);
+  const isBudgetView = useExpenseStore(state => state.isBudgetView);
+  const setBudgetView = useExpenseStore(state => state.setBudgetView);
   
   const { firstDay, todayStr } = getCurrentMonthDatesLocal();
   
   const [startDate, setStartDate] = useState(firstDay);
   const [endDate, setEndDate] = useState(todayStr);
   const detailsRef = useRef<HTMLDivElement>(null);
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const isMounted = useIsMounted();
 
   const handleClear = () => {
     setStartDate('');
@@ -66,7 +70,7 @@ export default function DashboardTab() {
   const total = filteredExpenses.reduce((sum, exp) => {
     const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
     const curOriginal = exp.original_currency || exp.currency || baseCurrency;
-    const amtDisplay = convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
+    const amtDisplay = convertAmount(amtOriginal, curOriginal, displayCurrency, exchangeRates);
     return sum + amtDisplay;
   }, 0);
 
@@ -77,7 +81,7 @@ export default function DashboardTab() {
       if (!byCategory[catName]) byCategory[catName] = { total: 0, items: [] };
       const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
       const curOriginal = exp.original_currency || exp.currency || baseCurrency;
-      const amtDisplay = convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
+      const amtDisplay = convertAmount(amtOriginal, curOriginal, displayCurrency, exchangeRates);
       byCategory[catName].total += amtDisplay;
       byCategory[catName].items.push(exp);
     });
@@ -293,7 +297,7 @@ export default function DashboardTab() {
                           (() => {
                             const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
                             const curOriginal = exp.original_currency || exp.currency || baseCurrency;
-                            return convertAmount(amtOriginal, curOriginal as any, displayCurrency, exchangeRates);
+                            return convertAmount(amtOriginal, curOriginal, displayCurrency, exchangeRates);
                           })(),
                           displayCurrency
                         )}
@@ -312,3 +316,5 @@ export default function DashboardTab() {
     </div>
   );
 }
+
+export default memo(DashboardTab);

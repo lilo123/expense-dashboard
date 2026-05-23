@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AddExpenseModal from '@/components/AddExpenseModal';
 import { useExpenseStore } from '@/store/useExpenseStore';
@@ -48,7 +49,8 @@ describe('AddExpenseModal Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
-    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
+    (useExpenseStore as unknown as jest.Mock).mockImplementation((selector: any) => {
+      const state = {
       isAddModalOpen: true,
       toggleAddModal: mockToggleAddModal,
       categories: mockCategories,
@@ -58,6 +60,8 @@ describe('AddExpenseModal Component', () => {
       hydrate: mockHydrate,
       baseCurrency: 'CAD',
       exchangeRates: { CAD: 1.0 },
+    };
+      return selector ? selector(state) : state;
     });
 
     (getRecurringExpensesAction as jest.Mock).mockResolvedValue({
@@ -69,7 +73,8 @@ describe('AddExpenseModal Component', () => {
   });
 
   it('should not render when isAddModalOpen is false', () => {
-    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
+    (useExpenseStore as unknown as jest.Mock).mockImplementation((selector: any) => {
+      const state = {
       isAddModalOpen: false,
       toggleAddModal: mockToggleAddModal,
       categories: mockCategories,
@@ -78,6 +83,8 @@ describe('AddExpenseModal Component', () => {
       hydrate: mockHydrate,
       baseCurrency: 'CAD',
       exchangeRates: { CAD: 1.0 },
+    };
+      return selector ? selector(state) : state;
     });
 
     const { container } = render(<AddExpenseModal />);
@@ -85,7 +92,8 @@ describe('AddExpenseModal Component', () => {
   });
 
   it('should initialize currency with store baseCurrency preference', () => {
-    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
+    (useExpenseStore as unknown as jest.Mock).mockImplementation((selector: any) => {
+      const state = {
       isAddModalOpen: true,
       toggleAddModal: mockToggleAddModal,
       categories: mockCategories,
@@ -95,6 +103,8 @@ describe('AddExpenseModal Component', () => {
       hydrate: mockHydrate,
       baseCurrency: 'EUR', // Explicitly set to EUR to prove dynamic binding!
       exchangeRates: { EUR: 1.0 },
+    };
+      return selector ? selector(state) : state;
     });
 
     render(<AddExpenseModal />);

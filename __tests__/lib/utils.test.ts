@@ -50,6 +50,11 @@ describe('Currency Utilities - Scaled Architecture', () => {
       expect(formatFriendlyCurrency(1250.75, 'CAD')).toBe('C$1,250.75');
     });
 
+    it('should format JPY correctly with zero decimals', () => {
+      expect(formatFriendlyCurrency(120, 'JPY')).toBe('¥120');
+      expect(formatFriendlyCurrency(120.75, 'JPY')).toBe('¥121');
+    });
+
     it('should format VND with compression rules and suffix glyph', () => {
       expect(formatFriendlyCurrency(1500000, 'VND')).toBe('1.5M ₫');
       expect(formatFriendlyCurrency(15000000, 'VND')).toBe('15M ₫');

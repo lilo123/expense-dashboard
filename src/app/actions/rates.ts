@@ -1,6 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 // 7 Core Currencies backed by local conversion map
 const CORE_CURRENCIES = ['CAD', 'VND', 'USD', 'EUR', 'JPY', 'GBP', 'SGD'];
@@ -16,8 +17,8 @@ const FALLBACK_RATES: Record<string, number> = {
   SGD: 0.99,
 };
 
-export async function syncExchangeRates(): Promise<Record<string, number>> {
-  const supabase = await createClient();
+export async function syncExchangeRates(supabaseClient?: SupabaseClient): Promise<Record<string, number>> {
+  const supabase = supabaseClient || (await createClient());
 
   try {
     // 1. Check if we have cached rates that are less than 24 hours old
@@ -76,8 +77,9 @@ export async function syncExchangeRates(): Promise<Record<string, number>> {
 
     console.log('[FX SYNC SUCCESS] Live exchange rates cached successfully (CAD baseline).');
     return filteredRates;
-  } catch (err: any) {
-    console.error('[FX SYNC FAILURE] Falling back to hardcoded CAD rates:', err.message || err);
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    console.error('[FX SYNC FAILURE] Falling back to hardcoded CAD rates:', errorMessage);
     return FALLBACK_RATES;
   }
 }
