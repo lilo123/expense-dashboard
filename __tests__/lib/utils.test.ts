@@ -33,6 +33,14 @@ describe('Currency Utilities - Scaled Architecture', () => {
     it('should correctly convert between non-base currencies (VND to USD)', () => {
       expect(convertAmount(185000, 'VND', 'USD', mockRates)).toBe(7.30);
     });
+
+    it('should handle empty rates mapping by defaulting to 1:1 conversion fallback', () => {
+      expect(convertAmount(100, 'CAD', 'USD', {})).toBe(100);
+    });
+
+    it('should handle undefined rates mapping cleanly by defaulting to 1:1 conversion fallback', () => {
+      expect(convertAmount(100, 'CAD', 'USD', undefined)).toBe(100);
+    });
   });
 
   describe('getCurrencySymbol', () => {

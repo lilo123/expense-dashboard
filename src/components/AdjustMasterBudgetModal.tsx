@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 import { useState, useEffect, useMemo, useActionState } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { saveBulkBudgets } from '@/app/actions/budget';
 import { addCategoryAction, deleteCategoryAction } from '@/app/actions';
-import { formatFriendlyCurrency, formatNoDecimalCurrency, parseLocalDate, getCurrencySymbol, CURRENCY_CONFIG } from '@/lib/utils';
+import { formatNoDecimalCurrency, parseLocalDate, getCurrencySymbol, CURRENCY_CONFIG, convertAmount } from '@/lib/utils';
 import { Tag, Trash2, Plus, X } from 'lucide-react';
 
 const DEFAULT_CATEGORIES = ['Housing', 'Food & Dining', 'Transportation', 'Utilities', 'Personal/Entertainment'];
@@ -29,7 +30,8 @@ export default function AdjustMasterBudgetModal({
     profile,
     addCategory,
     removeCategory,
-    expenses
+    expenses,
+    exchangeRates
   } = useExpenseStore();
 
   const [step, setStep] = useState(1);
@@ -37,25 +39,29 @@ export default function AdjustMasterBudgetModal({
   const [allocations, setAllocations] = useState<Record<string, number>>({});
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
-  const [hasHydrated, setHasHydrated] = useState(false);
+  const [prevIsOpen, setPrevIsOpen] = useState(false);
 
   const monthWord = useMemo(() => {
     const d = parseLocalDate(`${targetMonth}-01`);
     return isNaN(d.getTime()) ? targetMonth : d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }, [targetMonth]);
 
-  // Hydrate initial state only once per modal session to prevent re-render resets mid-interaction
-  useEffect(() => {
-    if (isOpen && !hasHydrated) {
+  // Synchronously adjust local form states during render when the modal opens to satisfy set-state-in-effect rules
+  if (isOpen !== prevIsOpen) {
+    setPrevIsOpen(isOpen);
+    if (isOpen) {
       const targetMonthBudgets = budgets.filter(b => b.month === targetMonth);
       if (targetMonthBudgets.length > 0) {
-        const total = targetMonthBudgets.reduce((sum, b) => sum + b.limit_amount, 0);
+        const total = targetMonthBudgets.reduce((sum, b) => {
+          const converted = convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
+          return sum + converted;
+        }, 0);
         setTotalBudgetStr(total.toString());
         
         const allocMap: Record<string, number> = {};
         targetMonthBudgets.forEach(b => {
           if (b.category_id) {
-            allocMap[b.category_id] = b.limit_amount;
+            allocMap[b.category_id] = convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
           }
         });
         setAllocations(allocMap);
@@ -65,12 +71,8 @@ export default function AdjustMasterBudgetModal({
         setAllocations({});
         setStep(1);
       }
-      setHasHydrated(true);
     }
-    if (!isOpen) {
-      setHasHydrated(false);
-    }
-  }, [isOpen, budgets, targetMonth, initialAmount, hasHydrated]);
+  }
 
   const totalBudget = parseFloat(totalBudgetStr) || 0;
 

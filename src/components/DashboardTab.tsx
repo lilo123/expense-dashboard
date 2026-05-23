@@ -2,7 +2,8 @@
 'use client';
 import { useState, useMemo, useRef, memo } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
-import { convertAmount, formatFriendlyCurrency, formatChartFriendlyCurrency, formatUTCToLocal, formatFriendlyDate, wrapLabel, useIsMounted } from '@/lib/utils';
+import { convertAmount, formatFriendlyCurrency, formatChartFriendlyCurrency, formatUTCToLocal, formatFriendlyDate, wrapLabel } from '@/lib/utils';
+import { useIsMounted } from '@/lib/hooks';
 import {
   Chart as ChartJS,
   CategoryScale,

@@ -88,23 +88,25 @@ function BudgetView() {
     return selectedMonthBudgets.find(b => b.category_id === null);
   }, [selectedMonthBudgets]);
 
-  const surplusAmount = surplusBudget ? surplusBudget.limit_amount : 0;
+  const surplusAmount = surplusBudget ? convertAmount(surplusBudget.limit_amount, surplusBudget.currency || 'CAD', displayCurrency, exchangeRates) : 0;
 
   // Calculate Total Limits and Total Spent
   const { totalLimits, totalSpent } = useMemo(() => {
     let limits = 0;
     let spent = 0;
     selectedMonthBudgets.forEach(b => {
-      if (b.category_id) limits += b.limit_amount;
+      if (b.category_id) {
+        limits += convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
+      }
     });
     Object.values(spentByCategory).forEach(s => spent += s);
     return { totalLimits: limits, totalSpent: spent };
-  }, [selectedMonthBudgets, spentByCategory]);
+  }, [selectedMonthBudgets, spentByCategory, displayCurrency, exchangeRates]);
 
   const sortedCategories = useMemo(() => {
     const items = categories.map(cat => {
       const budget = selectedMonthBudgets.find(b => b.category_id === cat.id);
-      const limit = budget ? budget.limit_amount : 0;
+      const limit = budget ? convertAmount(budget.limit_amount, budget.currency || 'CAD', displayCurrency, exchangeRates) : 0;
       const spent = spentByCategory[cat.id] || 0;
       const remaining = Math.max(0, limit - spent);
       return { category: cat, limit, spent, remaining };
@@ -128,7 +130,7 @@ function BudgetView() {
       return sortDirection === 'highest' ? metricB - metricA : metricA - metricB;
     });
     return activeItems;
-  }, [categories, selectedMonthBudgets, spentByCategory, sortMetric, sortDirection]);
+  }, [categories, selectedMonthBudgets, spentByCategory, sortMetric, sortDirection, displayCurrency, exchangeRates]);
 
   // Pre-reconcile integers before subtraction to guarantee A - B = C in UI displays
   const displayTotalLimits = Math.round(totalLimits);

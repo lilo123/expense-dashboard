@@ -2,7 +2,8 @@
 'use client';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { useMemo, useState, useEffect, useRef, memo } from 'react';
-import { parseLocalDate, formatFriendlyDate, convertAmount, formatFriendlyCurrency, formatChartFriendlyCurrency, formatAxisFriendlyCurrency, formatNoDecimalCurrency, useIsMounted } from '@/lib/utils';
+import { parseLocalDate, formatFriendlyDate, convertAmount, formatFriendlyCurrency, formatChartFriendlyCurrency, formatAxisFriendlyCurrency, formatNoDecimalCurrency } from '@/lib/utils';
+import { useIsMounted } from '@/lib/hooks';
 import { ChevronDown } from 'lucide-react';
 import {
   Chart as ChartJS,

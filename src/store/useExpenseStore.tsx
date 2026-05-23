@@ -144,6 +144,15 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
       const hydratedBase = data.baseCurrency || (activeProfile ? activeProfile.base_currency : state.baseCurrency);
       const hydratedDisplay = preferredDisplay || data.displayCurrency || (activeProfile ? activeProfile.display_currency : undefined) || (activeProfile ? activeProfile.base_currency : state.displayCurrency);
 
+      // Hardening: only overwrite rates if incoming has rich rates, or current state is default/empty
+      const incomingRates = data.exchangeRates;
+      const hasIncomingRichRates = incomingRates && Object.keys(incomingRates).length > 1;
+      const stateHasRichRates = state.exchangeRates && Object.keys(state.exchangeRates).length > 1;
+      
+      const resolvedRates = hasIncomingRichRates 
+        ? incomingRates 
+        : (stateHasRichRates ? state.exchangeRates : (incomingRates || state.exchangeRates));
+
       return { 
         expenses: data.expenses !== undefined ? [...data.expenses] : state.expenses, 
         categories: data.categories !== undefined ? [...data.categories] : state.categories, 
@@ -152,9 +161,9 @@ export const createExpenseStore = (initialState: Partial<ExpenseState> = {}) =>
         user: data.user !== undefined ? data.user : state.user, 
         globalError: data.error !== undefined ? data.error : state.globalError,
         profile: activeProfile,
-        baseCurrency: hydratedBase,
-        displayCurrency: hydratedDisplay,
-        exchangeRates: data.exchangeRates || state.exchangeRates
+        baseCurrency: hydratedBase as SupportedCurrency,
+        displayCurrency: hydratedDisplay as SupportedCurrency,
+        exchangeRates: resolvedRates
       };
     }),
     
@@ -321,23 +330,16 @@ function areInitialDataEqual(a: Partial<ExpenseState>, b: Partial<ExpenseState>)
   return true;
 }
 
-// Export StoreProvider Context Component
 export function StoreProvider({ children, initialData }: { children: React.ReactNode; initialData: Partial<ExpenseState> }) {
-  const storeRef = useRef<ReturnType<typeof createExpenseStore>>(undefined);
-  if (!storeRef.current) {
-    storeRef.current = createExpenseStore(initialData);
-  }
-  
+  const [store] = useState(() => createExpenseStore(initialData));
   const prevInitialDataRef = useRef<Partial<ExpenseState>>(initialData);
 
   useIsomorphicLayoutEffect(() => {
     if (prevInitialDataRef.current !== initialData && !areInitialDataEqual(prevInitialDataRef.current, initialData)) {
-      storeRef.current?.getState().hydrate(initialData);
+      store.getState().hydrate(initialData);
       prevInitialDataRef.current = initialData;
     }
-  }, [initialData]);
-
-  const store = storeRef.current;
+  }, [initialData, store]);
 
   return (
     <StoreContext.Provider value={store}>
@@ -352,5 +354,5 @@ export function useExpenseStore<T>(selector: (state: ExpenseState) => T): T;
 export function useExpenseStore<T>(selector?: (state: ExpenseState) => T): T | ExpenseState {
   const store = useContext(StoreContext);
   if (!store) throw new Error('useExpenseStore must be used within a StoreProvider');
-  return useStore(store, selector || ((state) => state as any));
+  return useStore(store, selector || ((state) => state as ExpenseState));
 }

@@ -1,8 +1,8 @@
 import { createClient } from '@/utils/supabase/server';
 import { redirect } from 'next/navigation';
 import BudgetPlanner from '@/components/BudgetPlanner';
-import { Suspense } from 'react';
-import BudgetPlannerSkeleton from './loading';
+import { syncExchangeRates } from '@/app/actions/rates';
+
 
 interface BudgetPageProps {
   searchParams: Promise<{ year?: string }>;
@@ -47,6 +47,7 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   }));
 
   const displayCurrency = String(profileRes.data?.display_currency || 'CAD');
+  const exchangeRates = await syncExchangeRates();
 
   return (
     <BudgetPlanner 
@@ -54,6 +55,7 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
       categories={categories} 
       displayCurrency={displayCurrency} 
       initialYear={initialYear} 
+      exchangeRates={exchangeRates}
     />
   );
 }

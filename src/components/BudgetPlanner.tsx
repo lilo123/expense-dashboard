@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import { useState, useMemo, useEffect, useRef, useOptimistic, useActionState } from 'react';
+import { useState, useMemo, useRef, useOptimistic, useActionState } from 'react';
 import { saveBulkBudgets } from '@/app/actions/budget';
-import { formatFriendlyCurrency, getCurrencySymbol, CURRENCY_CONFIG } from '@/lib/utils';
+import { formatFriendlyCurrency, getCurrencySymbol, CURRENCY_CONFIG, convertAmount } from '@/lib/utils';
 import { Tag, ChevronDown, ChevronUp, Copy, RefreshCw, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -26,6 +27,7 @@ interface BudgetPlannerProps {
   categories: CategoryDTO[];
   displayCurrency: string;
   initialYear: string;
+  exchangeRates?: Record<string, number>;
 }
 
 const MONTH_LABELS = [
@@ -37,7 +39,8 @@ export default function BudgetPlanner({
   initialBudgets,
   categories,
   displayCurrency,
-  initialYear
+  initialYear,
+  exchangeRates
 }: BudgetPlannerProps) {
   const [selectedYear, setSelectedYear] = useState(initialYear);
   // Deterministic initial state: January (0) expanded by default
@@ -106,8 +109,9 @@ export default function BudgetPlanner({
     }
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [copyState, copyAction, isCopyPending] = useActionState(
-    async (prevState: any, formData: FormData) => {
+    async (_prevState: any, _formData: FormData) => {
       const prevYear = String(parseInt(selectedYear) - 1);
       const prevDecember = `${prevYear}-12`;
       const sourceBudgets = initialBudgets.filter(b => b.month === prevDecember);
@@ -236,7 +240,6 @@ export default function BudgetPlanner({
               key={monthStr}
               monthStr={monthStr}
               monthName={monthName}
-              monthIndex={idx}
               isOpen={isOpen}
               onToggle={() => toggleMonth(idx)}
               onKeyDown={(e) => handleKeyDown(e, idx)}
@@ -245,7 +248,7 @@ export default function BudgetPlanner({
               setOptimisticBudgets={setOptimisticBudgets}
               categories={categories}
               displayCurrency={displayCurrency}
-              selectedYear={selectedYear}
+              exchangeRates={exchangeRates}
               setAnnouncement={setAnnouncement}
               onOpenSelectionModal={() => setSelectionModalState({ isOpen: true, sourceMonthStr: monthStr, sourceMonthIndex: idx })}
               optimisticVersion={optimisticVersion}
@@ -276,7 +279,6 @@ export default function BudgetPlanner({
 interface MonthAccordionFormProps {
   monthStr: string;
   monthName: string;
-  monthIndex: number;
   isOpen: boolean;
   onToggle: () => void;
   onKeyDown: (e: React.KeyboardEvent) => void;
@@ -285,7 +287,7 @@ interface MonthAccordionFormProps {
   setOptimisticBudgets: (update: { targetMonths: string[]; allocations: BudgetDTO[] }) => void;
   categories: CategoryDTO[];
   displayCurrency: string;
-  selectedYear: string;
+  exchangeRates?: Record<string, number>;
   setAnnouncement: (msg: string) => void;
   onOpenSelectionModal: () => void;
   optimisticVersion: number;
@@ -296,7 +298,6 @@ const activeSubmissions = new Set<string>();
 function MonthAccordionForm({
   monthStr,
   monthName,
-  monthIndex,
   isOpen,
   onToggle,
   onKeyDown,
@@ -305,7 +306,7 @@ function MonthAccordionForm({
   setOptimisticBudgets,
   categories,
   displayCurrency,
-  selectedYear,
+  exchangeRates,
   setAnnouncement,
   onOpenSelectionModal,
   optimisticVersion
@@ -394,32 +395,31 @@ function MonthAccordionForm({
     { success: false }
   );
 
-  const prevSyncKeyRef = useRef<string | null>(null);
   const currentSyncKey = `${monthStr}-${optimisticVersion}`;
 
-  // Derive local state when accordion opens, month changes, or external propagation occurs, completely immune to intermediate transition commits
-  useEffect(() => {
-    if (isOpen && !activeSubmissions.has(monthStr) && !state.error) {
-      if (prevSyncKeyRef.current !== currentSyncKey || Object.keys(allocations).length === 0) {
-        prevSyncKeyRef.current = currentSyncKey;
-        if (monthBudgets.length > 0) {
-          const total = monthBudgets.reduce((sum, b) => sum + b.limit_amount, 0);
-          setTotalBudgetStr(total.toString());
-          
-          const allocMap: Record<string, number> = {};
-          monthBudgets.forEach(b => {
-            if (b.category_id) {
-              allocMap[b.category_id] = b.limit_amount;
-            }
-          });
-          setAllocations(allocMap);
-        } else {
-          setTotalBudgetStr('2000');
-          setAllocations({});
-        }
+  const [prevSyncKey, setPrevSyncKey] = useState<string | null>(null);
+
+  // Synchronously synchronize state during render when accordion opens to satisfy set-state-in-effect linter rules
+  if (isOpen && !activeSubmissions.has(monthStr) && !state.error) {
+    if (currentSyncKey !== prevSyncKey || Object.keys(allocations).length === 0) {
+      setPrevSyncKey(currentSyncKey);
+      if (monthBudgets.length > 0) {
+        const total = monthBudgets.reduce((sum, b) => sum + convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates), 0);
+        setTotalBudgetStr(total.toString());
+        
+        const allocMap: Record<string, number> = {};
+        monthBudgets.forEach(b => {
+          if (b.category_id) {
+            allocMap[b.category_id] = convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
+          }
+        });
+        setAllocations(allocMap);
+      } else {
+        setTotalBudgetStr('2000');
+        setAllocations({});
       }
     }
-  }, [isOpen, monthBudgets, state.error, currentSyncKey]);
+  }
 
   return (
     <div className="bg-white/60 backdrop-blur-xl border border-white/30 shadow-sm rounded-3xl overflow-hidden transition-all">
@@ -442,7 +442,7 @@ function MonthAccordionForm({
 
         <div className="flex items-center gap-4">
           <span className="text-sm font-bold text-zen-charcoal/70">
-            {monthBudgets.length > 0 ? formatFriendlyCurrency(monthBudgets.reduce((s, b) => s + b.limit_amount, 0), displayCurrency) : 'Not Set'}
+            {monthBudgets.length > 0 ? formatFriendlyCurrency(monthBudgets.reduce((s, b) => s + convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates), 0), displayCurrency) : 'Not Set'}
           </span>
           {isOpen ? <ChevronUp size={20} className="text-zen-charcoal/60" /> : <ChevronDown size={20} className="text-zen-charcoal/60" />}
         </div>

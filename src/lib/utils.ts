@@ -1,6 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { useSyncExternalStore } from 'react';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -102,11 +101,12 @@ export function convertAmount(
   amount: number,
   from: string,
   to: string,
-  rates: Record<string, number>
+  rates?: Record<string, number>
 ): number {
   if (!from || !to) return amount;
-  const fromRate = rates[from] || 1;
-  const toRate = rates[to] || 1;
+  const safeRates = rates || { CAD: 1.0 };
+  const fromRate = safeRates[from] || 1;
+  const toRate = safeRates[to] || 1;
   
   // Safeguard: skip FX division on identical pairs, but always execute rounding clamp
   const converted = from === to ? amount : amount * (toRate / fromRate);
@@ -304,13 +304,4 @@ export function getCachedIntl(
   
   intlCache.set(key, newInstance);
   return newInstance;
-}
-
-const emptySubscribe = () => () => {};
-export function useIsMounted(): boolean {
-  return useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
 }
