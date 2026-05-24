@@ -4,7 +4,7 @@ import { useState, useMemo, useActionState } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { saveBulkBudgets } from '@/app/actions/budget';
 import { addCategoryAction, deleteCategoryAction } from '@/app/actions';
-import { formatNoDecimalCurrency, parseLocalDate, getCurrencySymbol, CURRENCY_CONFIG, convertAmount } from '@/lib/utils';
+import { formatNoDecimalCurrency, parseLocalDate, getCurrencySymbol, CURRENCY_CONFIG, convertAmount, getRemainingMonths } from '@/lib/utils';
 import { Tag, Trash2, Plus, X } from 'lucide-react';
 
 const DEFAULT_CATEGORIES = ['Housing', 'Food & Dining', 'Transportation', 'Utilities', 'Personal/Entertainment'];
@@ -26,7 +26,6 @@ export default function AdjustMasterBudgetModal({
     categories, 
     displayCurrency,
     budgets,
-    profile,
     addCategory,
     removeCategory,
     exchangeRates
@@ -63,6 +62,10 @@ export default function AdjustMasterBudgetModal({
 
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
+  const [applyToRemaining, setApplyToRemaining] = useState(false);
+
+  const remainingMonths = useMemo(() => getRemainingMonths(targetMonth), [targetMonth]);
+  const remainingMonthsCount = remainingMonths.length;
 
   const monthWord = useMemo(() => {
     const d = parseLocalDate(`${targetMonth}-01`);
@@ -144,6 +147,7 @@ export default function AdjustMasterBudgetModal({
       const allocationsMap = JSON.parse(formData.get('allocationsPayload') as string);
       const totalBgt = parseFloat(formData.get('totalBudgetPayload') as string) || 0;
       const unalloc = parseFloat(formData.get('unallocatedPayload') as string) || 0;
+      const applyToRemainingVal = formData.get('applyToRemaining') === 'true';
 
       if (totalBgt <= 0) {
         return { success: false, error: 'Please enter a valid total budget.' };
@@ -153,12 +157,11 @@ export default function AdjustMasterBudgetModal({
         return { success: false, error: 'Allocations exceed total budget. Please adjust category limits.' };
       }
 
-      const payload: { category_id: string | null; limit_amount: number; currency: string; month: string }[] = displayCategories.map(cat => ({
+      const payload: { category_id: string | null; limit_amount: number; currency: string }[] = displayCategories.map(cat => ({
         category_id: cat.id,
         // Convert local string representation back to number when saving payload
         limit_amount: parseFloat(allocationsMap[cat.id] || '0') || 0,
-        currency: displayCurrency,
-        month: targetMonth
+        currency: displayCurrency
       }));
 
       // Only push 'Unallocated Budget' surplus record if greater than zero
@@ -166,12 +169,18 @@ export default function AdjustMasterBudgetModal({
         payload.push({
           category_id: null,
           limit_amount: unalloc,
-          currency: displayCurrency,
-          month: targetMonth
+          currency: displayCurrency
         });
       }
 
-      const res = await saveBulkBudgets(targetMonth, [targetMonth], payload);
+      // Compute target months dynamically based on propagation checkbox selection
+      const targetMonths = [targetMonth];
+      if (applyToRemainingVal) {
+        const remaining = getRemainingMonths(targetMonth);
+        targetMonths.push(...remaining);
+      }
+
+      const res = await saveBulkBudgets(targetMonth, targetMonths, payload);
 
       if (res.success) {
         onClose();
@@ -189,7 +198,7 @@ export default function AdjustMasterBudgetModal({
     <div className="modal" style={{ display: 'flex' }} onClick={(e) => {
       if ((e.target as HTMLElement).classList.contains('modal') && !isPending) onClose();
     }}>
-      <div className="modal-content bg-white border border-zen-lavender/45 shadow-[0_25px_55px_rgba(45,55,72,0.15)] text-zen-charcoal rounded-3xl p-8 w-full max-w-md max-h-[90dvh] overflow-y-auto flex flex-col gap-6 animate-scale-up" onClick={e => e.stopPropagation()}>
+      <div className="modal-content bg-white border border-zen-lavender/45 shadow-[0_25px_55px_rgba(45,55,72,0.15)] text-zen-charcoal rounded-3xl p-5 sm:p-6 w-full max-w-md max-h-[90dvh] flex flex-col gap-4 animate-scale-up" onClick={e => e.stopPropagation()}>
         
         {/* Modal Header */}
         <div className="flex justify-between items-center">
@@ -252,7 +261,7 @@ export default function AdjustMasterBudgetModal({
             <input type="hidden" name="unallocatedPayload" value={unallocated} />
 
             {/* Centered Premium Total Budget Input Card */}
-            <div className="w-full bg-white border border-zen-lavender/45 rounded-2xl p-4 flex flex-col items-center shadow-[0_4px_20px_rgba(45,55,72,0.05)] justify-between min-h-[95px] box-border">
+            <div className="w-full bg-white border border-zen-lavender/45 rounded-2xl p-3 flex flex-col items-center shadow-[0_4px_20px_rgba(45,55,72,0.05)] justify-between box-border">
               <span className="text-xs font-bold text-zen-charcoal/60 uppercase tracking-wider select-none">Total Budget</span>
               <div className="flex items-center bg-white border border-zen-lavender/60 rounded-xl px-4 py-1.5 shadow-inner w-full max-w-[180px] box-border my-1 focus-within:ring-2 focus-within:ring-zen-sage/60">
                 {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
@@ -273,7 +282,7 @@ export default function AdjustMasterBudgetModal({
 
             {/* Premium Budget Allocation Utilization Progress Card */}
             {totalBudget > 0 && (
-              <div className="flex flex-col gap-3 bg-gradient-to-br from-zen-lavender/10 via-white/40 to-zen-peach/10 p-4 rounded-2xl border border-white/40 shadow-xs transition-all duration-300 my-2">
+              <div className="flex flex-col gap-3 bg-gradient-to-br from-zen-lavender/10 via-white/40 to-zen-peach/10 p-3 rounded-2xl border border-white/40 shadow-xs transition-all duration-300 my-1">
                 <div className="flex justify-between items-end">
                   <div className="flex flex-col gap-0.5 text-left">
                     <span className="text-[10px] font-bold text-zen-charcoal/40 uppercase tracking-wider">
@@ -293,7 +302,7 @@ export default function AdjustMasterBudgetModal({
                   
                   <span className={`text-xs font-extrabold tracking-wide px-2.5 py-1 rounded-lg shadow-2xs transition-all duration-300 ${
                     unallocated < 0 
-                      ? 'text-red-600 bg-red-50 border border-red-200/60' 
+                      ? 'text-amber-600 bg-amber-50 border border-amber-200/60' 
                       : unallocated === 0
                         ? 'text-zen-sage bg-zen-sage/20 border border-zen-sage/30'
                         : 'text-zen-charcoal bg-white/80 border border-zen-lavender/30'
@@ -314,7 +323,7 @@ export default function AdjustMasterBudgetModal({
                   <div 
                     className={`h-full rounded-full transition-all duration-500 ease-out ${
                       unallocated < 0 
-                        ? 'bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.4)]' 
+                        ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.3)]' 
                         : allocatedPercent === 100 
                           ? 'bg-zen-sage shadow-[0_0_10px_rgba(163,230,53,0.3)]' 
                           : 'bg-zen-sage/85'
@@ -325,8 +334,8 @@ export default function AdjustMasterBudgetModal({
 
                 <div className="flex items-center justify-between text-[11px] font-semibold transition-all duration-300">
                   {unallocated < 0 ? (
-                    <span className="text-red-500 flex items-center gap-1 animate-pulse">
-                      ⚠️ Allocations exceed ceiling by {formatNoDecimalCurrency(Math.abs(unallocated), displayCurrency)}
+                    <span className="text-amber-600 font-bold">
+                      Allocations exceed target ceiling by {formatNoDecimalCurrency(Math.abs(unallocated), displayCurrency)}
                     </span>
                   ) : unallocated === 0 && totalBudget > 0 ? (
                     <span className="text-zen-sage flex items-center gap-1 font-bold">
@@ -346,7 +355,7 @@ export default function AdjustMasterBudgetModal({
             )}
 
             {/* Spacious single-row Category card list */}
-            <div className="flex flex-col gap-3.5 overflow-y-auto max-h-[40dvh] pr-2">
+            <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[25dvh] pr-2">
               {displayCategories.map(cat => {
                 const val = allocations[cat.id] || '';
                 const parsedVal = parseFloat(val) || 0;
@@ -355,7 +364,7 @@ export default function AdjustMasterBudgetModal({
                 return (
                   <div 
                     key={cat.id} 
-                    className="flex flex-col gap-3 bg-white/40 hover:bg-white/60 p-4 rounded-2xl border border-white/20 shadow-xs hover:shadow-sm transition-all duration-200"
+                    className="flex flex-col gap-2 bg-white/40 hover:bg-white/60 p-3 rounded-2xl border border-white/20 shadow-xs hover:shadow-sm transition-all duration-200"
                   >
                     {/* Top Row: Name & Input Field */}
                     <div className="flex justify-between items-center gap-4">
@@ -371,7 +380,7 @@ export default function AdjustMasterBudgetModal({
 
                       {/* Numerical limit text fields */}
                       <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex items-center bg-white/75 border border-zen-lavender/40 rounded-xl px-3 py-1.5 min-h-[40px] focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner">
+                        <div className="flex items-center bg-white/75 border border-zen-lavender/40 rounded-xl px-3 py-1 min-h-[36px] focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner">
                           {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
                             <span className="text-xs font-extrabold text-zen-charcoal/40 mr-1 select-none">
                               {getCurrencySymbol(displayCurrency)}
@@ -424,7 +433,7 @@ export default function AdjustMasterBudgetModal({
             </div>
 
             {/* Add New Category Row */}
-            <div className="flex gap-2 items-center bg-white/40 p-3 rounded-2xl border border-white/20">
+            <div className="flex gap-2 items-center bg-white/40 p-2.5 mr-2 rounded-2xl border border-white/20">
               <input 
                 type="text" 
                 placeholder="New category name..."
@@ -443,20 +452,29 @@ export default function AdjustMasterBudgetModal({
               </button>
             </div>
 
+            {/* One-Click Propagation Checkbox Row */}
+            {remainingMonthsCount > 0 && (
+              <div className="flex items-center gap-2 py-1.5 px-1 select-none">
+                <input
+                  type="checkbox"
+                  id="applyToRemaining"
+                  checked={applyToRemaining}
+                  onChange={(e) => setApplyToRemaining(e.target.checked)}
+                  className="w-4 h-4 rounded border-zen-lavender/40 text-zen-charcoal focus:ring-zen-sage/60 cursor-pointer accent-zen-charcoal"
+                />
+                <label htmlFor="applyToRemaining" className="text-xs font-semibold text-zen-charcoal/70 cursor-pointer">
+                  Apply to remaining months of the year ({remainingMonthsCount} month{remainingMonthsCount > 1 ? 's' : ''})
+                </label>
+                <input type="hidden" name="applyToRemaining" value={String(applyToRemaining)} />
+              </div>
+            )}
+
             {/* Modal Footer Buttons */}
-            <div className="flex gap-3 mt-2">
-              <button 
-                type="button"
-                onClick={() => setStep(1)}
-                disabled={isPending}
-                className="flex-1 py-3 px-4 bg-white/60 border border-zen-lavender/40 text-zen-charcoal hover:bg-white/80 rounded-full font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40"
-              >
-                Back
-              </button>
+            <div className="flex gap-3 mt-1">
               <button 
                 type="submit"
                 disabled={isPending || unallocated < 0}
-                className="flex-1 py-3 px-4 bg-zen-charcoal text-zen-base rounded-full font-extrabold text-xs uppercase tracking-wider hover:bg-zen-charcoal/90 transition-all cursor-pointer disabled:opacity-40 border-none shadow-md"
+                className="w-full py-2.5 px-4 bg-zen-charcoal text-zen-base rounded-full font-extrabold text-xs uppercase tracking-wider hover:bg-zen-charcoal/90 transition-all cursor-pointer disabled:opacity-40 border-none shadow-md"
               >
                 {isPending ? 'Saving...' : 'Save Allocations'}
               </button>

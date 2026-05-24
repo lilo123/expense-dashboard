@@ -127,4 +127,51 @@ describe('AdjustMasterBudgetModal', () => {
     });
     // If no unhandled exceptions or act warnings occur, test passes!
   });
+
+  it('should render the propagation checkbox for intermediate months', () => {
+    renderModal({ targetMonth: '2026-05' });
+    expect(screen.getByLabelText(/apply to remaining months/i)).toBeInTheDocument();
+  });
+
+  it('should hide the propagation checkbox when adjusting December budget', () => {
+    renderModal({ targetMonth: '2026-12' });
+    expect(screen.queryByLabelText(/apply to remaining months/i)).not.toBeInTheDocument();
+  });
+
+  it('should propagate allocations to all subsequent months of the year when checkbox is checked', async () => {
+    renderModal({ targetMonth: '2026-05' }); // May, should propagate to Jun-Dec
+    (saveBulkBudgets as jest.Mock).mockResolvedValue({ success: true });
+
+    const checkbox = screen.getByLabelText(/apply to remaining months/i);
+    await act(async () => {
+      fireEvent.click(checkbox); // Check it!
+    });
+
+    const submitBtn = screen.getByText('Save Allocations');
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(saveBulkBudgets).toHaveBeenCalledWith(
+      '2026-05',
+      ['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11', '2026-12'],
+      expect.any(Array)
+    );
+  });
+
+  it('should only save to the current month when propagation checkbox is unchecked', async () => {
+    renderModal({ targetMonth: '2026-05' });
+    (saveBulkBudgets as jest.Mock).mockResolvedValue({ success: true });
+
+    const submitBtn = screen.getByText('Save Allocations');
+    await act(async () => {
+      fireEvent.click(submitBtn);
+    });
+
+    expect(saveBulkBudgets).toHaveBeenCalledWith(
+      '2026-05',
+      ['2026-05'],
+      expect.any(Array)
+    );
+  });
 });

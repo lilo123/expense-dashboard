@@ -1,4 +1,4 @@
-import { convertAmount, formatFriendlyCurrency, getCurrencySymbol, formatChartFriendlyCurrency } from '@/lib/utils';
+import { convertAmount, formatFriendlyCurrency, getCurrencySymbol, formatChartFriendlyCurrency, getRemainingMonths } from '@/lib/utils';
 
 describe('Currency Utilities - Scaled Architecture', () => {
   const mockRates: Record<string, number> = {
@@ -90,6 +90,47 @@ describe('Currency Utilities - Scaled Architecture', () => {
       expect(formatChartFriendlyCurrency(1500000, 'VND')).toBe('1.5M ₫');
       // 100,000 VND -> 100K ₫
       expect(formatChartFriendlyCurrency(100000, 'VND')).toBe('100K ₫');
+    });
+  });
+
+  describe('getRemainingMonths', () => {
+    it('should return remaining months of the year for standard months (May -> Jun-Dec)', () => {
+      expect(getRemainingMonths('2026-05')).toEqual([
+        '2026-06',
+        '2026-07',
+        '2026-08',
+        '2026-09',
+        '2026-10',
+        '2026-11',
+        '2026-12',
+      ]);
+    });
+
+    it('should return remaining months of the year starting from January (Jan -> Feb-Dec)', () => {
+      expect(getRemainingMonths('2026-01')).toEqual([
+        '2026-02',
+        '2026-03',
+        '2026-04',
+        '2026-05',
+        '2026-06',
+        '2026-07',
+        '2026-08',
+        '2026-09',
+        '2026-10',
+        '2026-11',
+        '2026-12',
+      ]);
+    });
+
+    it('should return empty array if targetMonth is December (Dec -> empty)', () => {
+      expect(getRemainingMonths('2026-12')).toEqual([]);
+    });
+
+    it('should handle invalid or malformed input defensively by returning empty array', () => {
+      expect(getRemainingMonths('')).toEqual([]);
+      expect(getRemainingMonths('2026')).toEqual([]);
+      expect(getRemainingMonths('2026-13')).toEqual([]);
+      expect(getRemainingMonths('invalid-date')).toEqual([]);
     });
   });
 });

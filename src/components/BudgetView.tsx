@@ -13,7 +13,6 @@ function BudgetView() {
   const displayCurrency = useExpenseStore(state => state.displayCurrency);
   const baseCurrency = useExpenseStore(state => state.baseCurrency);
   const exchangeRates = useExpenseStore(state => state.exchangeRates);
-  const toggleOnboarding = useExpenseStore(state => state.toggleOnboarding);
 
   const isMounted = useIsMounted();
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
@@ -78,13 +77,6 @@ function BudgetView() {
     });
     return map;
   }, [selectedMonthExpenses, baseCurrency, displayCurrency, exchangeRates]);
-
-  // Find 'Unallocated Budget' surplus
-  const surplusBudget = useMemo(() => {
-    return selectedMonthBudgets.find(b => b.category_id === null);
-  }, [selectedMonthBudgets]);
-
-  const surplusAmount = surplusBudget ? convertAmount(surplusBudget.limit_amount, surplusBudget.currency || 'CAD', displayCurrency, exchangeRates) : 0;
 
   // Calculate Total Limits and Total Spent
   const { totalLimits, totalSpent } = useMemo(() => {
@@ -274,7 +266,7 @@ function BudgetView() {
         </div>
         
         {sortedCategories.map(({ category: cat, limit, spent }) => {
-          const isOver = spent > limit && limit > 0;
+          const isOver = spent > limit;
           
           // Pre-reconcile integers before subtraction
           const displayLimit = Math.round(limit);
@@ -282,7 +274,7 @@ function BudgetView() {
           const displayRemaining = Math.max(0, displayLimit - displaySpent);
           
           // Decoupled actual percentage from progress bar width clamping for accessible semantics
-          const actualPercentage = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+          const actualPercentage = limit > 0 ? Math.round((spent / limit) * 100) : (spent > 0 ? 100 : 0);
           const barWidth = Math.min(100, actualPercentage);
 
           return (
@@ -297,7 +289,11 @@ function BudgetView() {
                 
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-zen-charcoal/70">
-                    Spent {formatNoDecimalCurrency(displaySpent, displayCurrency)} of {formatNoDecimalCurrency(displayLimit, displayCurrency)}
+                    {displayLimit === 0 ? (
+                      `Spent ${formatNoDecimalCurrency(displaySpent, displayCurrency)} / No Allocation`
+                    ) : (
+                      `Spent ${formatNoDecimalCurrency(displaySpent, displayCurrency)} of ${formatNoDecimalCurrency(displayLimit, displayCurrency)}`
+                    )}
                   </span>
                 </div>
               </div>

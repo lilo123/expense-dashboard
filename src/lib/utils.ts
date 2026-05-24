@@ -305,3 +305,29 @@ export function getCachedIntl(
   intlCache.set(key, newInstance);
   return newInstance;
 }
+
+/**
+ * Dynamic utility to compute remaining months of the calendar year
+ * for one-click bulk propagation.
+ * Returns array of YYYY-MM strings from the month after targetMonth
+ * to December of the same year.
+ */
+export function getRemainingMonths(targetMonth: string): string[] {
+  if (!targetMonth || !/^\d{4}-\d{2}$/.test(targetMonth)) {
+    return [];
+  }
+  const [yearStr, monthStr] = targetMonth.split("-");
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10); // 1-indexed (1 = Jan, 12 = Dec)
+  
+  if (isNaN(year) || isNaN(month) || month < 1 || month >= 12) {
+    return [];
+  }
+  
+  const remaining: string[] = [];
+  for (let m = month + 1; m <= 12; m++) {
+    const formattedMonth = String(m).padStart(2, '0');
+    remaining.push(`${year}-${formattedMonth}`);
+  }
+  return remaining;
+}
