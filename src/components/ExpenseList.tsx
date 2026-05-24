@@ -317,17 +317,17 @@ function ExpenseList() {
                         onChange={() => toggleSelection(exp.id)}
                         onClick={(e) => e.stopPropagation()}
                       />
-                      <div className="expense-info">
-                          <h4>{exp.item}</h4>
-                          <p className="flex items-center flex-wrap gap-1">
-                            <span className="text-zen-charcoal/60 text-sm">{exp.categories?.name || "Uncategorized"} &bull; {dateStr}</span>
+                      <div className="expense-info min-w-0 flex-1 pr-2">
+                          <h4 className="text-sm font-bold text-zen-charcoal truncate m-0">{exp.item}</h4>
+                          <p className="flex items-center flex-wrap gap-1 m-0 mt-0.5">
+                            <span className="text-zen-charcoal/50 text-xs font-medium">{exp.categories?.name || "Uncategorized"} &bull; {dateStr}</span>
                             {(exp.is_recurring || !!exp.recurring_expense_id) && (
                               <span 
-                                className="inline-flex items-center ml-1 text-zen-sage/80 hover:text-zen-sage transition-colors duration-200 cursor-help" 
+                                className="inline-flex items-center ml-1 text-zen-sage/85 hover:text-zen-sage transition-colors duration-200 cursor-help" 
                                 title="Recurring Expense"
                                 data-testid="recurring-icon"
                               >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="inline">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="inline">
                                   <path d="m17 2 4 4-4 4"/>
                                   <path d="M3 11v-1a4 4 0 0 1 4-4h14"/>
                                   <path d="m7 22-4-4 4-4"/>
@@ -337,7 +337,7 @@ function ExpenseList() {
                             )}
                           </p>
                       </div>
-                      <div className="expense-amount font-semibold text-zen-charcoal">
+                      <div className="expense-amount text-sm font-extrabold text-zen-charcoal pl-4 shrink-0">
                         {formatFriendlyCurrency(displayAmt, displayCurr)}
                       </div>
                   </div>

@@ -91,9 +91,7 @@ function BudgetView() {
     let limits = 0;
     let spent = 0;
     selectedMonthBudgets.forEach(b => {
-      if (b.category_id) {
-        limits += convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
-      }
+      limits += convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
     });
     Object.values(spentByCategory).forEach(s => spent += s);
     return { totalLimits: limits, totalSpent: spent };
@@ -154,46 +152,28 @@ function BudgetView() {
         />
       </div>
 
-      {/* Top Summary Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        
-        {/* Available Funds Card */}
-        <div className="bg-white/60 backdrop-blur-xl border border-white/30 shadow-sm p-6 rounded-3xl flex flex-col justify-between items-start">
+      {/* Consolidated Premium Remaining Budget Card */}
+      <div className="w-full">
+        <div className="bg-white border border-zen-lavender/30 shadow-md hover:shadow-lg transition-all duration-300 p-6 rounded-3xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex flex-col">
-            <span className="text-xs font-bold text-zen-charcoal/60 uppercase tracking-wider">Available Budget</span>
-            <div className="text-4xl font-extrabold text-zen-charcoal my-2">
+            <span className="text-xs font-bold text-zen-charcoal/60 uppercase tracking-wider select-none">
+              Remaining Budget
+            </span>
+            <div className="text-4xl font-extrabold text-zen-charcoal my-1">
               {formatNoDecimalCurrency(availableFunds, displayCurrency)}
             </div>
-            <span className="text-xs text-zen-charcoal/60">
-              Total Limits ({formatNoDecimalCurrency(displayTotalLimits, displayCurrency)}) minus Spent ({formatNoDecimalCurrency(displayTotalSpent, displayCurrency)})
+            <span className="text-xs text-zen-charcoal/60 font-medium select-none">
+              of Monthly Limits ({formatNoDecimalCurrency(displayTotalLimits, displayCurrency)})
             </span>
           </div>
           
           <button 
             onClick={() => setIsAdjustOpen(true)}
-            className="mt-4 px-6 py-2.5 bg-zen-charcoal text-zen-base rounded-full font-bold text-xs hover:bg-zen-charcoal/90 transition-all cursor-pointer border-none shadow-md"
+            className="px-6 py-3 bg-zen-charcoal text-zen-base rounded-full font-bold text-sm hover:bg-zen-charcoal/90 hover:shadow-md transition-all duration-200 cursor-pointer border-none shadow-sm shrink-0 self-start sm:self-center"
           >
-            Adjust Available Budget
+            Adjust Budget
           </button>
         </div>
-
-        {/* Unallocated Budget Surplus Card */}
-        <div className="bg-white/60 backdrop-blur-xl border border-white/30 shadow-sm p-6 rounded-3xl flex flex-col justify-between items-start">
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-zen-charcoal/60 uppercase tracking-wider">Unallocated Budget</span>
-            <div className="text-4xl font-extrabold text-zen-sage/90 my-2">
-              {formatNoDecimalCurrency(surplusAmount, displayCurrency)}
-            </div>
-          </div>
-          
-          <button 
-            onClick={() => toggleOnboarding()}
-            className="mt-4 px-6 py-2.5 bg-zen-charcoal text-zen-base rounded-full font-bold text-xs hover:bg-zen-charcoal/90 transition-all cursor-pointer border-none shadow-md disabled:opacity-40"
-          >
-            Allocate
-          </button>
-        </div>
-
       </div>
 
       {isAdjustOpen && (
@@ -201,7 +181,7 @@ function BudgetView() {
           isOpen={isAdjustOpen} 
           onClose={() => setIsAdjustOpen(false)} 
           targetMonth={selectedMonth} 
-          initialAmount={surplusAmount} 
+          initialAmount={displayTotalLimits} 
         />
       )}
 

@@ -58,7 +58,7 @@ export default function TargetMonthSelectionModal({
       const payload = sourceBudgets.map(b => ({
         category_id: b.category_id,
         limit_amount: b.limit_amount,
-        currency: displayCurrency
+        currency: b.currency || 'CAD'
       }));
 
       const optimisticAdditions: BudgetDTO[] = [];
@@ -68,7 +68,7 @@ export default function TargetMonthSelectionModal({
             id: `opt-${m}-${idx}`,
             category_id: b.category_id,
             limit_amount: b.limit_amount,
-            currency: displayCurrency,
+            currency: b.currency || 'CAD',
             month: m
           });
         });

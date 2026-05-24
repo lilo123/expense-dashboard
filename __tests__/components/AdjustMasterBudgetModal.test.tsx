@@ -51,14 +51,14 @@ describe('AdjustMasterBudgetModal', () => {
   it('should hydrate initial state from store budgets and jump to Step 2 if budgets exist', () => {
     renderModal();
     expect(screen.getByText('Allocate May 2026 Budget')).toBeInTheDocument();
-    expect(screen.getByText('C$500')).toBeInTheDocument(); // Unallocated
+    expect(screen.getByText(/C\$500/)).toBeInTheDocument(); // Unallocated
   });
 
   it('should allow adjusting category allocations and clamp to available ceiling limit', () => {
     renderModal();
     const inputs = screen.getAllByPlaceholderText('0');
     fireEvent.change(inputs[0], { target: { value: '1800' } });
-    expect(screen.getByText('C$200')).toBeInTheDocument(); // 2000 - 1800
+    expect(screen.getByText(/C\$200/)).toBeInTheDocument(); // 2000 - 1800
   });
 
   it('should handle React 19 useActionState lifecycles using Controlled Promises', async () => {

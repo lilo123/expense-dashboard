@@ -123,7 +123,7 @@ export default function BudgetPlanner({
       const payload = sourceBudgets.map(b => ({
         category_id: b.category_id,
         limit_amount: b.limit_amount,
-        currency: displayCurrency
+        currency: b.currency || 'CAD'
       }));
 
       const optimisticAdditions: BudgetDTO[] = [];
@@ -133,7 +133,7 @@ export default function BudgetPlanner({
             id: `opt-${m}-${idx}`,
             category_id: b.category_id,
             limit_amount: b.limit_amount,
-            currency: displayCurrency,
+            currency: b.currency || 'CAD',
             month: m
           });
         });
@@ -194,7 +194,7 @@ export default function BudgetPlanner({
           <button 
             type="button"
             onClick={toggleExpandAll}
-            className="px-4 py-2.5 min-h-[44px] bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-bold hover:bg-white/80 transition-all text-xs cursor-pointer shadow-xs"
+            className="px-4 py-2.5 min-h-[44px] bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-extrabold uppercase tracking-wider hover:bg-white/80 transition-all text-[10px] cursor-pointer shadow-xs"
           >
             {expandedMonths.size === 12 ? 'Collapse All' : 'Expand All'}
           </button>
@@ -207,7 +207,7 @@ export default function BudgetPlanner({
           <button 
             type="submit"
             disabled={isCopyPending}
-            className={`px-5 py-2.5 min-h-[44px] rounded-full font-bold text-xs flex items-center gap-2 transition-all border-none shadow-sm cursor-pointer disabled:opacity-40 ${
+            className={`px-5 py-2.5 min-h-[44px] rounded-full font-extrabold text-[10px] uppercase tracking-wider flex items-center gap-2 transition-all border-none shadow-sm cursor-pointer disabled:opacity-40 ${
               isYearEmpty ? 'bg-zen-sage text-zen-charcoal animate-pulse' : 'bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90'
             }`}
           >
@@ -393,6 +393,10 @@ function MonthAccordionForm({
       try {
         const allocMap = JSON.parse(formData.get('allocationsPayload') as string);
         const unalloc = parseFloat(formData.get('unallocatedPayload') as string) || 0;
+
+        if (unalloc < 0) {
+          return { success: false, error: 'Allocations exceed target ceiling. Please adjust category limits.' };
+        }
 
         const payload: { category_id: string | null; limit_amount: number; currency: string }[] = categories.map(cat => ({
           category_id: cat.id,
@@ -632,49 +636,69 @@ function MonthAccordionForm({
               </div>
             )}
 
-            {/* Clean Category Rows without sliders */}
-            <div className="flex flex-col gap-3 max-h-[40dvh] overflow-y-auto pr-2">
+            {/* Spacious single-row Category card list with dynamic sliders */}
+            <div className="flex flex-col gap-3.5 max-h-[40dvh] overflow-y-auto pr-2">
               {categories.map(cat => {
                 const val = allocations[cat.id] || '';
+                const parsedVal = parseFloat(val) || 0;
+                const maxSliderVal = Math.max(0, Math.round((parsedVal + unallocated) * 100) / 100);
                 const labelId = `cat-label-${monthStr}-${cat.id}`;
                 return (
                   <div 
                     key={cat.id} 
-                    className="flex justify-between items-center gap-4 bg-white/40 hover:bg-white/60 p-3 sm:p-4 rounded-2xl border border-white/20 shadow-xs hover:shadow-sm transition-all duration-200"
+                    className="flex flex-col gap-3 bg-white/40 hover:bg-white/60 p-4 rounded-2xl border border-white/20 shadow-xs hover:shadow-sm transition-all duration-200"
                   >
-                    {/* Category Label & Icon */}
-                    <span id={labelId} className="font-bold text-sm text-zen-charcoal flex items-center gap-3 truncate min-w-0 flex-1">
-                      <span className="w-8 h-8 rounded-xl bg-zen-lavender/15 flex items-center justify-center text-zen-charcoal/70 shrink-0">
-                        <Tag size={16} />
-                      </span>
-                      <span className="truncate tracking-wide text-zen-charcoal/90 font-bold">
-                        {cat.name}
-                      </span>
-                    </span>
-
-                    {/* Input field with focus borders */}
-                    <div className="flex items-center bg-white/70 border border-zen-lavender/40 rounded-xl px-3 py-1.5 min-h-[44px] focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner shrink-0">
-                      {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
-                        <span className="text-xs font-extrabold text-zen-charcoal/40 mr-1 select-none">
-                          {getCurrencySymbol(displayCurrency)}
+                    {/* Top Row: Name & Input Field */}
+                    <div className="flex justify-between items-center gap-4">
+                      {/* Category Label & Icon */}
+                      <span id={labelId} className="font-bold text-sm text-zen-charcoal flex items-center gap-3 truncate min-w-0 flex-1">
+                        <span className="w-8 h-8 rounded-xl bg-zen-lavender/15 flex items-center justify-center text-zen-charcoal/70 shrink-0">
+                          <Tag size={16} />
                         </span>
-                      )}
+                        <span className="truncate tracking-wide text-zen-charcoal/90 font-bold">
+                          {cat.name}
+                        </span>
+                      </span>
+
+                      {/* Numerical limit text fields */}
+                      <div className="flex items-center bg-white/70 border border-zen-lavender/40 rounded-xl px-3 py-1.5 min-h-[40px] focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner shrink-0">
+                        {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
+                          <span className="text-xs font-extrabold text-zen-charcoal/40 mr-1 select-none">
+                            {getCurrencySymbol(displayCurrency)}
+                          </span>
+                        )}
+                        <input 
+                          type="text" 
+                          inputMode="decimal"
+                          pattern="^[0-9]*\.?[0-9]*$"
+                          aria-labelledby={labelId}
+                          value={val} 
+                          onChange={e => handleAllocationChange(cat.id, e.target.value)}
+                          disabled={isPending}
+                          className="w-16 bg-transparent border-none text-right text-sm font-extrabold text-zen-charcoal outline-none appearance-none disabled:opacity-40 focus:ring-0"
+                          placeholder="0"
+                        />
+                        {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
+                          <span className="text-xs font-extrabold text-zen-charcoal/40 ml-1 select-none">
+                            {getCurrencySymbol(displayCurrency)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Dynamic headroom range slider */}
+                    <div className="flex items-center gap-3 px-1 animate-fade-in">
                       <input 
-                        type="text" 
-                        inputMode="decimal"
-                        pattern="^[0-9]*\.?[0-9]*$"
-                        aria-labelledby={labelId}
-                        value={val} 
+                        type="range"
+                        min="0"
+                        max={maxSliderVal}
+                        step="1"
+                        value={parsedVal}
                         onChange={e => handleAllocationChange(cat.id, e.target.value)}
                         disabled={isPending}
-                        className="w-16 bg-transparent border-none text-right text-sm font-extrabold text-zen-charcoal outline-none appearance-none disabled:opacity-40 focus:ring-0"
-                        placeholder="0"
+                        aria-labelledby={labelId}
+                        className="w-full h-1 bg-zen-lavender/20 rounded-lg appearance-none cursor-pointer accent-zen-sage disabled:opacity-45"
                       />
-                      {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
-                        <span className="text-xs font-extrabold text-zen-charcoal/40 ml-1 select-none">
-                          {getCurrencySymbol(displayCurrency)}
-                        </span>
-                      )}
                     </div>
                   </div>
                 );
@@ -687,14 +711,14 @@ function MonthAccordionForm({
                 type="button"
                 disabled={isPending}
                 onClick={onOpenSelectionModal}
-                className="flex-1 py-3.5 px-5 bg-white/60 border border-zen-lavender/40 text-zen-charcoal hover:bg-white/80 rounded-full font-bold text-sm transition-all cursor-pointer disabled:opacity-40"
+                className="flex-1 py-3 px-5 bg-white/60 border border-zen-lavender/40 text-zen-charcoal hover:bg-white/80 rounded-full font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40"
               >
                 Apply to other months...
               </button>
               <button 
                 type="submit"
                 disabled={isPending || unallocated < 0}
-                className="flex-1 py-3.5 px-5 bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90 rounded-full font-bold text-sm transition-all cursor-pointer disabled:opacity-40 border-none shadow-md"
+                className="flex-1 py-3 px-5 bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90 rounded-full font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40 border-none shadow-md"
               >
                 {isPending ? 'Saving...' : 'Save Month'}
               </button>

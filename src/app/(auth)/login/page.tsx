@@ -32,7 +32,6 @@ function LoginCard() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const router = useRouter();
-  const supabase = createClient();
   const searchParams = useSearchParams();
 
   // Configurable invite block and secret bypass parameters
@@ -67,6 +66,8 @@ function LoginCard() {
     e.preventDefault();
     setError(null);
     setMessage(null);
+
+    const supabase = createClient();
 
     if (isSignUp) {
       // Invite request flow active (Public block)

@@ -88,7 +88,6 @@ function ClientDashboardContent() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const router = useRouter();
-  const supabase = createClient();
 
   // Timezone Sync Effect
   useEffect(() => {
@@ -133,6 +132,7 @@ function ClientDashboardContent() {
   useEffect(() => {
     if (!user) return;
 
+    const supabase = createClient();
     const channel = supabase
       .channel('realtime-expenses')
       .on(
@@ -158,7 +158,7 @@ function ClientDashboardContent() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, supabase, addExpense]);
+  }, [user, addExpense]);
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
@@ -187,6 +187,7 @@ function ClientDashboardContent() {
   }, [toggleOnboarding]);
 
   const handleSignOut = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
     reset();
     router.push('/login');

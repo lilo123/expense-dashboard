@@ -96,7 +96,7 @@ export default function AdjustMasterBudgetModal({
   }, [allocatedTotal, totalBudget]);
 
   const handleAllocationChange = (categoryId: string, value: string) => {
-    // Store raw string in state directly to preserve dot keystrokes
+    // Decouple hard-clamping inside modal inputs to allow over-allocation intermediate states
     setAllocations(prev => ({ ...prev, [categoryId]: value }));
   };
 
@@ -189,7 +189,7 @@ export default function AdjustMasterBudgetModal({
     <div className="modal" style={{ display: 'flex' }} onClick={(e) => {
       if ((e.target as HTMLElement).classList.contains('modal') && !isPending) onClose();
     }}>
-      <div className="modal-content bg-white/60 backdrop-blur-xl border border-white/30 shadow-2xl text-zen-charcoal rounded-3xl p-8 w-full max-w-md max-h-[90dvh] overflow-y-auto flex flex-col gap-6 animate-scale-up" onClick={e => e.stopPropagation()}>
+      <div className="modal-content bg-white border border-zen-lavender/45 shadow-[0_25px_55px_rgba(45,55,72,0.15)] text-zen-charcoal rounded-3xl p-8 w-full max-w-md max-h-[90dvh] overflow-y-auto flex flex-col gap-6 animate-scale-up" onClick={e => e.stopPropagation()}>
         
         {/* Modal Header */}
         <div className="flex justify-between items-center">
@@ -251,32 +251,23 @@ export default function AdjustMasterBudgetModal({
             <input type="hidden" name="totalBudgetPayload" value={totalBudget} />
             <input type="hidden" name="unallocatedPayload" value={unallocated} />
 
-            {/* Top Summary Cards (Total Ceiling Budget & Unallocated Surplus) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-white/70 backdrop-blur-md border border-white/40 rounded-2xl p-4 flex flex-col items-center shadow-sm justify-between min-h-[90px] box-border">
-                <span className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider">Total Budget</span>
-                <div className="flex items-center bg-white/80 border border-zen-lavender/60 rounded-xl px-3 py-1 shadow-inner w-full max-w-[160px] box-border my-1">
-                  {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
-                    <span className="text-xs font-bold text-zen-charcoal mr-1">{getCurrencySymbol(displayCurrency)}</span>
-                  )}
-                  <input 
-                    type="number" 
-                    value={totalBudgetStr}
-                    onChange={e => setTotalBudgetStr(e.target.value)}
-                    className="w-full bg-transparent border-none text-center text-xl font-extrabold text-zen-charcoal outline-none appearance-none m-0"
-                    placeholder="0.00"
-                  />
-                  {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
-                    <span className="text-xs font-bold text-zen-charcoal ml-1">{getCurrencySymbol(displayCurrency)}</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="bg-white/70 backdrop-blur-md border border-white/40 rounded-2xl p-4 flex flex-col items-center shadow-sm justify-between min-h-[90px] box-border">
-                <span className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider">Unallocated</span>
-                <span className="text-2xl font-extrabold text-zen-sage/90 my-1 flex items-center h-9">
-                  {formatNoDecimalCurrency(unallocated, displayCurrency)}
-                </span>
+            {/* Centered Premium Total Budget Input Card */}
+            <div className="w-full bg-white border border-zen-lavender/45 rounded-2xl p-4 flex flex-col items-center shadow-[0_4px_20px_rgba(45,55,72,0.05)] justify-between min-h-[95px] box-border">
+              <span className="text-xs font-bold text-zen-charcoal/60 uppercase tracking-wider select-none">Total Budget</span>
+              <div className="flex items-center bg-white border border-zen-lavender/60 rounded-xl px-4 py-1.5 shadow-inner w-full max-w-[180px] box-border my-1 focus-within:ring-2 focus-within:ring-zen-sage/60">
+                {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
+                  <span className="text-xs font-bold text-zen-charcoal mr-1">{getCurrencySymbol(displayCurrency)}</span>
+                )}
+                <input 
+                  type="number" 
+                  value={totalBudgetStr}
+                  onChange={e => setTotalBudgetStr(e.target.value)}
+                  className="w-full bg-transparent border-none text-center text-xl font-extrabold text-zen-charcoal outline-none appearance-none m-0"
+                  placeholder="0.00"
+                />
+                {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
+                  <span className="text-xs font-bold text-zen-charcoal ml-1">{getCurrencySymbol(displayCurrency)}</span>
+                )}
               </div>
             </div>
 
@@ -343,7 +334,7 @@ export default function AdjustMasterBudgetModal({
                     </span>
                   ) : unallocated > 0 && totalBudget > 0 ? (
                     <span className="text-zen-charcoal/50">
-                      ✨ {formatNoDecimalCurrency(unallocated, displayCurrency)} remaining for other intentions
+                      ✨ {formatNoDecimalCurrency(unallocated, displayCurrency)} remaining to allocate
                     </span>
                   ) : (
                     <span className="text-zen-charcoal/40">
@@ -358,55 +349,74 @@ export default function AdjustMasterBudgetModal({
             <div className="flex flex-col gap-3.5 overflow-y-auto max-h-[40dvh] pr-2">
               {displayCategories.map(cat => {
                 const val = allocations[cat.id] || '';
+                const parsedVal = parseFloat(val) || 0;
+                const maxSliderVal = Math.max(0, Math.round((parsedVal + unallocated) * 100) / 100);
                 const labelId = `cat-label-${targetMonth}-${cat.id}`;
                 return (
                   <div 
                     key={cat.id} 
-                    className="flex justify-between items-center gap-4 bg-white/40 hover:bg-white/60 p-4 rounded-2xl border border-white/20 shadow-xs hover:shadow-sm transition-all duration-200"
+                    className="flex flex-col gap-3 bg-white/40 hover:bg-white/60 p-4 rounded-2xl border border-white/20 shadow-xs hover:shadow-sm transition-all duration-200"
                   >
-                    {/* Category Label & Icon */}
-                    <span id={labelId} className="font-bold text-sm text-zen-charcoal flex items-center gap-3 truncate min-w-0 flex-1">
-                      <span className="w-8 h-8 rounded-xl bg-zen-lavender/15 flex items-center justify-center text-zen-charcoal/70 shrink-0">
-                        <Tag size={16} />
+                    {/* Top Row: Name & Input Field */}
+                    <div className="flex justify-between items-center gap-4">
+                      {/* Category Label & Icon */}
+                      <span id={labelId} className="font-bold text-sm text-zen-charcoal flex items-center gap-3 truncate min-w-0 flex-1">
+                        <span className="w-8 h-8 rounded-xl bg-zen-lavender/15 flex items-center justify-center text-zen-charcoal/70 shrink-0">
+                          <Tag size={16} />
+                        </span>
+                        <span className="truncate tracking-wide text-zen-charcoal/90 font-bold">
+                          {cat.name}
+                        </span>
                       </span>
-                      <span className="truncate tracking-wide text-zen-charcoal/90 font-bold">
-                        {cat.name}
-                      </span>
-                    </span>
 
-                    {/* Numerical limit text fields */}
-                    <div className="flex items-center gap-2.5 shrink-0">
-                      <div className="flex items-center bg-white/70 border border-zen-lavender/40 rounded-xl px-3 py-1.5 min-h-[44px] focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner">
-                        {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
-                          <span className="text-xs font-extrabold text-zen-charcoal/40 mr-1 select-none">
-                            {getCurrencySymbol(displayCurrency)}
-                          </span>
-                        )}
-                        <input 
-                          type="text" 
-                          inputMode="decimal"
-                          pattern="^[0-9]*\.?[0-9]*$"
-                          aria-labelledby={labelId}
-                          value={val} 
-                          onChange={e => handleAllocationChange(cat.id, e.target.value)}
-                          className="w-16 bg-transparent border-none text-right text-sm font-extrabold text-zen-charcoal outline-none appearance-none focus:ring-0"
-                          placeholder="0"
-                        />
-                        {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
-                          <span className="text-xs font-extrabold text-zen-charcoal/40 ml-1 select-none">
-                            {getCurrencySymbol(displayCurrency)}
-                          </span>
-                        )}
+                      {/* Numerical limit text fields */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center bg-white/75 border border-zen-lavender/40 rounded-xl px-3 py-1.5 min-h-[40px] focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner">
+                          {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
+                            <span className="text-xs font-extrabold text-zen-charcoal/40 mr-1 select-none">
+                              {getCurrencySymbol(displayCurrency)}
+                            </span>
+                          )}
+                          <input 
+                            type="text" 
+                            inputMode="decimal"
+                            pattern="^[0-9]*\.?[0-9]*$"
+                            aria-labelledby={labelId}
+                            value={val} 
+                            onChange={e => handleAllocationChange(cat.id, e.target.value)}
+                            className="w-16 bg-transparent border-none text-right text-sm font-extrabold text-zen-charcoal outline-none appearance-none focus:ring-0"
+                            placeholder="0"
+                          />
+                          {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
+                            <span className="text-xs font-extrabold text-zen-charcoal/40 ml-1 select-none">
+                              {getCurrencySymbol(displayCurrency)}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <button 
+                          type="button"
+                          onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                          aria-label={`Delete ${cat.name}`}
+                          className="w-8.5 h-8.5 rounded-xl bg-white/45 hover:bg-red-50 hover:text-red-500 text-zen-charcoal/60 flex items-center justify-center cursor-pointer border border-zen-lavender/30 transition-all duration-200 shadow-xs"
+                        >
+                          <Trash2 size={15} />
+                        </button>
                       </div>
-                      
-                      <button 
-                        type="button"
-                        onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                        aria-label={`Delete ${cat.name}`}
-                        className="w-9 h-9 rounded-xl bg-white/45 hover:bg-red-50 hover:text-red-500 text-zen-charcoal/60 flex items-center justify-center cursor-pointer border border-zen-lavender/30 transition-all duration-200 shadow-xs hover:shadow-sm"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    </div>
+
+                    {/* Dynamic headroom range slider */}
+                    <div className="flex items-center gap-3 px-1">
+                      <input 
+                        type="range"
+                        min="0"
+                        max={maxSliderVal}
+                        step="1"
+                        value={parsedVal}
+                        onChange={e => handleAllocationChange(cat.id, e.target.value)}
+                        aria-labelledby={labelId}
+                        className="w-full h-1 bg-zen-lavender/20 rounded-lg appearance-none cursor-pointer accent-zen-sage"
+                      />
                     </div>
                   </div>
                 );
@@ -439,14 +449,14 @@ export default function AdjustMasterBudgetModal({
                 type="button"
                 onClick={() => setStep(1)}
                 disabled={isPending}
-                className="flex-1 py-4 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-bold text-lg hover:bg-white/80 transition-all cursor-pointer disabled:opacity-40"
+                className="flex-1 py-3 px-4 bg-white/60 border border-zen-lavender/40 text-zen-charcoal hover:bg-white/80 rounded-full font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40"
               >
                 Back
               </button>
               <button 
                 type="submit"
                 disabled={isPending || unallocated < 0}
-                className="flex-1 py-4 bg-zen-charcoal text-zen-base rounded-full font-bold text-lg hover:bg-zen-charcoal/90 transition-all cursor-pointer disabled:opacity-40 border-none shadow-md"
+                className="flex-1 py-3 px-4 bg-zen-charcoal text-zen-base rounded-full font-extrabold text-xs uppercase tracking-wider hover:bg-zen-charcoal/90 transition-all cursor-pointer disabled:opacity-40 border-none shadow-md"
               >
                 {isPending ? 'Saving...' : 'Save Allocations'}
               </button>
