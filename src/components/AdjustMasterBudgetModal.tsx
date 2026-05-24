@@ -364,7 +364,7 @@ export default function AdjustMasterBudgetModal({
                 return (
                   <div 
                     key={cat.id} 
-                    className="flex flex-col gap-2 bg-white/40 hover:bg-white/60 p-3 rounded-2xl border border-white/20 shadow-xs hover:shadow-sm transition-all duration-200"
+                    className="flex flex-col gap-2 bg-zen-lavender/12 hover:bg-zen-lavender/20 p-3 rounded-2xl border border-white/20 shadow-[0_2px_8px_rgba(45,55,72,0.03)] hover:shadow-[0_4px_12px_rgba(45,55,72,0.06)] transition-all duration-200"
                   >
                     {/* Top Row: Name & Input Field */}
                     <div className="flex justify-between items-center gap-4">
@@ -380,7 +380,7 @@ export default function AdjustMasterBudgetModal({
 
                       {/* Numerical limit text fields */}
                       <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex items-center bg-white/75 border border-zen-lavender/40 rounded-xl px-3 py-1 min-h-[36px] focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner">
+                        <div className="flex items-center bg-white border border-zen-lavender/55 rounded-xl px-3 py-1 min-h-[36px] focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner">
                           {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
                             <span className="text-xs font-extrabold text-zen-charcoal/40 mr-1 select-none">
                               {getCurrencySymbol(displayCurrency)}
@@ -407,7 +407,7 @@ export default function AdjustMasterBudgetModal({
                           type="button"
                           onClick={() => handleDeleteCategory(cat.id, cat.name)}
                           aria-label={`Delete ${cat.name}`}
-                          className="w-8.5 h-8.5 rounded-xl bg-white/45 hover:bg-red-50 hover:text-red-500 text-zen-charcoal/60 flex items-center justify-center cursor-pointer border border-zen-lavender/30 transition-all duration-200 shadow-xs"
+                          className="w-8.5 h-8.5 rounded-xl bg-white hover:bg-red-50 hover:text-red-500 text-zen-charcoal/60 flex items-center justify-center cursor-pointer border border-zen-lavender/55 transition-all duration-200 shadow-sm"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -433,19 +433,19 @@ export default function AdjustMasterBudgetModal({
             </div>
 
             {/* Add New Category Row */}
-            <div className="flex gap-2 items-center bg-white/40 p-2.5 mr-2 rounded-2xl border border-white/20">
+            <div className="flex gap-2 items-center bg-zen-lavender/12 hover:bg-zen-lavender/20 p-2.5 mr-2 rounded-2xl border border-white/20">
               <input 
                 type="text" 
-                placeholder="New category name..."
+                placeholder="New Category"
                 value={newCategoryName}
                 onChange={e => setNewCategoryName(e.target.value)}
-                className="flex-1 bg-white/50 border border-zen-lavender/40 rounded-xl px-4 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-zen-sage/60 focus:border-transparent"
+                className="min-w-0 flex-1 bg-white/50 border border-zen-lavender/40 rounded-xl px-4 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-zen-sage/60 focus:border-transparent"
               />
               <button 
                 type="button"
                 onClick={handleAddCategory}
                 disabled={isSubmittingCategory}
-                className="px-5 py-2 bg-zen-sage text-white rounded-xl font-bold text-sm hover:bg-zen-sage/90 transition-all flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-40 border-none"
+                className="px-3 sm:px-5 py-2 bg-zen-sage text-white rounded-xl font-bold text-sm hover:bg-zen-sage/90 transition-all flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-40 border-none shrink-0"
               >
                 <Plus size={16} />
                 <span>Add</span>
@@ -454,13 +454,13 @@ export default function AdjustMasterBudgetModal({
 
             {/* One-Click Propagation Checkbox Row */}
             {remainingMonthsCount > 0 && (
-              <div className="flex items-center gap-2 py-1.5 px-1 select-none">
+              <div className="flex items-start gap-2 py-1.5 px-1 select-none">
                 <input
                   type="checkbox"
                   id="applyToRemaining"
                   checked={applyToRemaining}
                   onChange={(e) => setApplyToRemaining(e.target.checked)}
-                  className="w-4 h-4 rounded border-zen-lavender/40 text-zen-charcoal focus:ring-zen-sage/60 cursor-pointer accent-zen-charcoal"
+                  className="w-4 h-4 rounded border-zen-lavender/40 text-zen-charcoal focus:ring-zen-sage/60 cursor-pointer accent-zen-sage mt-0.5 shrink-0"
                 />
                 <label htmlFor="applyToRemaining" className="text-xs font-semibold text-zen-charcoal/70 cursor-pointer">
                   Apply to remaining months of the year ({remainingMonthsCount} month{remainingMonthsCount > 1 ? 's' : ''})
