@@ -288,7 +288,7 @@ export default function AdjustMasterBudgetModal({
                     <span className="text-[10px] font-bold text-zen-charcoal/40 uppercase tracking-wider">
                       Allocation Distribution
                     </span>
-                    <span className="text-xs font-bold text-zen-charcoal/70 flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-zen-charcoal/70 flex flex-wrap items-center gap-1.5">
                       <span>Total Allocated:</span>
                       <span className="font-extrabold text-zen-charcoal">
                         {formatNoDecimalCurrency(allocatedTotal, displayCurrency)}
@@ -376,7 +376,7 @@ export default function AdjustMasterBudgetModal({
 
                     {/* Numerical limit text fields */}
                     <div className="flex items-center gap-2.5 shrink-0">
-                      <div className="flex items-center bg-white/70 border border-zen-lavender/40 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner">
+                      <div className="flex items-center bg-white/70 border border-zen-lavender/40 rounded-xl px-3 py-1.5 min-h-[44px] focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner">
                         {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
                           <span className="text-xs font-extrabold text-zen-charcoal/40 mr-1 select-none">
                             {getCurrencySymbol(displayCurrency)}

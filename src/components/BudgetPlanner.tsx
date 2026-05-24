@@ -566,7 +566,7 @@ function MonthAccordionForm({
                     <span className="text-[10px] font-bold text-zen-charcoal/40 uppercase tracking-wider">
                       Active Distribution
                     </span>
-                    <span className="text-xs font-bold text-zen-charcoal/70 flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-zen-charcoal/70 flex flex-wrap items-center gap-1.5">
                       <span>Allocated:</span>
                       <span className="font-extrabold text-zen-charcoal">
                         {formatFriendlyCurrency(allocatedTotal, displayCurrency)}
