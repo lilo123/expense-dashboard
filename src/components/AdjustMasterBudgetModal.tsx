@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import { useState, useEffect, useMemo, useActionState } from 'react';
+import { useState, useMemo, useActionState } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { saveBulkBudgets } from '@/app/actions/budget';
 import { addCategoryAction, deleteCategoryAction } from '@/app/actions';
@@ -26,53 +26,48 @@ export default function AdjustMasterBudgetModal({
     categories, 
     displayCurrency,
     budgets,
-    setBudgets,
     profile,
     addCategory,
     removeCategory,
-    expenses,
     exchangeRates
   } = useExpenseStore();
 
-  const [step, setStep] = useState(1);
-  const [totalBudgetStr, setTotalBudgetStr] = useState('');
-  const [allocations, setAllocations] = useState<Record<string, number>>({});
+  // Lazy initialize form states synchronously on initial mount to prevent render loops or stale prop mismatches
+  const [step, setStep] = useState(() => {
+    const targetMonthBudgets = budgets.filter(b => b.month === targetMonth);
+    return targetMonthBudgets.length > 0 ? 2 : 1;
+  });
+
+  const [totalBudgetStr, setTotalBudgetStr] = useState(() => {
+    const targetMonthBudgets = budgets.filter(b => b.month === targetMonth);
+    if (targetMonthBudgets.length > 0) {
+      const total = targetMonthBudgets.reduce((sum, b) => {
+        return sum + convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
+      }, 0);
+      return total.toString();
+    }
+    return initialAmount > 0 ? initialAmount.toString() : '2000';
+  });
+
+  // allocations stores string values to cleanly preserve intermediate states (e.g., "0." or empty inputs)
+  const [allocations, setAllocations] = useState<Record<string, string>>(() => {
+    const targetMonthBudgets = budgets.filter(b => b.month === targetMonth);
+    const allocMap: Record<string, string> = {};
+    targetMonthBudgets.forEach(b => {
+      if (b.category_id) {
+        allocMap[b.category_id] = convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates).toString();
+      }
+    });
+    return allocMap;
+  });
+
   const [newCategoryName, setNewCategoryName] = useState('');
   const [isSubmittingCategory, setIsSubmittingCategory] = useState(false);
-  const [prevIsOpen, setPrevIsOpen] = useState(false);
 
   const monthWord = useMemo(() => {
     const d = parseLocalDate(`${targetMonth}-01`);
     return isNaN(d.getTime()) ? targetMonth : d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   }, [targetMonth]);
-
-  // Synchronously adjust local form states during render when the modal opens to satisfy set-state-in-effect rules
-  if (isOpen !== prevIsOpen) {
-    setPrevIsOpen(isOpen);
-    if (isOpen) {
-      const targetMonthBudgets = budgets.filter(b => b.month === targetMonth);
-      if (targetMonthBudgets.length > 0) {
-        const total = targetMonthBudgets.reduce((sum, b) => {
-          const converted = convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
-          return sum + converted;
-        }, 0);
-        setTotalBudgetStr(total.toString());
-        
-        const allocMap: Record<string, number> = {};
-        targetMonthBudgets.forEach(b => {
-          if (b.category_id) {
-            allocMap[b.category_id] = convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
-          }
-        });
-        setAllocations(allocMap);
-        setStep(2);
-      } else {
-        setTotalBudgetStr(initialAmount > 0 ? initialAmount.toString() : '2000');
-        setAllocations({});
-        setStep(1);
-      }
-    }
-  }
 
   const totalBudget = parseFloat(totalBudgetStr) || 0;
 
@@ -82,16 +77,27 @@ export default function AdjustMasterBudgetModal({
     return [...defaults, ...custom];
   }, [categories]);
 
+  // allocatedTotal parses the string allocations dynamically for calculations
   const allocatedTotal = useMemo(() => {
-    return Object.values(allocations).reduce((sum, amt) => sum + amt, 0);
+    return Object.values(allocations).reduce((sum, val) => {
+      const amt = parseFloat(val) || 0;
+      return sum + amt;
+    }, 0);
   }, [allocations]);
 
-  const unallocated = totalBudget - allocatedTotal;
+  // Unallocated is rounded to 2 decimal places to resolve floating-point subtract errors (e.g., 100.30 - 50.10 - 50.20 = -1e-14)
+  const unallocated = useMemo(() => {
+    return Math.round((totalBudget - allocatedTotal) * 100) / 100;
+  }, [totalBudget, allocatedTotal]);
 
-  // Prevent slider freezing by removing intermediate hard-clamping
+  const allocatedPercent = useMemo(() => {
+    if (totalBudget <= 0) return 0;
+    return (allocatedTotal / totalBudget) * 100;
+  }, [allocatedTotal, totalBudget]);
+
   const handleAllocationChange = (categoryId: string, value: string) => {
-    const amt = parseFloat(value) || 0;
-    setAllocations(prev => ({ ...prev, [categoryId]: amt }));
+    // Store raw string in state directly to preserve dot keystrokes
+    setAllocations(prev => ({ ...prev, [categoryId]: value }));
   };
 
   const handleAddCategory = async () => {
@@ -100,8 +106,7 @@ export default function AdjustMasterBudgetModal({
     try {
       const res = await addCategoryAction(newCategoryName.trim());
       if (res.success && res.data) {
-        addCategory(res.data as any);
-        setAllocations(prev => ({ ...prev, [res.data!.id]: 0 }));
+        addCategory(res.data);
         setNewCategoryName('');
       } else {
         alert(res.error || 'Failed to add category');
@@ -114,11 +119,6 @@ export default function AdjustMasterBudgetModal({
   };
 
   const handleDeleteCategory = async (catId: string, catName: string) => {
-    const hasExpenses = expenses.some(e => e.category_id === catId);
-    if (hasExpenses) {
-      alert(`"${catName}" contains expenses. Please use the Category Management tab in Account Overview to reassign expenses before deleting.`);
-      return;
-    }
     if (confirm(`Are you sure you want to delete "${catName}"?`)) {
       try {
         const res = await deleteCategoryAction(catId);
@@ -140,7 +140,7 @@ export default function AdjustMasterBudgetModal({
 
   // React 19 useActionState using semantic hidden formData inputs
   const [state, formAction, isPending] = useActionState(
-    async (prevState: any, formData: FormData) => {
+    async (_prevState: any, formData: FormData) => {
       const allocationsMap = JSON.parse(formData.get('allocationsPayload') as string);
       const totalBgt = parseFloat(formData.get('totalBudgetPayload') as string) || 0;
       const unalloc = parseFloat(formData.get('unallocatedPayload') as string) || 0;
@@ -155,7 +155,8 @@ export default function AdjustMasterBudgetModal({
 
       const payload: { category_id: string | null; limit_amount: number; currency: string; month: string }[] = displayCategories.map(cat => ({
         category_id: cat.id,
-        limit_amount: allocationsMap[cat.id] || 0,
+        // Convert local string representation back to number when saving payload
+        limit_amount: parseFloat(allocationsMap[cat.id] || '0') || 0,
         currency: displayCurrency,
         month: targetMonth
       }));
@@ -173,30 +174,14 @@ export default function AdjustMasterBudgetModal({
       const res = await saveBulkBudgets(targetMonth, [targetMonth], payload);
 
       if (res.success) {
-        const newBudgets = payload.map((b, idx) => ({
-          id: `bgt-${Date.now()}-${idx}`,
-          user_id: profile?.id || 'user',
-          category_id: b.category_id,
-          limit_amount: b.limit_amount,
-          currency: b.currency,
-          month: b.month
-        }));
-        // Store merge instead of overwrite to preserve multi-month history
-        const existingBudgets = budgets.filter(b => b.month !== targetMonth);
-        setBudgets([...existingBudgets, ...newBudgets]);
+        onClose();
         return { success: true };
       } else {
-        return { success: false, error: res.error || 'Failed to save budget.' };
+        return { success: false, error: res.error || 'Failed to save budgets.' };
       }
     },
     { success: false }
   );
-
-  useEffect(() => {
-    if (state.success) {
-      onClose();
-    }
-  }, [state.success, onClose]);
 
   if (!isOpen) return null;
 
@@ -259,7 +244,7 @@ export default function AdjustMasterBudgetModal({
             </button>
           </div>
         ) : (
-          // STEP 2: CATEGORY SLIDERS & SURPLUS COUNTER
+          // STEP 2: CATEGORY INPUTS & SUMMARY PROGRESS
           <form action={formAction} className="flex flex-col gap-6 text-left animate-fade-in">
             {/* Hidden Semantic Form Payload Inputs */}
             <input type="hidden" name="allocationsPayload" value={JSON.stringify(allocations)} />
@@ -295,62 +280,134 @@ export default function AdjustMasterBudgetModal({
               </div>
             </div>
 
-            {unallocated < 0 && (
-              <div className="p-4 bg-zen-peach/20 border border-zen-peach text-zen-charcoal rounded-2xl text-sm font-semibold">
-                Allocations exceed total budget by {formatNoDecimalCurrency(Math.abs(unallocated), displayCurrency)}. Please adjust category limits.
+            {/* Premium Budget Allocation Utilization Progress Card */}
+            {totalBudget > 0 && (
+              <div className="flex flex-col gap-3 bg-gradient-to-br from-zen-lavender/10 via-white/40 to-zen-peach/10 p-4 rounded-2xl border border-white/40 shadow-xs transition-all duration-300 my-2">
+                <div className="flex justify-between items-end">
+                  <div className="flex flex-col gap-0.5 text-left">
+                    <span className="text-[10px] font-bold text-zen-charcoal/40 uppercase tracking-wider">
+                      Allocation Distribution
+                    </span>
+                    <span className="text-xs font-bold text-zen-charcoal/70 flex items-center gap-1.5">
+                      <span>Total Allocated:</span>
+                      <span className="font-extrabold text-zen-charcoal">
+                        {formatNoDecimalCurrency(allocatedTotal, displayCurrency)}
+                      </span>
+                      <span className="text-zen-charcoal/40 font-medium">of</span>
+                      <span className="font-semibold text-zen-charcoal/60">
+                        {formatNoDecimalCurrency(totalBudget, displayCurrency)}
+                      </span>
+                    </span>
+                  </div>
+                  
+                  <span className={`text-xs font-extrabold tracking-wide px-2.5 py-1 rounded-lg shadow-2xs transition-all duration-300 ${
+                    unallocated < 0 
+                      ? 'text-red-600 bg-red-50 border border-red-200/60' 
+                      : unallocated === 0
+                        ? 'text-zen-sage bg-zen-sage/20 border border-zen-sage/30'
+                        : 'text-zen-charcoal bg-white/80 border border-zen-lavender/30'
+                  }`}>
+                    {allocatedPercent.toFixed(0)}%
+                  </span>
+                </div>
+
+                {/* Utilisation progress bar track */}
+                <div 
+                  role="progressbar"
+                  aria-valuenow={Math.max(0, Math.min(allocatedPercent, 100))}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Allocation utilization percentage"
+                  className="w-full h-2.5 bg-zen-lavender/10 rounded-full overflow-hidden border border-zen-lavender/25 shadow-inner relative"
+                >
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ease-out ${
+                      unallocated < 0 
+                        ? 'bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.4)]' 
+                        : allocatedPercent === 100 
+                          ? 'bg-zen-sage shadow-[0_0_10px_rgba(163,230,53,0.3)]' 
+                          : 'bg-zen-sage/85'
+                    }`}
+                    style={{ width: `${Math.max(0, Math.min(allocatedPercent, 100))}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] font-semibold transition-all duration-300">
+                  {unallocated < 0 ? (
+                    <span className="text-red-500 flex items-center gap-1 animate-pulse">
+                      ⚠️ Allocations exceed ceiling by {formatNoDecimalCurrency(Math.abs(unallocated), displayCurrency)}
+                    </span>
+                  ) : unallocated === 0 && totalBudget > 0 ? (
+                    <span className="text-zen-sage flex items-center gap-1 font-bold">
+                      ✓ Fully allocated! Perfect harmony achieved.
+                    </span>
+                  ) : unallocated > 0 && totalBudget > 0 ? (
+                    <span className="text-zen-charcoal/50">
+                      ✨ {formatNoDecimalCurrency(unallocated, displayCurrency)} remaining for other intentions
+                    </span>
+                  ) : (
+                    <span className="text-zen-charcoal/40">
+                      Set a total available budget limit to begin allocating.
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
-            {/* Category Sliders List */}
-            <div className="flex flex-col gap-4 overflow-y-auto max-h-[40dvh] pr-2">
+            {/* Spacious single-row Category card list */}
+            <div className="flex flex-col gap-3.5 overflow-y-auto max-h-[40dvh] pr-2">
               {displayCategories.map(cat => {
-                const val = allocations[cat.id] || 0;
+                const val = allocations[cat.id] || '';
+                const labelId = `cat-label-${targetMonth}-${cat.id}`;
                 return (
-                  <div key={cat.id} className="flex flex-col gap-2 bg-white/40 p-4 rounded-2xl border border-white/20">
-                    <div className="flex justify-between items-center gap-2">
-                      <span className="font-bold text-sm text-zen-charcoal flex items-center gap-2 truncate min-w-0 flex-1">
-                        {cat.icon && <Tag size={16} className="text-zen-charcoal/60 shrink-0" />}
-                        <span className="truncate">{cat.name}</span>
+                  <div 
+                    key={cat.id} 
+                    className="flex justify-between items-center gap-4 bg-white/40 hover:bg-white/60 p-4 rounded-2xl border border-white/20 shadow-xs hover:shadow-sm transition-all duration-200"
+                  >
+                    {/* Category Label & Icon */}
+                    <span id={labelId} className="font-bold text-sm text-zen-charcoal flex items-center gap-3 truncate min-w-0 flex-1">
+                      <span className="w-8 h-8 rounded-xl bg-zen-lavender/15 flex items-center justify-center text-zen-charcoal/70 shrink-0">
+                        <Tag size={16} />
                       </span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <div className="flex items-center bg-white/60 border border-zen-lavender/40 rounded-xl px-3 py-1">
-                          {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
-                            <span className="text-xs font-bold text-zen-charcoal mr-1">{getCurrencySymbol(displayCurrency)}</span>
-                          )}
-                          <input 
-                            type="text" 
-                            inputMode="decimal"
-                            pattern="^[0-9]*\.?[0-9]*$"
-                            value={val === 0 ? 0 : val} 
-                            onChange={e => handleAllocationChange(cat.id, e.target.value)}
-                            className="w-16 bg-transparent border-none text-right text-sm font-bold text-zen-charcoal outline-none appearance-none"
-                            placeholder="0"
-                          />
-                          {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
-                            <span className="text-xs font-bold text-zen-charcoal ml-1">{getCurrencySymbol(displayCurrency)}</span>
-                          )}
-                        </div>
-                        <button 
-                          type="button"
-                          onClick={() => handleDeleteCategory(cat.id, cat.name)}
-                          aria-label={`Delete ${cat.name}`}
-                          className="w-8 h-8 rounded-full bg-transparent hover:bg-zen-peach/30 text-zen-charcoal flex items-center justify-center cursor-pointer border border-zen-lavender/40 transition-colors p-0"
-                        >
-                          <Trash2 size={16} />
-                        </button>
+                      <span className="truncate tracking-wide text-zen-charcoal/90 font-bold">
+                        {cat.name}
+                      </span>
+                    </span>
+
+                    {/* Numerical limit text fields */}
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <div className="flex items-center bg-white/70 border border-zen-lavender/40 rounded-xl px-3 py-1.5 focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner">
+                        {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
+                          <span className="text-xs font-extrabold text-zen-charcoal/40 mr-1 select-none">
+                            {getCurrencySymbol(displayCurrency)}
+                          </span>
+                        )}
+                        <input 
+                          type="text" 
+                          inputMode="decimal"
+                          pattern="^[0-9]*\.?[0-9]*$"
+                          aria-labelledby={labelId}
+                          value={val} 
+                          onChange={e => handleAllocationChange(cat.id, e.target.value)}
+                          className="w-16 bg-transparent border-none text-right text-sm font-extrabold text-zen-charcoal outline-none appearance-none focus:ring-0"
+                          placeholder="0"
+                        />
+                        {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
+                          <span className="text-xs font-extrabold text-zen-charcoal/40 ml-1 select-none">
+                            {getCurrencySymbol(displayCurrency)}
+                          </span>
+                        )}
                       </div>
+                      
+                      <button 
+                        type="button"
+                        onClick={() => handleDeleteCategory(cat.id, cat.name)}
+                        aria-label={`Delete ${cat.name}`}
+                        className="w-9 h-9 rounded-xl bg-white/45 hover:bg-red-50 hover:text-red-500 text-zen-charcoal/60 flex items-center justify-center cursor-pointer border border-zen-lavender/30 transition-all duration-200 shadow-xs hover:shadow-sm"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
-                    
-                    {/* Slider Input */}
-                    <input 
-                      type="range" 
-                      min="0" 
-                      max={totalBudget} 
-                      step="10"
-                      value={val}
-                      onChange={e => handleAllocationChange(cat.id, e.target.value)}
-                      className="w-full accent-zen-sage cursor-pointer"
-                    />
                   </div>
                 );
               })}
@@ -363,32 +420,33 @@ export default function AdjustMasterBudgetModal({
                 placeholder="New category name..."
                 value={newCategoryName}
                 onChange={e => setNewCategoryName(e.target.value)}
-                className="flex-1 bg-white/60 border border-zen-lavender/40 px-4 py-2 rounded-full text-zen-charcoal text-sm font-semibold outline-none box-border"
+                className="flex-1 bg-white/50 border border-zen-lavender/40 rounded-xl px-4 py-2 text-sm font-semibold outline-none focus:ring-2 focus:ring-zen-sage/60 focus:border-transparent"
               />
               <button 
                 type="button"
                 onClick={handleAddCategory}
-                disabled={isSubmittingCategory || !newCategoryName.trim()}
-                className="px-5 py-2 bg-zen-charcoal text-white rounded-full font-bold text-xs hover:bg-zen-charcoal/90 transition-all cursor-pointer border-none disabled:opacity-40 disabled:cursor-not-allowed h-9 flex items-center justify-center gap-1"
+                disabled={isSubmittingCategory}
+                className="px-5 py-2 bg-zen-sage text-white rounded-xl font-bold text-sm hover:bg-zen-sage/90 transition-all flex items-center gap-1 cursor-pointer shadow-xs disabled:opacity-40 border-none"
               >
-                {isSubmittingCategory ? 'Adding...' : <><Plus size={16} /> Add</>}
+                <Plus size={16} />
+                <span>Add</span>
               </button>
             </div>
 
-            {/* Actions */}
+            {/* Modal Footer Buttons */}
             <div className="flex gap-3 mt-2">
               <button 
                 type="button"
                 onClick={() => setStep(1)}
                 disabled={isPending}
-                className="w-1/3 py-4 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-all cursor-pointer text-sm disabled:opacity-40"
+                className="flex-1 py-4 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-bold text-lg hover:bg-white/80 transition-all cursor-pointer disabled:opacity-40"
               >
                 Back
               </button>
               <button 
                 type="submit"
                 disabled={isPending || unallocated < 0}
-                className="w-2/3 py-4 bg-zen-charcoal text-zen-base rounded-full font-bold text-lg hover:bg-zen-charcoal/90 transition-all cursor-pointer border-none shadow-md disabled:opacity-40 flex items-center justify-center"
+                className="flex-1 py-4 bg-zen-charcoal text-zen-base rounded-full font-bold text-lg hover:bg-zen-charcoal/90 transition-all cursor-pointer disabled:opacity-40 border-none shadow-md"
               >
                 {isPending ? 'Saving...' : 'Save Allocations'}
               </button>

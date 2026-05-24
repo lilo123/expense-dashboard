@@ -3,7 +3,7 @@
 import { useState, useMemo, useRef, useOptimistic, useActionState } from 'react';
 import { saveBulkBudgets } from '@/app/actions/budget';
 import { formatFriendlyCurrency, getCurrencySymbol, CURRENCY_CONFIG, convertAmount } from '@/lib/utils';
-import { Tag, ChevronDown, ChevronUp, Copy, RefreshCw, AlertCircle } from 'lucide-react';
+import { ChevronDown, ChevronUp, Copy, RefreshCw, AlertCircle, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import TargetMonthSelectionModal from './TargetMonthSelectionModal';
@@ -40,10 +40,9 @@ export default function BudgetPlanner({
   categories,
   displayCurrency,
   initialYear,
-  exchangeRates
+  exchangeRates = { CAD: 1.0 }
 }: BudgetPlannerProps) {
   const [selectedYear, setSelectedYear] = useState(initialYear);
-  // Deterministic initial state: January (0) expanded by default
   const [expandedMonths, setExpandedMonths] = useState<Set<number>>(new Set([0]));
   const [announcement, setAnnouncement] = useState('');
   const [selectionModalState, setSelectionModalState] = useState<{ isOpen: boolean; sourceMonthStr: string; sourceMonthIndex: number } | null>(null);
@@ -144,6 +143,7 @@ export default function BudgetPlanner({
       const res = await saveBulkBudgets(prevDecember, targetMonths, payload);
       if (res.success) {
         setAnnouncement(`Successfully copied monthly budget from ${prevYear} into all 12 months of ${selectedYear}. [${Date.now()}]`);
+        setOptimisticVersion(v => v + 1); // Force remount of all months
         return { success: true };
       } else {
         return { success: false, error: res.error || 'Failed to copy monthly budget.' };
@@ -188,7 +188,7 @@ export default function BudgetPlanner({
         </div>
       </div>
 
-      {/* Sticky Global Utility Toolbar */}
+      {/* Sticky Global Utility Toolbar (Expand All & Copy ceilings) */}
       <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border border-white/40 shadow-md rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 transition-all">
         <div className="flex items-center gap-3">
           <button 
@@ -237,7 +237,8 @@ export default function BudgetPlanner({
           
           return (
             <MonthAccordionForm
-              key={monthStr}
+              // React Key Reset: Remount accordion form cleanly on display currency or database budgets propagation changes
+              key={`${monthStr}-${displayCurrency}-${optimisticVersion}`}
               monthStr={monthStr}
               monthName={monthName}
               isOpen={isOpen}
@@ -306,48 +307,87 @@ function MonthAccordionForm({
   setOptimisticBudgets,
   categories,
   displayCurrency,
-  exchangeRates,
+  exchangeRates = { CAD: 1.0 },
   setAnnouncement,
   onOpenSelectionModal,
   optimisticVersion
 }: MonthAccordionFormProps) {
-  const monthBudgets = useMemo(() => {
+  // Memoize budget items corresponding exclusively to this accordion's month
+  const monthBudgetsFiltered = useMemo(() => {
     return optimisticBudgets.filter(b => b.month === monthStr);
   }, [optimisticBudgets, monthStr]);
 
-  const [allocations, setAllocations] = useState<Record<string, number>>({});
-  const [totalBudgetStr, setTotalBudgetStr] = useState<string>('');
+  // 1. Header Calculations: derived directly from monthBudgets prop for scannable closed indicators
+  const headerTotalBudget = useMemo(() => {
+    return monthBudgetsFiltered.reduce((sum, b) => sum + convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates), 0);
+  }, [monthBudgetsFiltered, displayCurrency, exchangeRates]);
+
+  const headerAllocatedTotal = useMemo(() => {
+    return monthBudgetsFiltered
+      .filter(b => b.category_id !== null)
+      .reduce((sum, b) => sum + convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates), 0);
+  }, [monthBudgetsFiltered, displayCurrency, exchangeRates]);
+
+  const headerAllocatedPercent = useMemo(() => {
+    if (headerTotalBudget <= 0) return 0;
+    return (headerAllocatedTotal / headerTotalBudget) * 100;
+  }, [headerAllocatedTotal, headerTotalBudget]);
+
+  const headerUnallocated = useMemo(() => {
+    return Math.round((headerTotalBudget - headerAllocatedTotal) * 100) / 100;
+  }, [headerTotalBudget, headerAllocatedTotal]);
+
+  // 2. Lazy State Initializers: Hydrated once on initial mount
+  const [totalBudgetStr, setTotalBudgetStr] = useState(() => {
+    if (monthBudgetsFiltered.length > 0) {
+      const total = monthBudgetsFiltered.reduce((sum, b) => {
+        return sum + convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
+      }, 0);
+      return total.toString();
+    }
+    return '2000';
+  });
+
+  // allocations stores raw keystroke strings to prevent intermediate decimal/empty swallowing
+  const [allocations, setAllocations] = useState<Record<string, string>>(() => {
+    const allocMap: Record<string, string> = {};
+    if (monthBudgetsFiltered.length > 0) {
+      monthBudgetsFiltered.forEach(b => {
+        if (b.category_id) {
+          allocMap[b.category_id] = convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates).toString();
+        }
+      });
+    }
+    return allocMap;
+  });
 
   const totalBudget = parseFloat(totalBudgetStr) || 0;
+
   const allocatedTotal = useMemo(() => {
-    return Object.values(allocations).reduce((sum, amt) => sum + amt, 0);
+    return Object.values(allocations).reduce((sum, val) => {
+      const amt = parseFloat(val) || 0;
+      return sum + amt;
+    }, 0);
   }, [allocations]);
-  const unallocated = Math.max(0, totalBudget - allocatedTotal);
+
+  // Unallocated is rounded to 2 decimal places to resolve floating point subtraction offsets
+  const unallocated = useMemo(() => {
+    return Math.round((totalBudget - allocatedTotal) * 100) / 100;
+  }, [totalBudget, allocatedTotal]);
+
+  const allocatedPercent = useMemo(() => {
+    if (totalBudget <= 0) return 0;
+    return (allocatedTotal / totalBudget) * 100;
+  }, [allocatedTotal, totalBudget]);
 
   const handleAllocationChange = (categoryId: string, value: string) => {
-    const amt = parseFloat(value) || 0;
-    setAllocations(prev => {
-      const currentOtherTotal = Object.entries(prev)
-        .filter(([id]) => id !== categoryId)
-        .reduce((sum, [, v]) => sum + v, 0);
-
-      const maxAllowed = Math.max(0, totalBudget - currentOtherTotal);
-      const clampedAmt = Math.min(amt, maxAllowed);
-
-      return { ...prev, [categoryId]: clampedAmt };
-    });
+    // Decouple hard-clamping inside planner inputs to allow over-allocation intermediate states
+    setAllocations(prev => ({ ...prev, [categoryId]: value }));
   };
 
-  const statusBadge = useMemo(() => {
-    if (monthBudgets.length === 0) {
-      return { label: 'Empty', className: 'bg-zen-lavender/20 text-zen-charcoal/70 border border-zen-lavender/40' };
-    }
-    return { label: 'Allocated', className: 'bg-zen-sage/30 text-zen-charcoal border border-zen-sage' };
-  }, [monthBudgets]);
-
+  // React 19 useActionState using semantic hidden accordion form payloads
   const [state, formAction, isPending] = useActionState(
     async (prevState: any, formData: FormData) => {
-      if (activeSubmissions.has(monthStr)) return prevState;
       activeSubmissions.add(monthStr);
 
       try {
@@ -356,7 +396,8 @@ function MonthAccordionForm({
 
         const payload: { category_id: string | null; limit_amount: number; currency: string }[] = categories.map(cat => ({
           category_id: cat.id,
-          limit_amount: allocMap[cat.id] || 0,
+          // Parse raw string values back to numbers on submit
+          limit_amount: parseFloat(allocMap[cat.id] || '0') || 0,
           currency: displayCurrency
         }));
         payload.push({
@@ -395,31 +436,13 @@ function MonthAccordionForm({
     { success: false }
   );
 
-  const currentSyncKey = `${monthStr}-${optimisticVersion}`;
-
-  const [prevSyncKey, setPrevSyncKey] = useState<string | null>(null);
-
-  // Synchronously synchronize state during render when accordion opens to satisfy set-state-in-effect linter rules
-  if (isOpen && !activeSubmissions.has(monthStr) && !state.error) {
-    if (currentSyncKey !== prevSyncKey) {
-      setPrevSyncKey(currentSyncKey);
-      if (monthBudgets.length > 0) {
-        const total = monthBudgets.reduce((sum, b) => sum + convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates), 0);
-        setTotalBudgetStr(total.toString());
-        
-        const allocMap: Record<string, number> = {};
-        monthBudgets.forEach(b => {
-          if (b.category_id) {
-            allocMap[b.category_id] = convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates);
-          }
-        });
-        setAllocations(allocMap);
-      } else {
-        setTotalBudgetStr('2000');
-        setAllocations({});
-      }
-    }
-  }
+  const statusBadge = monthBudgetsFiltered.length > 0
+    ? headerUnallocated < 0 
+      ? { label: 'Over Ceil', className: 'bg-red-50 text-red-600 border border-red-200/60' }
+      : headerUnallocated === 0
+        ? { label: 'Balanced', className: 'bg-zen-sage/25 text-zen-sage border border-zen-sage/30' }
+        : { label: 'Active', className: 'bg-white/80 text-zen-charcoal border border-zen-lavender/30' }
+    : { label: 'Not Configured', className: 'bg-zen-lavender/10 text-zen-charcoal/50 border border-zen-lavender/20' };
 
   return (
     <div className="bg-white/60 backdrop-blur-xl border border-white/30 shadow-sm rounded-3xl overflow-hidden transition-all">
@@ -440,126 +463,240 @@ function MonthAccordionForm({
           </span>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 md:gap-6">
+          {/* Header Micro Progress Bar (Collapsed State Overview) */}
+          {monthBudgetsFiltered.length > 0 && (
+            <div className="hidden sm:flex items-center gap-2.5">
+              <div 
+                role="progressbar"
+                aria-valuenow={Math.max(0, Math.min(headerAllocatedPercent, 100))}
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-label="Accordion header allocation progress"
+                className="w-20 md:w-28 h-2 bg-zen-lavender/15 rounded-full overflow-hidden border border-zen-lavender/20 shadow-inner relative"
+              >
+                <div 
+                  className={`h-full rounded-full transition-all duration-500 ease-out ${
+                    headerUnallocated < 0 
+                      ? 'bg-red-400 shadow-[0_0_6px_rgba(248,113,113,0.3)]' 
+                      : headerAllocatedPercent === 100 
+                        ? 'bg-zen-sage shadow-[0_0_6px_rgba(163,230,53,0.2)]' 
+                        : 'bg-zen-sage/80'
+                  }`}
+                  style={{ width: `${Math.max(0, Math.min(headerAllocatedPercent, 100))}%` }}
+                />
+              </div>
+              <span className={`text-[10px] font-extrabold tracking-wider ${
+                headerUnallocated < 0 ? 'text-red-500' : 'text-zen-charcoal/50'
+              }`}>
+                {headerAllocatedPercent.toFixed(0)}%
+              </span>
+            </div>
+          )}
+
           <span className="text-sm font-bold text-zen-charcoal/70">
-            {monthBudgets.length > 0 ? formatFriendlyCurrency(monthBudgets.reduce((s, b) => s + convertAmount(b.limit_amount, b.currency || 'CAD', displayCurrency, exchangeRates), 0), displayCurrency) : 'Not Set'}
+            {monthBudgetsFiltered.length > 0 ? formatFriendlyCurrency(headerTotalBudget, displayCurrency) : 'Not Set'}
           </span>
           {isOpen ? <ChevronUp size={20} className="text-zen-charcoal/60" /> : <ChevronDown size={20} className="text-zen-charcoal/60" />}
         </div>
       </button>
 
       {isOpen && (
-        <div
+        <div 
           id={`panel-${monthStr}`}
           role="region"
           aria-labelledby={`header-${monthStr}`}
-          className="px-6 pb-6 pt-2 border-t border-zen-lavender/20 animate-fade-in"
+          className="px-6 pb-6 text-left animate-fade-in border-t border-white/20 pt-4 flex flex-col gap-6"
         >
+          {state.error && (
+            <div className="p-4 bg-zen-peach/20 border border-zen-peach text-zen-charcoal rounded-2xl text-sm font-semibold flex items-center gap-2">
+              <AlertCircle size={16} className="text-amber-600 shrink-0" />
+              <span>{state.error}</span>
+            </div>
+          )}
+
           <form action={formAction} className="flex flex-col gap-6">
+            {/* Hidden Semantic Payload Inputs */}
             <input type="hidden" name="allocationsPayload" value={JSON.stringify(allocations)} />
+            <input type="hidden" name="totalBudgetPayload" value={totalBudget} />
             <input type="hidden" name="unallocatedPayload" value={unallocated} />
-            
-            {state.error && (
-              <div className="p-4 bg-zen-peach/20 border border-zen-peach text-zen-charcoal rounded-2xl text-sm font-semibold flex items-center gap-2">
-                <AlertCircle size={16} className="text-amber-600 shrink-0" />
-                <span>{state.error}</span>
-              </div>
-            )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-1">
-                <label htmlFor={`total-ceil-${monthStr}`} className="text-xs font-bold text-zen-charcoal/60 uppercase tracking-wider">
-                  Total Ceiling Limit ({displayCurrency})
-                </label>
-                <input 
-                  id={`total-ceil-${monthStr}`}
-                  type="number" 
-                  placeholder="0.00"
-                  value={totalBudgetStr}
-                  onChange={e => setTotalBudgetStr(e.target.value)}
-                  disabled={isPending}
-                  className="px-4 py-3 bg-white/60 border border-zen-lavender/40 rounded-full text-zen-charcoal text-base font-bold outline-none h-12 box-border disabled:opacity-40"
-                />
+            {/* Accordion Ceilings Summaries */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col items-start shadow-3xs justify-between min-h-[90px] box-border">
+                <span className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider">Target Ceiling</span>
+                <div className="flex items-center bg-white/70 border border-zen-lavender/40 rounded-xl px-3 py-1 shadow-inner w-full max-w-[160px] box-border my-1 focus-within:ring-2 focus-within:ring-zen-sage focus-within:border-transparent">
+                  {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
+                    <span className="text-xs font-bold text-zen-charcoal mr-1">{getCurrencySymbol(displayCurrency)}</span>
+                  )}
+                  <input 
+                    type="number" 
+                    value={totalBudgetStr}
+                    onChange={e => setTotalBudgetStr(e.target.value)}
+                    disabled={isPending}
+                    className="w-full bg-transparent border-none text-left text-base font-extrabold text-zen-charcoal outline-none appearance-none m-0 disabled:opacity-40"
+                    placeholder="0"
+                  />
+                  {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
+                    <span className="text-xs font-bold text-zen-charcoal ml-1">{getCurrencySymbol(displayCurrency)}</span>
+                  )}
+                </div>
               </div>
 
-              <div className="flex flex-col gap-1 justify-center items-start bg-white/40 p-4 rounded-2xl border border-white/20">
-                <span className="text-xs font-bold text-zen-charcoal/60 uppercase tracking-wider">
-                  Unallocated Pool
+              <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col items-start shadow-3xs justify-between min-h-[90px] box-border">
+                <span className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider">Allocated</span>
+                <span className="text-xl font-extrabold text-zen-charcoal/90 my-1 flex items-center h-9">
+                  {formatFriendlyCurrency(allocatedTotal, displayCurrency)}
                 </span>
-                <span className="text-2xl font-extrabold text-zen-sage/90 my-0">
+              </div>
+
+              <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col items-start shadow-3xs justify-between min-h-[90px] box-border">
+                <span className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider">Unallocated Pool</span>
+                <span className="text-xl font-extrabold text-zen-sage/90 my-1 flex items-center h-9">
                   {formatFriendlyCurrency(unallocated, displayCurrency)}
                 </span>
               </div>
             </div>
 
-            <div className="flex flex-col gap-4 overflow-y-auto max-h-[40dvh] pr-2">
+            {/* Parity Expanded Utilization Progress Card (Real-time Feedback) */}
+            {totalBudget > 0 && (
+              <div className="flex flex-col gap-3 bg-gradient-to-br from-zen-lavender/10 via-white/40 to-zen-peach/10 p-4 rounded-2xl border border-white/40 shadow-xs transition-all duration-300 my-2">
+                <div className="flex justify-between items-end">
+                  <div className="flex flex-col gap-0.5 text-left">
+                    <span className="text-[10px] font-bold text-zen-charcoal/40 uppercase tracking-wider">
+                      Active Distribution
+                    </span>
+                    <span className="text-xs font-bold text-zen-charcoal/70 flex items-center gap-1.5">
+                      <span>Allocated:</span>
+                      <span className="font-extrabold text-zen-charcoal">
+                        {formatFriendlyCurrency(allocatedTotal, displayCurrency)}
+                      </span>
+                      <span className="text-zen-charcoal/40 font-medium">of</span>
+                      <span className="font-semibold text-zen-charcoal/60">
+                        {formatFriendlyCurrency(totalBudget, displayCurrency)}
+                      </span>
+                    </span>
+                  </div>
+                  
+                  <span className={`text-xs font-extrabold tracking-wide px-2.5 py-1 rounded-lg shadow-2xs transition-all duration-300 ${
+                    unallocated < 0 
+                      ? 'text-red-600 bg-red-50 border border-red-200/60' 
+                      : unallocated === 0
+                        ? 'text-zen-sage bg-zen-sage/20 border border-zen-sage/30'
+                        : 'text-zen-charcoal bg-white/80 border border-zen-lavender/30'
+                  }`}>
+                    {allocatedPercent.toFixed(0)}%
+                  </span>
+                </div>
+
+                {/* Accordion expanded utilization progress track */}
+                <div 
+                  role="progressbar"
+                  aria-valuenow={Math.max(0, Math.min(allocatedPercent, 100))}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Accordion allocation utilization percentage"
+                  className="w-full h-2.5 bg-zen-lavender/10 rounded-full overflow-hidden border border-zen-lavender/25 shadow-inner relative"
+                >
+                  <div 
+                    className={`h-full rounded-full transition-all duration-500 ease-out ${
+                      unallocated < 0 
+                        ? 'bg-red-400 shadow-[0_0_10px_rgba(248,113,113,0.4)]' 
+                        : allocatedPercent === 100 
+                          ? 'bg-zen-sage shadow-[0_0_10px_rgba(163,230,53,0.3)]' 
+                          : 'bg-zen-sage/85'
+                    }`}
+                    style={{ width: `${Math.max(0, Math.min(allocatedPercent, 100))}%` }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between text-[11px] font-semibold transition-all duration-300">
+                  {unallocated < 0 ? (
+                    <span className="text-red-500 flex items-center gap-1 animate-pulse">
+                      ⚠️ Allocations exceed ceiling by {formatFriendlyCurrency(Math.abs(unallocated), displayCurrency)}
+                    </span>
+                  ) : unallocated === 0 && totalBudget > 0 ? (
+                    <span className="text-zen-sage flex items-center gap-1 font-bold">
+                      ✓ Fully allocated! Perfect harmony achieved.
+                    </span>
+                  ) : unallocated > 0 && totalBudget > 0 ? (
+                    <span className="text-zen-charcoal/50">
+                      ✨ {formatFriendlyCurrency(unallocated, displayCurrency)} remaining for other intentions
+                    </span>
+                  ) : (
+                    <span className="text-zen-charcoal/40">
+                      Enter a ceiling limit above to balance your categories.
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Clean Category Rows without sliders */}
+            <div className="flex flex-col gap-3 max-h-[40dvh] overflow-y-auto pr-2">
               {categories.map(cat => {
-                const val = allocations[cat.id] || 0;
+                const val = allocations[cat.id] || '';
                 const labelId = `cat-label-${monthStr}-${cat.id}`;
                 return (
-                  <div key={cat.id} className="flex flex-col gap-2 bg-white/40 p-3 sm:p-4 rounded-2xl border border-white/20">
-                    <div className="flex justify-between items-center gap-2">
-                      <span id={labelId} className="font-bold text-sm text-zen-charcoal flex items-center gap-2 truncate min-w-0 flex-1">
-                        {cat.icon && <Tag size={16} className="text-zen-charcoal/60 shrink-0" />}
-                        <span className="truncate">{cat.name}</span>
+                  <div 
+                    key={cat.id} 
+                    className="flex justify-between items-center gap-4 bg-white/40 hover:bg-white/60 p-3 sm:p-4 rounded-2xl border border-white/20 shadow-xs hover:shadow-sm transition-all duration-200"
+                  >
+                    {/* Category Label & Icon */}
+                    <span id={labelId} className="font-bold text-sm text-zen-charcoal flex items-center gap-3 truncate min-w-0 flex-1">
+                      <span className="w-8 h-8 rounded-xl bg-zen-lavender/15 flex items-center justify-center text-zen-charcoal/70 shrink-0">
+                        <Tag size={16} />
                       </span>
-                      <div className="flex items-center bg-white/60 border border-zen-lavender/40 rounded-xl px-3 py-1.5 min-h-[44px] box-border shrink-0">
-                        {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
-                          <span className="text-xs font-bold text-zen-charcoal mr-1">{getCurrencySymbol(displayCurrency)}</span>
-                        )}
-                        <input 
-                          type="text" 
-                          inputMode="decimal"
-                          pattern="^[0-9]*\.?[0-9]*$"
-                          aria-labelledby={labelId}
-                          value={val === 0 ? 0 : val} 
-                          onChange={e => handleAllocationChange(cat.id, e.target.value)}
-                          disabled={isPending}
-                          className="w-16 bg-transparent border-none text-right text-sm font-bold text-zen-charcoal outline-none appearance-none disabled:opacity-40"
-                          placeholder="0"
-                        />
-                        {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
-                          <span className="text-xs font-bold text-zen-charcoal ml-1">{getCurrencySymbol(displayCurrency)}</span>
-                        )}
-                      </div>
+                      <span className="truncate tracking-wide text-zen-charcoal/90 font-bold">
+                        {cat.name}
+                      </span>
+                    </span>
+
+                    {/* Input field with focus borders */}
+                    <div className="flex items-center bg-white/70 border border-zen-lavender/40 rounded-xl px-3 py-1.5 min-h-[44px] focus-within:ring-2 focus-within:ring-zen-sage/60 focus-within:border-transparent hover:border-zen-lavender/60 transition-all shadow-inner shrink-0">
+                      {CURRENCY_CONFIG[displayCurrency]?.position !== 'suffix' && (
+                        <span className="text-xs font-extrabold text-zen-charcoal/40 mr-1 select-none">
+                          {getCurrencySymbol(displayCurrency)}
+                        </span>
+                      )}
+                      <input 
+                        type="text" 
+                        inputMode="decimal"
+                        pattern="^[0-9]*\.?[0-9]*$"
+                        aria-labelledby={labelId}
+                        value={val} 
+                        onChange={e => handleAllocationChange(cat.id, e.target.value)}
+                        disabled={isPending}
+                        className="w-16 bg-transparent border-none text-right text-sm font-extrabold text-zen-charcoal outline-none appearance-none disabled:opacity-40 focus:ring-0"
+                        placeholder="0"
+                      />
+                      {CURRENCY_CONFIG[displayCurrency]?.position === 'suffix' && (
+                        <span className="text-xs font-extrabold text-zen-charcoal/40 ml-1 select-none">
+                          {getCurrencySymbol(displayCurrency)}
+                        </span>
+                      )}
                     </div>
-                    
-                    <input 
-                      type="range" 
-                      aria-labelledby={labelId}
-                      aria-label={`Adjust ${cat.name} allocation`}
-                      min="0" 
-                      max={totalBudget} 
-                      step="10"
-                      value={val}
-                      onChange={e => handleAllocationChange(cat.id, e.target.value)}
-                      disabled={isPending}
-                      className="w-full accent-zen-sage cursor-pointer disabled:opacity-40 md:hidden"
-                    />
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex flex-wrap gap-3 justify-end mt-2">
-              <button
-                type="submit"
-                name="actionType"
-                value="save"
-                disabled={isPending}
-                className="px-6 py-3 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-bold hover:bg-white/80 transition-all text-sm cursor-pointer shadow-xs disabled:opacity-40 flex items-center justify-center"
-              >
-                {isPending ? 'Saving...' : 'Save Month'}
-              </button>
-
+            {/* Actions Section (Save Month & Propagate) */}
+            <div className="flex flex-col sm:flex-row gap-3 mt-2">
               <button
                 type="button"
                 disabled={isPending}
                 onClick={onOpenSelectionModal}
-                className="px-6 py-3 bg-zen-charcoal text-zen-base rounded-full font-bold hover:bg-zen-charcoal/90 transition-all text-sm cursor-pointer border-none shadow-md disabled:opacity-40 flex items-center justify-center gap-2"
+                className="flex-1 py-3.5 px-5 bg-white/60 border border-zen-lavender/40 text-zen-charcoal hover:bg-white/80 rounded-full font-bold text-sm transition-all cursor-pointer disabled:opacity-40"
               >
-                <RefreshCw size={14} />
-                <span>Apply to other months</span>
+                Apply to other months...
+              </button>
+              <button 
+                type="submit"
+                disabled={isPending || unallocated < 0}
+                className="flex-1 py-3.5 px-5 bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90 rounded-full font-bold text-sm transition-all cursor-pointer disabled:opacity-40 border-none shadow-md"
+              >
+                {isPending ? 'Saving...' : 'Save Month'}
               </button>
             </div>
           </form>
@@ -568,4 +705,3 @@ function MonthAccordionForm({
     </div>
   );
 }
-

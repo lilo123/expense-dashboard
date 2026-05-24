@@ -1,5 +1,6 @@
 'use client';
 import { useMemo, useState, useEffect, useRef, memo } from 'react';
+import { useIsMounted } from '@/lib/hooks';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { convertAmount, formatNoDecimalCurrency } from '@/lib/utils';
 import { Tag, ListFilter, ChevronDown } from 'lucide-react';
@@ -14,7 +15,7 @@ function BudgetView() {
   const exchangeRates = useExpenseStore(state => state.exchangeRates);
   const toggleOnboarding = useExpenseStore(state => state.toggleOnboarding);
 
-  const [isMounted, setIsMounted] = useState(false);
+  const isMounted = useIsMounted();
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
   const [sortDirection, setSortDirection] = useState<'highest' | 'lowest'>('highest');
   const [sortMetric, setSortMetric] = useState<'budget' | 'spend' | 'remaining'>('budget');
@@ -40,11 +41,6 @@ function BudgetView() {
       window.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isSortOpen]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setIsMounted(true);
-  }, []);
 
   // Filter expenses for selected month and convert to display currency
   const selectedMonthExpenses = useMemo(() => {
