@@ -320,7 +320,7 @@ function ClientDashboardContent() {
       {isMounted && <div id="hydrated-marker" style={{ width: 0, height: 0, opacity: 0, position: 'absolute', pointerEvents: 'none' }} />}
     
       {/* Add Expense FAB and Modal */}
-      <div className="fab-container fixed right-4 z-40 bottom-[calc(64px_+_16px_+_env(safe-area-inset-bottom,_0px))]">
+      <div className="fab-container fixed right-4 sm:right-[30px] z-40 bottom-[calc(64px_+_16px_+_env(safe-area-inset-bottom,_0px))] sm:bottom-[30px]">
         <button 
           id="action-elem-8" 
           className={`fab secondary-fab transition-all duration-200 rounded-full flex items-center justify-center ${isChatModalOpen ? 'bg-zen-sage text-zen-charcoal shadow-md border-none' : 'bg-white/60 text-zen-charcoal/60 border border-zen-lavender/30 hover:bg-white/80'}`}
