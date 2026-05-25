@@ -18,7 +18,13 @@ test.describe('Yearly Tab Budget-Only & Stacked Chart Breakdown E2E', () => {
     const yearlyTab = page.locator('#tab-yearly').first();
     await expect(yearlyTab).toBeVisible();
 
-    await expect(yearlyTab.locator('h2')).toContainText('Budget vs Spent');
+    // Assert custom legend is visible on mount with standard items
+    const legendBox = yearlyTab.locator('#custom-chart-legend');
+    await expect(legendBox).toBeVisible();
+    await expect(legendBox).toContainText('Monthly Budget');
+    await expect(legendBox).toContainText('Actual Spent');
+    await expect(legendBox).not.toContainText('Recurring Spent');
+    await expect(legendBox).not.toContainText('One-off Spent');
 
     const chartContainer = yearlyTab.locator('.chart-container');
     await expect(chartContainer).toBeVisible();
@@ -32,13 +38,28 @@ test.describe('Yearly Tab Budget-Only & Stacked Chart Breakdown E2E', () => {
     await expect(checkbox).toBeVisible();
     await expect(checkbox).not.toBeChecked();
 
+    const legendBox = yearlyTab.locator('#custom-chart-legend');
+    await expect(legendBox).toBeVisible();
+
     // Toggle on
     await checkbox.check();
     await expect(checkbox).toBeChecked();
 
+    // Assert legend updates dynamically to breakdown state
+    await expect(legendBox).toContainText('Monthly Budget');
+    await expect(legendBox).toContainText('Recurring Spent');
+    await expect(legendBox).toContainText('One-off Spent');
+    await expect(legendBox).not.toContainText('Actual Spent');
+
     // Toggle off
     await checkbox.uncheck();
     await expect(checkbox).not.toBeChecked();
+
+    // Assert legend reverts dynamically to baseline spent state
+    await expect(legendBox).toContainText('Monthly Budget');
+    await expect(legendBox).toContainText('Actual Spent');
+    await expect(legendBox).not.toContainText('Recurring Spent');
+    await expect(legendBox).not.toContainText('One-off Spent');
   });
 
   test('should display category-level budget performance in details tray when clicking a chart bar', async ({ page }) => {

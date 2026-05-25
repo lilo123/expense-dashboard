@@ -269,7 +269,7 @@ function YearlyTab() {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    layout: { padding: { top: 35 } },
+    layout: { padding: { top: 5 } },
     onClick: (event: any, elements: any[]) => {
       if (elements.length > 0) {
         const idx = elements[0].index;
@@ -300,13 +300,7 @@ function YearlyTab() {
     },
     plugins: {
         legend: { 
-          display: true,
-          position: 'top' as const,
-          labels: { 
-            boxWidth: 12, 
-            font: { weight: 'bold' as const },
-            padding: 20
-          }
+          display: false
         },
         tooltip: {
           enabled: true,
@@ -372,27 +366,26 @@ function YearlyTab() {
 
   return (
     <div id="tab-yearly" className="tab-content active" style={{ display: "block" }}>
-        <div className="flex justify-between items-center mb-4">
-            <h2 className="font-extrabold text-zen-charcoal text-2xl m-0 leading-none select-none">Budget vs Spent</h2>
-            <div className="flex items-center gap-3">
-                {/* Relocated "Show recurring expenses" checkbox Styled as h-10 glassmorphic pill */}
-                <label className="inline-flex items-center gap-2 bg-white/40 backdrop-blur-md border border-white/20 rounded-full px-4 h-10 cursor-pointer select-none shadow-xs hover:bg-white/60 transition-all box-border">
-                  <input 
-                    type="checkbox" 
-                    checked={showBreakdown}
-                    onChange={e => setShowBreakdown(e.target.checked)}
-                    className="w-4 h-4 accent-zen-sage cursor-pointer rounded m-0"
-                  />
-                  <span className="text-xs font-bold text-zen-charcoal whitespace-nowrap">Show recurring expenses</span>
-                </label>
+        <div className="flex justify-between items-center mb-4 w-full">
+            {/* "Show recurring expenses" checkbox Styled as h-10 glassmorphic pill on the left */}
+            <label className="inline-flex items-center gap-2 bg-white/40 backdrop-blur-md border border-white/20 rounded-full px-4 h-10 cursor-pointer select-none shadow-xs hover:bg-white/60 transition-all box-border">
+              <input 
+                type="checkbox" 
+                checked={showBreakdown}
+                onChange={e => setShowBreakdown(e.target.checked)}
+                className="w-4 h-4 accent-zen-sage cursor-pointer rounded m-0"
+              />
+              <span className="text-xs font-bold text-zen-charcoal whitespace-nowrap">Show recurring expenses</span>
+            </label>
 
-                <div className="relative inline-flex items-center">
-                  <select 
-                    id="yearSelect" 
-                    value={selectedYear} 
-                    onChange={e => setSelectedYear(e.target.value)}
-                    className="pl-4 pr-8 py-2 bg-white/50 border border-zen-lavender/60 rounded-full text-zen-charcoal text-sm font-bold outline-none cursor-pointer h-10 appearance-none box-border min-w-[44px]"
-                  >
+            {/* Year Select Dropdown on the right */}
+            <div className="relative inline-flex items-center">
+              <select 
+                id="yearSelect" 
+                value={selectedYear} 
+                onChange={e => setSelectedYear(e.target.value)}
+                className="pl-4 pr-8 py-2 bg-white/50 border border-zen-lavender/60 rounded-full text-zen-charcoal text-sm font-bold outline-none cursor-pointer h-10 appearance-none box-border min-w-[44px]"
+              >
                     {years.map(y => <option key={y} value={y}>{y}</option>)}
                   </select>
                   <div className="absolute right-3.5 pointer-events-none text-zen-charcoal/60 flex items-center justify-center">
@@ -400,8 +393,32 @@ function YearlyTab() {
                       <path d="m6 9 6 6 6-6"></path>
                     </svg>
                   </div>
-                </div>
             </div>
+        </div>
+
+        {/* Custom React JSX Legend */}
+        <div id="custom-chart-legend" className="flex flex-wrap items-center justify-center gap-6 mb-4 select-none animate-fade-in bg-white/20 backdrop-blur-xs border border-white/10 rounded-full py-1.5 px-4 w-fit mx-auto shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span className="w-4 h-1 rounded-full" style={{ backgroundColor: '#2D3748' }} />
+            <span className="text-xs font-extrabold text-zen-charcoal/80">Monthly Budget</span>
+          </div>
+          {!showBreakdown ? (
+            <div className="flex items-center gap-2">
+              <span className="w-3 h-3 rounded-xs" style={{ backgroundColor: '#AEC3B0' }} />
+              <span className="text-xs font-extrabold text-zen-charcoal/80">Actual Spent</span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-xs" style={{ backgroundColor: '#AEC3B0' }} />
+                <span className="text-xs font-extrabold text-zen-charcoal/80">Recurring Spent</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-xs" style={{ backgroundColor: '#D8D2E1' }} />
+                <span className="text-xs font-extrabold text-zen-charcoal/80">One-off Spent</span>
+              </div>
+            </>
+          )}
         </div>
 
         <div className="chart-container" style={{ height: '300px', maxHeight: '40vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
