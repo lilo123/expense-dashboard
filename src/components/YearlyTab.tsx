@@ -65,7 +65,6 @@ function YearlyTab() {
 
 
 
-  const [yearlyViewMode, setYearlyViewMode] = useState<'expense' | 'budget'>('expense');
   const [showBreakdown, setShowBreakdown] = useState(false);
 
   const years = useMemo(() => {
@@ -185,88 +184,79 @@ function YearlyTab() {
 
 
 
-  const chartDatasets = yearlyViewMode === 'budget' ? [
-    {
-      type: 'line' as const,
-      label: 'Monthly Budget',
-      data: budgetData,
-      borderColor: '#2D3748', // Zen Charcoal
-      backgroundColor: '#2D3748',
-      borderWidth: 3,
-      tension: 0.2,
-      fill: false,
-      pointHitRadius: 15,
-      datalabels: {
-        display: false // Removed static sum labels from budget line per user request
-      }
-    },
-    {
-      type: 'bar' as const,
-      label: 'Actual Spent',
-      data: totalData,
-      backgroundColor: '#AEC3B0', // Monochromatic light green per user request
-      borderRadius: 4,
-      barPercentage: 0.6,
-      datalabels: {
-        display: false // Remove static sum labels from tops of actual expense bars
-      }
-    }
-  ] : (showBreakdown ? [
-    {
-      label: 'Recurring',
-      data: recurringData,
-      backgroundColor: '#AEC3B0', // Soft Sage Green
-      borderRadius: 4,
-      barPercentage: 0.6,
-      stack: 'stack1',
-      datalabels: {
-        display: (context: any) => {
-          const val = context.dataset.data[context.dataIndex];
-          return val !== null && val > 0;
-        },
-        anchor: 'center' as const,
-        align: 'center' as const,
-        color: '#2D3748',
-        font: { weight: 'bold' as const, size: 10 },
-        formatter: (value: number, context: any) => {
-          const idx = context.dataIndex;
-          const recVal = recurringData[idx] || 0;
-          const oneVal = oneOffData[idx] || 0;
-          const total = recVal + oneVal;
-          if (total === 0) return '';
-          const pct = Math.round((value / total) * 100);
-          return pct > 0 ? `${pct}%` : '';
+  const chartDatasets = useMemo(() => {
+    return showBreakdown ? [
+      {
+        type: 'line' as const,
+        label: 'Monthly Budget',
+        data: budgetData,
+        borderColor: '#2D3748', // Zen Charcoal
+        backgroundColor: '#2D3748',
+        borderWidth: 3,
+        tension: 0.2,
+        fill: false,
+        pointHitRadius: 15,
+        datalabels: {
+          display: false
+        }
+      },
+      {
+        type: 'bar' as const,
+        label: 'Recurring Spent',
+        data: recurringData,
+        backgroundColor: '#AEC3B0', // Sage Green
+        stack: 'spentStack',
+        borderRadius: 4,
+        barPercentage: 0.6,
+        datalabels: {
+          display: false
+        }
+      },
+      {
+        type: 'bar' as const,
+        label: 'One-off Spent',
+        data: oneOffData,
+        backgroundColor: '#D8D2E1', // Soft Lavender
+        stack: 'spentStack',
+        borderRadius: 4,
+        barPercentage: 0.6,
+        datalabels: {
+          display: false
         }
       }
-    },
-    {
-      label: 'One-off',
-      data: oneOffData,
-      backgroundColor: '#D8D2E1', // Muted Lavender
-      borderRadius: 4,
-      barPercentage: 0.6,
-      stack: 'stack1',
-      datalabels: {
-        display: false // Removed total sum labels from top of bars
+    ] : [
+      {
+        type: 'line' as const,
+        label: 'Monthly Budget',
+        data: budgetData,
+        borderColor: '#2D3748', // Zen Charcoal
+        backgroundColor: '#2D3748',
+        borderWidth: 3,
+        tension: 0.2,
+        fill: false,
+        pointHitRadius: 15,
+        datalabels: {
+          display: false
+        }
+      },
+      {
+        type: 'bar' as const,
+        label: 'Actual Spent',
+        data: totalData,
+        backgroundColor: '#AEC3B0', // Monochromatic Sage Green
+        borderRadius: 4,
+        barPercentage: 0.6,
+        datalabels: {
+          display: false
+        }
       }
-    }
-  ] : [
-    {
-      label: 'Total Spent',
-      data: totalData,
-      backgroundColor: '#AEC3B0', // Soft Sage Green
-      borderRadius: 4,
-      barPercentage: 0.6,
-      datalabels: {
-        display: false // Removed static numerical sum labels from tops of bars
-      }
-    }
-  ]);
+    ];
+  }, [showBreakdown, budgetData, recurringData, oneOffData, totalData]);
 
-  const chartData = {
+  const chartData = useMemo(() => ({
     labels: MONTH_LABELS,
     datasets: chartDatasets
-  };
+  }), [chartDatasets]);
 
   const options = {
     responsive: true,
@@ -281,13 +271,13 @@ function YearlyTab() {
     },
     scales: {
         x: { 
-          stacked: (yearlyViewMode === 'expense' && showBreakdown) || yearlyViewMode === 'budget',
+          stacked: true,
           grid: { display: false }, 
           border: { display: false }, 
           ticks: { color: '#2D3748', font: { weight: 'bold' as const } } 
         },
         y: { 
-          stacked: (yearlyViewMode === 'expense' && showBreakdown) || yearlyViewMode === 'budget',
+          stacked: true,
           grid: { display: false }, 
           border: { display: false }, 
           ticks: { 
@@ -301,7 +291,7 @@ function YearlyTab() {
     },
     plugins: {
         legend: { 
-          display: yearlyViewMode === 'budget' || (yearlyViewMode === 'expense' && showBreakdown),
+          display: true,
           position: 'top' as const,
           labels: { boxWidth: 12, font: { weight: 'bold' as const } }
         },
@@ -317,7 +307,7 @@ function YearlyTab() {
               return label;
             },
             afterBody: function(context: any[]) {
-              if (yearlyViewMode === 'budget' && context.length > 0) {
+              if (context.length > 0) {
                 const idx = context[0].dataIndex;
                 const spent = totalData[idx] || 0;
                 return `Total Spent: ${formatChartFriendlyCurrency(spent, displayCurrency)}`;
@@ -365,38 +355,23 @@ function YearlyTab() {
     return map;
   }, [activeMonthExpenses, baseCurrency, displayCurrency, exchangeRates]);
 
-  const detailExpenses = useMemo(() => {
-    if (activeMonthFilter === null) return [];
-    const monthIdx = parseInt(activeMonthFilter, 10);
-    return expenses.filter(exp => {
-      if (!exp.date) return false;
-      const d = parseLocalDate(exp.date);
-      return d.getFullYear().toString() === selectedYear && d.getMonth() === monthIdx;
-    });
-  }, [expenses, activeMonthFilter, selectedYear]);
+// detailExpenses was removed as it is no longer used since the flat transaction list in Month Details tray was cleaned up.
 
   return (
     <div id="tab-yearly" className="tab-content active" style={{ display: "block" }}>
         <div className="flex justify-between items-center mb-4">
-            <h2 className="margin-0 text-zen-charcoal font-bold">
-              {yearlyViewMode === 'expense' ? 'Monthly Expenses' : 'Budget vs Spent'}
-            </h2>
+            <h2 className="font-extrabold text-zen-charcoal text-2xl m-0 leading-none select-none">Budget vs Spent</h2>
             <div className="flex items-center gap-3">
-                {/* Master View Toggle Switch */}
-                <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-full p-1 inline-flex items-center gap-1">
-                  <button 
-                    onClick={() => { setYearlyViewMode('expense'); setShowBreakdown(false); }}
-                    className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all border-none cursor-pointer ${yearlyViewMode === 'expense' ? 'bg-zen-charcoal text-white shadow-sm' : 'text-zen-charcoal/60 hover:text-zen-charcoal bg-transparent'}`}
-                  >
-                    Expense View
-                  </button>
-                  <button 
-                    onClick={() => setYearlyViewMode('budget')}
-                    className={`rounded-full px-3 py-1.5 text-xs font-bold transition-all border-none cursor-pointer ${yearlyViewMode === 'budget' ? 'bg-zen-charcoal text-white shadow-sm' : 'text-zen-charcoal/60 hover:text-zen-charcoal bg-transparent'}`}
-                  >
-                    Budget View
-                  </button>
-                </div>
+                {/* Relocated "Show recurring expenses" checkbox Styled as h-10 glassmorphic pill */}
+                <label className="inline-flex items-center gap-2 bg-white/40 backdrop-blur-md border border-white/20 rounded-full px-4 h-10 cursor-pointer select-none shadow-xs hover:bg-white/60 transition-all box-border">
+                  <input 
+                    type="checkbox" 
+                    checked={showBreakdown}
+                    onChange={e => setShowBreakdown(e.target.checked)}
+                    className="w-4 h-4 accent-zen-sage cursor-pointer rounded m-0"
+                  />
+                  <span className="text-xs font-bold text-zen-charcoal whitespace-nowrap">Show recurring expenses</span>
+                </label>
 
                 <div className="relative inline-flex items-center">
                   <select 
@@ -424,21 +399,6 @@ function YearlyTab() {
             )}
         </div>
 
-        {/* Relocated Single-Line Show Recurring Expenses Checkbox (Visible only in Expense View, right corner under chart) */}
-        <div className="flex justify-end mt-2 px-1">
-          {yearlyViewMode === 'expense' && (
-            <label className="inline-flex items-center gap-2 bg-white/40 backdrop-blur-md border border-white/20 rounded-full px-4 py-2 min-h-[44px] cursor-pointer select-none shadow-xs hover:bg-white/60 transition-all box-border">
-              <input 
-                type="checkbox" 
-                checked={showBreakdown}
-                onChange={e => setShowBreakdown(e.target.checked)}
-                className="w-4 h-4 accent-zen-sage cursor-pointer rounded m-0"
-              />
-              <span className="text-xs font-bold text-zen-charcoal whitespace-nowrap">Show recurring expenses</span>
-            </label>
-          )}
-        </div>
-
         <div id="yearly-details-container" ref={detailsRef} style={{ marginTop: '20px' }}>
           {activeMonthFilter !== null && (
             <div className="month-details p-5 bg-white/40 backdrop-blur-md border border-white/20 rounded-3xl mb-5 shadow-sm text-left">
@@ -446,154 +406,127 @@ function YearlyTab() {
                 <h3 className="font-extrabold text-zen-charcoal text-lg">
                   {MONTH_LABELS[parseInt(activeMonthFilter, 10)]} {selectedYear}
                 </h3>
-                <button onClick={() => setActiveMonthFilter(null)} className="px-3 py-1 bg-white/60 border border-zen-lavender/40 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-colors text-sm cursor-pointer border-none">Close</button>
+                <button onClick={() => setActiveMonthFilter(null)} className="px-3 py-1 bg-white/60 text-zen-charcoal rounded-full font-semibold hover:bg-white/80 transition-colors text-sm cursor-pointer border-none">Close</button>
               </div>
 
-              {yearlyViewMode === 'budget' ? (
-                <div className="flex flex-col gap-3 mt-2">
-                  {/* Overall Monthly Summary Progress Indicator */}
-                  {(() => {
-                    const monthIdx = parseInt(activeMonthFilter, 10);
-                    const monthSpent = Math.round(totalData[monthIdx] || 0);
-                    const monthBudget = Math.round(budgetData[monthIdx] || 0);
-                    const isMonthOver = monthSpent > monthBudget && monthBudget > 0;
-                    const percentage = monthBudget > 0 ? Math.round((monthSpent / monthBudget) * 100) : 0;
-                    const barWidth = Math.min(100, percentage);
+              <div className="flex flex-col gap-3 mt-2">
+                {/* Overall Monthly Summary Progress Indicator */}
+                {(() => {
+                  const monthIdx = parseInt(activeMonthFilter, 10);
+                  const monthSpent = Math.round(totalData[monthIdx] || 0);
+                  const monthBudget = Math.round(budgetData[monthIdx] || 0);
+                  const isMonthOver = monthSpent > monthBudget && monthBudget > 0;
+                  const percentage = monthBudget > 0 ? Math.round((monthSpent / monthBudget) * 100) : 0;
+                  const barWidth = Math.min(100, percentage);
 
-                    return (
-                      <div className="bg-white/60 border border-white/30 p-5 rounded-2xl flex flex-col gap-2 shadow-xs mb-4">
-                        <div className="flex justify-between items-center">
-                          <span className="font-extrabold text-base text-zen-charcoal">Total:</span>
-                          <span className="text-xs font-bold text-zen-charcoal/70">
-                            {monthBudget === 0 ? (
-                              `Spent ${formatNoDecimalCurrency(monthSpent, displayCurrency)} / No Budget`
-                            ) : (
-                              `Spent ${formatNoDecimalCurrency(monthSpent, displayCurrency)} of ${formatNoDecimalCurrency(monthBudget, displayCurrency)} (${percentage}%)`
-                            )}
-                          </span>
-                        </div>
-                        <div 
-                          role="progressbar"
-                          aria-valuenow={Math.min(100, percentage)}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-label="Overall monthly budget utilization"
-                          className="w-full h-3 bg-zen-lavender/20 rounded-full overflow-hidden border border-zen-lavender/30 shadow-inner"
-                        >
-                          <div 
-                            className={`h-full transition-all duration-500 rounded-full ${isMonthOver ? 'bg-amber-500' : 'bg-zen-sage'}`}
-                            style={{ width: `${barWidth}%` }}
-                          />
-                        </div>
+                  return (
+                    <div className="bg-white/60 border border-white/30 p-5 rounded-2xl flex flex-col gap-2 shadow-xs mb-4">
+                      <div className="flex justify-between items-center">
+                        <span className="font-extrabold text-base text-zen-charcoal">Total:</span>
+                        <span className="text-xs font-bold text-zen-charcoal/70">
+                          {monthBudget === 0 ? (
+                            `Spent ${formatNoDecimalCurrency(monthSpent, displayCurrency)} / No Budget`
+                          ) : (
+                            `Spent ${formatNoDecimalCurrency(monthSpent, displayCurrency)} of ${formatNoDecimalCurrency(monthBudget, displayCurrency)} (${percentage}%)`
+                          )}
+                        </span>
                       </div>
-                    );
-                  })()}
-
-                  {categories.map(cat => {
-                    const bgt = activeMonthBudgets.find(b => b.category_id === cat.id);
-                    const limit = bgt ? convertAmount(bgt.limit_amount, bgt.currency, displayCurrency, exchangeRates) : 0;
-                    const spent = activeMonthSpentByCategory[cat.id] || 0;
-                    if (limit === 0 && spent === 0) return null;
-
-                    const isOver = spent > limit && limit > 0;
-                    const percentage = limit > 0 ? Math.round((spent / limit) * 100) : 0;
-                    const barWidth = Math.min(100, percentage);
-                    const isOpen = expandedCategories.has(cat.id);
-
-                    const catExpenses = activeMonthExpenses.filter(exp => exp.category_id === cat.id);
-
-                    return (
-                      <div key={cat.id} className="flex flex-col gap-2.5 bg-white/60 p-4 rounded-2xl border border-white/20 shadow-xs">
-                        {/* Clickable Accordion Trigger Header */}
+                      <div 
+                        role="progressbar"
+                        aria-valuenow={Math.min(100, percentage)}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label="Overall monthly budget utilization"
+                        className="w-full h-3 bg-zen-lavender/20 rounded-full overflow-hidden border border-zen-lavender/30 shadow-inner"
+                      >
                         <div 
-                          onClick={() => toggleCategoryAccordion(cat.id)}
-                          className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-all select-none"
-                        >
-                          <span className="font-bold text-sm text-zen-charcoal flex items-center gap-2">
-                            <ChevronDown size={14} className={`text-zen-charcoal/50 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-                            {cat.name}
-                          </span>
-                          <span className="text-xs font-bold text-zen-charcoal/70">
-                            {limit === 0 ? (
-                              `Spent ${formatNoDecimalCurrency(Math.round(spent), displayCurrency)} / No Allocation`
-                            ) : (
-                              `Spent ${formatNoDecimalCurrency(Math.round(spent), displayCurrency)} of ${formatNoDecimalCurrency(Math.round(limit), displayCurrency)} (${percentage}%)`
-                            )}
-                          </span>
-                        </div>
+                          className={`h-full transition-all duration-500 rounded-full ${isMonthOver ? 'bg-amber-500' : 'bg-zen-sage'}`}
+                          style={{ width: `${barWidth}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
-                        {/* Mini Utilization Progressbar */}
+                {categories.map(cat => {
+                  const bgt = activeMonthBudgets.find(b => b.category_id === cat.id);
+                  const limit = bgt ? convertAmount(bgt.limit_amount, bgt.currency, displayCurrency, exchangeRates) : 0;
+                  const spent = activeMonthSpentByCategory[cat.id] || 0;
+                  if (limit === 0 && spent === 0) return null;
+
+                  const isOver = spent > limit && limit > 0;
+                  const percentage = limit > 0 ? Math.round((spent / limit) * 100) : 0;
+                  const barWidth = Math.min(100, percentage);
+                  const isOpen = expandedCategories.has(cat.id);
+
+                  const catExpenses = activeMonthExpenses.filter(exp => exp.category_id === cat.id);
+
+                  return (
+                    <div key={cat.id} className="flex flex-col gap-2.5 bg-white/60 p-4 rounded-2xl border border-white/20 shadow-xs">
+                      {/* Clickable Accordion Trigger Header */}
+                      <div 
+                        onClick={() => toggleCategoryAccordion(cat.id)}
+                        className="flex justify-between items-center cursor-pointer hover:opacity-80 transition-all select-none"
+                      >
+                        <span className="font-bold text-sm text-zen-charcoal flex items-center gap-2">
+                          <ChevronDown size={14} className={`text-zen-charcoal/50 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                          {cat.name}
+                        </span>
+                        <span className="text-xs font-bold text-zen-charcoal/70">
+                          {limit === 0 ? (
+                            `Spent ${formatNoDecimalCurrency(Math.round(spent), displayCurrency)} / No Allocation`
+                          ) : (
+                            `Spent ${formatNoDecimalCurrency(Math.round(spent), displayCurrency)} of ${formatNoDecimalCurrency(Math.round(limit), displayCurrency)} (${percentage}%)`
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Mini Utilization Progressbar */}
+                      <div 
+                        role="progressbar"
+                        aria-valuenow={Math.min(100, percentage)}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={`${cat.name} budget utilization`}
+                        className="w-full h-2 bg-zen-lavender/10 rounded-full overflow-hidden border border-zen-lavender/20 shadow-inner"
+                      >
                         <div 
-                          role="progressbar"
-                          aria-valuenow={Math.min(100, percentage)}
-                          aria-valuemin={0}
-                          aria-valuemax={100}
-                          aria-label={`${cat.name} budget utilization`}
-                          className="w-full h-2 bg-zen-lavender/10 rounded-full overflow-hidden border border-zen-lavender/20 shadow-inner"
-                        >
-                          <div 
-                            className={`h-full rounded-full transition-all duration-300 ${isOver ? 'bg-amber-500' : 'bg-zen-sage'}`}
-                            style={{ width: `${barWidth}%` }}
-                          />
-                        </div>
+                          className={`h-full rounded-full transition-all duration-300 ${isOver ? 'bg-amber-500' : 'bg-zen-sage'}`}
+                          style={{ width: `${barWidth}%` }}
+                        />
+                      </div>
 
-                        {/* Expanded Category Transaction Details List */}
-                        {isOpen && (
-                          <div className="mt-2 pl-5 border-l border-zen-lavender/30 flex flex-col gap-2.5 animate-fade-in">
-                            {catExpenses.length > 0 ? (
-                              catExpenses.map(exp => (
-                                <div key={exp.id} className="flex justify-between items-center text-xs font-semibold py-1 border-b border-zen-lavender/10 last:border-none">
-                                  <div className="flex flex-col gap-0.5 text-left">
-                                    <span className="text-zen-charcoal">{exp.item}</span>
-                                    <span className="text-[10px] text-zen-charcoal/60">{formatFriendlyDate(exp.date)}</span>
-                                  </div>
-                                  <span className="text-zen-charcoal font-bold">
-                                    {formatFriendlyCurrency(
-                                      (() => {
-                                        const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
-                                        const curOriginal = exp.original_currency || exp.currency || baseCurrency;
-                                        return convertAmount(amtOriginal, curOriginal, displayCurrency, exchangeRates);
-                                      })(),
-                                      displayCurrency
-                                    )}
-                                  </span>
+                      {/* Expanded Category Transaction Details List */}
+                      {isOpen && (
+                        <div className="mt-2 pl-5 border-l border-zen-lavender/30 flex flex-col gap-2.5 animate-fade-in">
+                          {catExpenses.length > 0 ? (
+                            catExpenses.map(exp => (
+                              <div key={exp.id} className="flex justify-between items-center text-xs font-semibold py-1 border-b border-zen-lavender/10 last:border-none">
+                                <div className="flex flex-col gap-0.5 text-left">
+                                  <span className="text-zen-charcoal">{exp.item}</span>
+                                  <span className="text-[10px] text-zen-charcoal/60">{formatFriendlyDate(exp.date)}</span>
                                 </div>
-                              ))
-                            ) : (
-                              <span className="text-xs text-zen-charcoal/50 text-left italic">No expenses logged in this category.</span>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                detailExpenses.length > 0 ? (
-                  <div className="recent-list">
-                    {detailExpenses.map(exp => (
-                      <div key={exp.id} className="expense-item">
-                        <div className="expense-info">
-                          <h4>{exp.item}</h4>
-                          <p>{exp.categories?.name || "Uncategorized"} &bull; {formatFriendlyDate(exp.date)}</p>
-                        </div>
-                        <div className="expense-amount">
-                          {formatFriendlyCurrency(
-                            (() => {
-                              const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
-                              const curOriginal = exp.original_currency || exp.currency || baseCurrency;
-                              return convertAmount(amtOriginal, curOriginal, displayCurrency, exchangeRates);
-                            })(),
-                            displayCurrency
+                                <span className="text-zen-charcoal font-bold">
+                                  {formatFriendlyCurrency(
+                                    (() => {
+                                      const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+                                      const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+                                      return convertAmount(amtOriginal, curOriginal, displayCurrency, exchangeRates);
+                                    })(),
+                                    displayCurrency
+                                  )}
+                                </span>
+                              </div>
+                            ))
+                          ) : (
+                            <span className="text-xs text-zen-charcoal/50 text-left italic">No expenses logged in this category.</span>
                           )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p>No expenses for this month.</p>
-                )
-              )}
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
 
             </div>
           )}
