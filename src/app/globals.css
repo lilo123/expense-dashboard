@@ -241,9 +241,6 @@ h2 { font-size: 20px; margin-bottom: 15px; }
         margin: 0;
     }
     
-    .recent-list {
-        padding-bottom: calc(130px + 16px + env(safe-area-inset-bottom, 0px)) !important;
-    }
 }
 
 /* Mobile Chat UI Fixes */

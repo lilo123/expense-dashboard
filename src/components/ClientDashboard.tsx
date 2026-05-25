@@ -220,7 +220,7 @@ function ClientDashboardContent() {
 
   return (
     <>
-      <div className="container max-sm:pb-[calc(130px_+_16px_+_env(safe-area-inset-bottom,_0px))]">
+      <div className="container max-sm:pb-[calc(64px_+_16px_+_env(safe-area-inset-bottom,_0px))]">
         <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <Link href="/" className="cursor-pointer hover:opacity-80 transition-all no-underline">
             <Logo className="w-24 h-8 text-zen-charcoal flex items-center" />
