@@ -275,7 +275,7 @@ function ExpenseList() {
         </div>
 
         {/* 3. THE LIST */}
-        <div className="recent-list pb-24 flex flex-col gap-3" id="recent-list">
+        <div className="recent-list flex flex-col gap-3" id="recent-list">
             {filteredAndSortedExpenses.length === 0 ? (
               <div className="empty-state bg-white/40 backdrop-blur-md border border-white/20 rounded-3xl p-8 text-center shadow-sm animate-fade-in">
                 <p className="text-zen-charcoal font-bold text-lg mb-1">No expenses found for this view.</p>
