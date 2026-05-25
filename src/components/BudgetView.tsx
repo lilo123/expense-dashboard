@@ -145,7 +145,7 @@ function BudgetView() {
       </div>
 
       {/* Consolidated Premium Remaining Budget Card */}
-      <div className="w-full">
+      <div id="remaining-budget-card" className="w-full">
         <div className="bg-white border border-zen-lavender/30 shadow-md hover:shadow-lg transition-all duration-300 p-6 rounded-3xl flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex flex-col">
             <span className="text-xs font-bold text-zen-charcoal/60 uppercase tracking-wider select-none">

@@ -87,6 +87,11 @@ function ClientDashboardContent() {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
+  // Scroll Pollution Prevention Hook
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [activeTab]);
+
   const router = useRouter();
 
   // Timezone Sync Effect
@@ -215,7 +220,7 @@ function ClientDashboardContent() {
 
   return (
     <>
-      <div className="container">
+      <div className="container max-sm:pb-[calc(130px_+_16px_+_env(safe-area-inset-bottom,_0px))]">
         <div className="header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <Link href="/" className="cursor-pointer hover:opacity-80 transition-all no-underline">
             <Logo className="w-24 h-8 text-zen-charcoal flex items-center" />
@@ -315,7 +320,7 @@ function ClientDashboardContent() {
       {isMounted && <div id="hydrated-marker" style={{ width: 0, height: 0, opacity: 0, position: 'absolute', pointerEvents: 'none' }} />}
     
       {/* Add Expense FAB and Modal */}
-      <div className="fab-container">
+      <div className="fab-container fixed right-4 z-40 bottom-[calc(64px_+_16px_+_env(safe-area-inset-bottom,_0px))]">
         <button 
           id="action-elem-8" 
           className={`fab secondary-fab transition-all duration-200 rounded-full flex items-center justify-center ${isChatModalOpen ? 'bg-zen-sage text-zen-charcoal shadow-md border-none' : 'bg-white/60 text-zen-charcoal/60 border border-zen-lavender/30 hover:bg-white/80'}`}
@@ -325,6 +330,7 @@ function ClientDashboardContent() {
         </button>
         <button 
           id="fab" 
+          aria-label="Add new expense"
           className={`fab transition-all duration-200 rounded-full shadow-md border-none cursor-pointer flex items-center justify-center ${isAddModalOpen ? 'bg-zen-sage text-zen-charcoal rotate-45' : 'bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90'}`}
           onClick={toggleAddModal}
         >
