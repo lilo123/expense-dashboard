@@ -182,7 +182,15 @@ function YearlyTab() {
     };
   }, [budgets, totalData, selectedYear, displayCurrency, exchangeRates]);
 
-
+  // Dynamically compute y-axis maximum ceiling with a comfortable 15% visual buffer
+  const yAxisMaxCeiling = useMemo(() => {
+    const validBudgets = budgetData.filter((v): v is number => v !== null && v > 0);
+    const validSpents = totalData.filter((v): v is number => v !== null && v > 0);
+    const allValues = [...validBudgets, ...validSpents];
+    if (allValues.length === 0) return undefined;
+    const rawMax = Math.max(...allValues);
+    return Math.ceil(rawMax * 1.15);
+  }, [budgetData, totalData]);
 
   const chartDatasets = useMemo(() => {
     return showBreakdown ? [
@@ -261,7 +269,7 @@ function YearlyTab() {
   const options = {
     responsive: true,
     maintainAspectRatio: false,
-    layout: { padding: { top: 30 } },
+    layout: { padding: { top: 35 } },
     onClick: (event: any, elements: any[]) => {
       if (elements.length > 0) {
         const idx = elements[0].index;
@@ -286,14 +294,19 @@ function YearlyTab() {
             font: { size: 10 },
             callback: (val: any) => formatAxisFriendlyCurrency(val, displayCurrency)
           },
-          min: 0 
+          min: 0,
+          max: yAxisMaxCeiling
         }
     },
     plugins: {
         legend: { 
           display: true,
           position: 'top' as const,
-          labels: { boxWidth: 12, font: { weight: 'bold' as const } }
+          labels: { 
+            boxWidth: 12, 
+            font: { weight: 'bold' as const },
+            padding: 20
+          }
         },
         tooltip: {
           enabled: true,
