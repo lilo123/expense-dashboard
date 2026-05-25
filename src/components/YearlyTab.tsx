@@ -366,35 +366,6 @@ function YearlyTab() {
 
   return (
     <div id="tab-yearly" className="tab-content active" style={{ display: "block" }}>
-        <div className="flex justify-between items-center mb-4 w-full">
-            {/* "Show recurring expenses" checkbox Styled as h-10 glassmorphic pill on the left */}
-            <label className="inline-flex items-center gap-2 bg-white/40 backdrop-blur-md border border-white/20 rounded-full px-4 h-10 cursor-pointer select-none shadow-xs hover:bg-white/60 transition-all box-border">
-              <input 
-                type="checkbox" 
-                checked={showBreakdown}
-                onChange={e => setShowBreakdown(e.target.checked)}
-                className="w-4 h-4 accent-zen-sage cursor-pointer rounded m-0"
-              />
-              <span className="text-xs font-bold text-zen-charcoal whitespace-nowrap">Show recurring expenses</span>
-            </label>
-
-            {/* Year Select Dropdown on the right */}
-            <div className="relative inline-flex items-center">
-              <select 
-                id="yearSelect" 
-                value={selectedYear} 
-                onChange={e => setSelectedYear(e.target.value)}
-                className="pl-4 pr-8 py-2 bg-white/50 border border-zen-lavender/60 rounded-full text-zen-charcoal text-sm font-bold outline-none cursor-pointer h-10 appearance-none box-border min-w-[44px]"
-              >
-                    {years.map(y => <option key={y} value={y}>{y}</option>)}
-                  </select>
-                  <div className="absolute right-3.5 pointer-events-none text-zen-charcoal/60 flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="m6 9 6 6 6-6"></path>
-                    </svg>
-                  </div>
-            </div>
-        </div>
 
         {/* Custom React JSX Legend */}
         <div id="custom-chart-legend" className="flex flex-wrap items-center justify-center gap-6 mb-4 select-none animate-fade-in bg-white/20 backdrop-blur-xs border border-white/10 rounded-full py-1.5 px-4 w-fit mx-auto shadow-2xs">
@@ -427,6 +398,37 @@ function YearlyTab() {
             ) : (
               <div className="text-zen-charcoal/60">Loading Chart...</div>
             )}
+        </div>
+
+        {/* Relocated Footer Control Panel Row (positioned below the chart container) */}
+        <div className="flex justify-between items-center mt-4 w-full select-none">
+            {/* "Show recurring expenses" checkbox Styled as h-10 glassmorphic pill on the left */}
+            <label className="inline-flex items-center gap-2 bg-white/40 backdrop-blur-md border border-white/20 rounded-full px-4 h-10 cursor-pointer select-none shadow-xs hover:bg-white/60 transition-all box-border">
+              <input 
+                type="checkbox" 
+                checked={showBreakdown}
+                onChange={e => setShowBreakdown(e.target.checked)}
+                className="w-4 h-4 accent-zen-sage cursor-pointer rounded m-0"
+              />
+              <span className="text-xs font-bold text-zen-charcoal whitespace-nowrap">Show recurring expenses</span>
+            </label>
+
+            {/* Year Select Dropdown on the right */}
+            <div className="relative inline-flex items-center">
+              <select 
+                id="yearSelect" 
+                value={selectedYear} 
+                onChange={e => setSelectedYear(e.target.value)}
+                className="pl-4 pr-8 py-2 bg-white/50 border border-zen-lavender/60 rounded-full text-zen-charcoal text-sm font-bold outline-none cursor-pointer h-10 appearance-none box-border min-w-[44px]"
+              >
+                {years.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+              <div className="absolute right-3.5 pointer-events-none text-zen-charcoal/60 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m6 9 6 6 6-6"></path>
+                </svg>
+              </div>
+            </div>
         </div>
 
         <div id="yearly-details-container" ref={detailsRef} style={{ marginTop: '20px' }}>
