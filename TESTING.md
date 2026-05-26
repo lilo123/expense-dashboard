@@ -150,6 +150,9 @@ Our frontend tests validate that the UI correctly aligns with the An-yen Zen aes
 *   **Global Modals Overlap & Visual regression (`modals_ui.spec.ts`)**: Verifies structural safety (zero exit overlaps, roundness, deep charcoal accessibility text contrast) on both Desktop (`1280x800`) and Mobile (`375x812`) viewport emulations across all 6 application modals.
 *   **Onboarding Category Polish & Safeguards (`onboarding_safeguards.spec.ts`)**: Verifies inline category additions are rendered dynamically, and active categories are strictly protected from deletion if linked to active expenses.
 *   **Onboarding Skip Flow Persistence (`onboarding_safeguards.spec.ts`)**: Verifies that skipping onboarding asynchronously updates the profile's onboarding status, closes the modal, and persists the completed state successfully across manual browser reloads.
+*   **Yearly Tab stacked Chart Breakdown E2E (`yearly_master_toggle.spec.ts`) (NEW)**:
+    *   Asserts that the dynamic **Custom React HTML Legend** renders standard items on mount (`Monthly Budget`, `Actual Spent`) and dynamically reflows to stacked items (`Monthly Budget`, `Recurring Spent`, `One-off Spent`) when the Breakdown checkbox is toggled, fully verifying visual and semantic stacked transitions.
+    *   Asserts that clicking a chart bar simulated via a database event successfully triggers the **Month Details Accordion Tray**, rendering category limits and progress headers containing May summaries.
 
 ---
 
@@ -173,8 +176,16 @@ if (!isMobile) {
   await expect(totalLabel).not.toContainText('K');
 }
 ```
+Playwright's assertions verify readability bounds perfectly.
 
-### C. Same-Site Domain Resolution
+### C. Local Database Emulator CSP Whitelists (NEW)
+Next.js 15 dynamic Content Security Policy (CSP) headers enforced via Middleware (`src/proxy.ts`) whitelist only strict database origins (`https://*.supabase.co`). However, during local development and automated Playwright E2E test runs, the browser client must connect to a **local Supabase Docker emulator** (`http://localhost:54321`).
+
+To prevent the browser from blocking local database fetches (which throws `Failed to fetch` and crashes user sign-ins), the middleware dynamically checks `NEXT_PUBLIC_SUPABASE_URL`:
+*   If the database URL is resolved to a local loopback host (`localhost`, `127.0.0.1`, or IPv6 `[::1]`), the middleware dynamically appends **local connect-src whitelists** (`http://127.0.0.1:*`, `http://localhost:*`, `http://::1:*` and matching `ws://` realtime websockets).
+*   This guarantees E2E automated testing connections pass 100% green locally, while keeping your cloud environment completely secure and locked down!
+
+### D. Same-Site Domain Resolution
 Safari/Webkit's **Intelligent Tracking Prevention (ITP)** blocks auth session cookies if the app runs on `localhost` and Supabase connects to `127.0.0.1`. E2E configurations explicitly map `NEXT_PUBLIC_SUPABASE_URL` to `http://localhost:54321` in `.env.test` to satisfy first-party same-site rules.
 
 ---
