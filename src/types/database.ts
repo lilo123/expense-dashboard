@@ -85,3 +85,10 @@ export interface InviteRequest {
   created_at: string;
   updated_at: string;
 }
+
+export interface EmailTemplate {
+  id: string;
+  subject: string;
+  html_body: string;
+  updated_at?: string;
+}

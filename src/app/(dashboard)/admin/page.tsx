@@ -17,6 +17,7 @@ export default async function AdminPage() {
   const initialInvites = invitesRes.success ? invitesRes.data || [] : [];
   const totalRegisteredAccounts = invitesRes.success ? invitesRes.totalRegisteredAccounts || 0 : 0;
   const activePast7Days = invitesRes.success ? invitesRes.activePast7Days || 0 : 0;
+  const initialEmailTemplate = invitesRes.success ? invitesRes.emailTemplate : undefined;
 
   return (
     <div className="container p-4 max-w-6xl">
@@ -30,11 +31,10 @@ export default async function AdminPage() {
         </Link>
       </div>
 
-      {/* Dedicated Executive Control Deck Header */}
+      {/* Dedicated Executive Control Deck Header - Requested Subtitle Paragraph Stripped Clean */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 flex-wrap bg-white/40 backdrop-blur-md border border-white/20 shadow-lg rounded-3xl p-8 mb-8">
         <div className="flex-1 min-w-[280px]">
-          <h1 className="text-2xl font-bold tracking-tight text-zen-charcoal mb-1">Manage Platform</h1>
-          <p className="text-sm text-zen-charcoal/80">Review invite requests, approve new accounts, and monitor user activity.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-zen-charcoal m-0">Manage Platform</h1>
         </div>
 
         {/* Spacious Luxury Glassmorphic Metrics Summary Flexbox */}
@@ -62,7 +62,7 @@ export default async function AdminPage() {
       </div>
 
       {/* Executive Cockpit Request Matrix */}
-      <AdminDashboardView initialInvites={initialInvites} />
+      <AdminDashboardView initialInvites={initialInvites} initialEmailTemplate={initialEmailTemplate} />
     </div>
   );
 }

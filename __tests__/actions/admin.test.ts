@@ -1,4 +1,4 @@
-import { getInviteRequestsAction, updateInviteStatusAction } from '@/app/actions/admin';
+import { getInviteRequestsAction, updateInviteStatusAction, updateEmailTemplateAction } from '@/app/actions/admin';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 
@@ -6,7 +6,7 @@ jest.mock('next/cache', () => ({ revalidatePath: jest.fn() }));
 jest.mock('@/utils/supabase/server', () => ({ createClient: jest.fn() }));
 jest.mock('@supabase/supabase-js', () => ({ createClient: jest.fn() }));
 
-describe('Admin Action Security Hardening & Metrics', () => {
+describe('Admin Action Security Hardening & Dynamic Mail Templates', () => {
   let mockSupabase: any;
 
   beforeEach(() => {
@@ -24,7 +24,7 @@ describe('Admin Action Security Hardening & Metrics', () => {
     expect(res.error).toBe('Unauthorized');
   });
 
-  it('rejects getInviteRequestsAction when profile role is regular user', async () => {
+  it('rejects updateEmailTemplateAction when profile role is regular user', async () => {
     mockSupabase = {
       auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-1' } } }) },
       from: jest.fn().mockReturnValue({
@@ -37,7 +37,7 @@ describe('Admin Action Security Hardening & Metrics', () => {
     };
     (createClient as jest.Mock).mockResolvedValue(mockSupabase);
 
-    const res = await getInviteRequestsAction();
+    const res = await updateEmailTemplateAction('Sub', 'Body');
     expect(res.success).toBe(false);
     expect(res.error).toBe('Unauthorized: Admin role required.');
   });
@@ -55,6 +55,9 @@ describe('Admin Action Security Hardening & Metrics', () => {
         }
         if (table === 'invite_requests') {
           return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({ single: jest.fn().mockResolvedValue({ data: { status: 'claimed' } }) })
+            }),
             update: jest.fn().mockReturnValue({
               eq: jest.fn().mockReturnValue({
                 eq: jest.fn().mockReturnValue({
@@ -89,6 +92,9 @@ describe('Admin Action Security Hardening & Metrics', () => {
         }
         if (table === 'invite_requests') {
           return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({ single: jest.fn().mockResolvedValue({ data: { status: 'pending' } }) })
+            }),
             update: jest.fn().mockReturnValue({
               eq: jest.fn().mockReturnValue({
                 eq: jest.fn().mockReturnValue({
@@ -110,7 +116,7 @@ describe('Admin Action Security Hardening & Metrics', () => {
     expect(res.error).toContain('processed by another administrator');
   });
 
-  it('cleanly returns metrics tuples on successful administrative lookup', async () => {
+  it('cleanly returns metrics and dynamic template tuples on successful administrative lookup', async () => {
     mockSupabase = {
       auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin-1' } } }) },
       from: jest.fn().mockImplementation((table) => {
@@ -134,6 +140,15 @@ describe('Admin Action Security Hardening & Metrics', () => {
             })
           };
         }
+        if (table === 'email_templates') {
+          return {
+            select: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                single: jest.fn().mockResolvedValue({ data: { id: 'invite_approval', subject: 'Dynamic Sub', html_body: '<b>Yo</b>' }, error: null })
+              })
+            })
+          };
+        }
         if (table === 'invite_requests') {
           return {
             select: jest.fn().mockReturnValue({
@@ -150,6 +165,7 @@ describe('Admin Action Security Hardening & Metrics', () => {
     expect(res.success).toBe(true);
     expect(res.totalRegisteredAccounts).toBe(42);
     expect(res.activePast7Days).toBe(2);
+    expect(res.emailTemplate?.subject).toBe('Dynamic Sub');
     expect(res.data).toHaveLength(1);
   });
 });

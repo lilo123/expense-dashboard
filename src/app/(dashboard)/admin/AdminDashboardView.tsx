@@ -1,25 +1,37 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { InviteRequest } from '@/types/database';
-import { updateInviteStatusAction } from '@/app/actions/admin';
-import { Check, X, Clock, AlertCircle, ShieldCheck, UserCheck, Copy } from 'lucide-react';
+import { InviteRequest, EmailTemplate } from '@/types/database';
+import { updateInviteStatusAction, updateEmailTemplateAction } from '@/app/actions/admin';
+import { Check, X, Clock, AlertCircle, ShieldCheck, UserCheck, Copy, Save, Eye, Edit } from 'lucide-react';
 
 interface AdminDashboardViewProps {
   initialInvites: InviteRequest[];
+  initialEmailTemplate?: EmailTemplate;
 }
 
 type FilterStatus = 'all' | 'pending' | 'approved' | 'claimed' | 'rejected';
+type ViewMode = 'requests' | 'template';
 
-export default function AdminDashboardView({ initialInvites }: AdminDashboardViewProps) {
-  const [invites, setInvites] = useState<InviteRequest[]>(initialInvites);
+export default function AdminDashboardView({ initialInvites, initialEmailTemplate }: AdminDashboardViewProps) {
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
+  
+  // Decoupled View Modes
+  const [viewMode, setViewMode] = useState<ViewMode>('requests');
   const [activeTab, setActiveTab] = useState<FilterStatus>('all');
   const [copiedGlobal, setCopiedGlobal] = useState(false);
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Template Studio States
+  const [subject, setSubject] = useState(initialEmailTemplate?.subject || 'Welcome to An-yen — Your Private Early Adopter Access');
+  const [htmlBody, setHtmlBody] = useState(initialEmailTemplate?.html_body || '<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; text-align: center; color: #1c1917;">\n  <h1 style="color: #1c1917; font-size: 24px; font-weight: bold;">Your Private Access Granted</h1>\n  <p style="font-size: 16px; line-height: 1.5; color: #444;">\n    Thank you for sharing your motivation with us. We are incredibly thrilled to welcome you into the An-yen early adopter cohort!\n  </p>\n  <div style="margin: 30px 0;">\n    <a href="https://an-yen.com/login?secret=flow-vip#toggle-to-signup" \n       style="background-color: #1c1917; color: #fbf9f4; padding: 14px 28px; text-decoration: none; border-radius: 50px; font-weight: bold; display: inline-block;">\n      Access An-yen Platform\n    </a>\n  </div>\n  <p style="font-size: 13px; color: #888;">\n    Please note: This access URL is protected. Our backend verifies your exact email address prior to profile creation.\n  </p>\n</div>');
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [templateSuccess, setTemplateSuccess] = useState<string | null>(null);
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
 
   useEffect(() => { 
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -27,18 +39,12 @@ export default function AdminDashboardView({ initialInvites }: AdminDashboardVie
     return () => { if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current); };
   }, []);
 
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setInvites(initialInvites);
-  }, [initialInvites]);
-
   const handleUpdateStatus = async (id: string, status: 'approved' | 'rejected') => {
     setLoadingIds(prev => new Set(prev).add(id));
     setError(null); setSuccessMsg(null);
     try {
       const res = await updateInviteStatusAction(id, status);
       if (res.success && res.data) {
-        setInvites(prev => prev.map(inv => inv.id === id ? res.data! : inv));
         setSuccessMsg(`Invitation successfully ${status}.`);
       } else setError(res.error || 'Failed to update status.');
     } catch (err: unknown) { 
@@ -62,8 +68,23 @@ export default function AdminDashboardView({ initialInvites }: AdminDashboardVie
     }
   };
 
-  const filteredInvites = invites.filter(inv => activeTab === 'all' ? true : inv.status === activeTab);
-  const countByStatus = (status: FilterStatus) => invites.filter(inv => status === 'all' ? true : inv.status === status).length;
+  const handleSaveTemplate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingTemplate(true); setTemplateError(null); setTemplateSuccess(null);
+    try {
+      const res = await updateEmailTemplateAction(subject, htmlBody);
+      if (res.success && res.data) {
+        setSubject(res.data.subject);
+        setHtmlBody(res.data.html_body);
+        setTemplateSuccess('Email template saved successfully! Incoming approved users will receive this copy.');
+      } else setTemplateError(res.error || 'Failed to save email template.');
+    } catch {
+      setTemplateError('Error updating template.');
+    } finally { setIsSavingTemplate(false); }
+  };
+
+  const filteredInvites = initialInvites.filter(inv => activeTab === 'all' ? true : inv.status === activeTab);
+  const countByStatus = (status: FilterStatus) => initialInvites.filter(inv => status === 'all' ? true : inv.status === status).length;
 
   const tabs: { key: FilterStatus; label: string }[] = [
     { key: 'all', label: 'All' },
@@ -75,28 +96,29 @@ export default function AdminDashboardView({ initialInvites }: AdminDashboardVie
 
   return (
     <div className="bg-white/40 backdrop-blur-md border border-white/20 shadow-lg rounded-2xl p-6 flex flex-col gap-5">
-      {/* Dismissible Action Alerts with Accessible Labeling */}
-      <div className="min-h-[44px] flex flex-col justify-center">
-        {error ? (
-          <div className="p-3 bg-red-100 border border-red-300 text-red-800 rounded-xl flex items-center justify-between gap-3 text-xs font-bold shadow-sm" role="alert">
-            <div className="flex items-center gap-3"><AlertCircle size={16} className="shrink-0" /><span>{error}</span></div>
-            <button onClick={() => setError(null)} aria-label="Dismiss alert" className="p-1 hover:bg-red-200 rounded-lg text-red-700 cursor-pointer"><X size={14} /></button>
-          </div>
-        ) : successMsg ? (
-          <div className="p-3 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl flex items-center justify-between gap-3 text-xs font-bold shadow-sm" role="status">
-            <div className="flex items-center gap-3"><ShieldCheck size={16} className="shrink-0" /><span>{successMsg}</span></div>
-            <button onClick={() => setSuccessMsg(null)} aria-label="Dismiss success message" className="p-1 hover:bg-emerald-200 rounded-lg text-emerald-700 cursor-pointer"><X size={14} /></button>
-          </div>
-        ) : (
-          <div className="text-xs text-zen-charcoal/80 font-semibold text-center">
-            Tip: Approved users can claim accounts via the Global VIP Access URL.
-          </div>
-        )}
-      </div>
+      {/* Dismissible Action Alerts - Hides completely when empty to avoid whitespace void */}
+      {error || successMsg ? (
+        <div className="flex flex-col gap-3">
+          {error && (
+            <div className="p-3 bg-red-100 border border-red-300 text-red-800 rounded-xl flex items-center justify-between gap-3 text-xs font-bold shadow-sm" role="alert">
+              <div className="flex items-center gap-3"><AlertCircle size={16} className="shrink-0" /><span>{error}</span></div>
+              <button onClick={() => setError(null)} aria-label="Dismiss alert" className="p-1 hover:bg-red-200 rounded-lg text-red-700 cursor-pointer"><X size={14} /></button>
+            </div>
+          )}
+          {successMsg && (
+            <div className="p-3 bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl flex items-center justify-between gap-3 text-xs font-bold shadow-sm" role="status">
+              <div className="flex items-center gap-3"><ShieldCheck size={16} className="shrink-0" /><span>{successMsg}</span></div>
+              <button onClick={() => setSuccessMsg(null)} aria-label="Dismiss success message" className="p-1 hover:bg-emerald-200 rounded-lg text-emerald-700 cursor-pointer"><X size={14} /></button>
+            </div>
+          )}
+        </div>
+      ) : null}
 
-      {/* Dedicated Top Title Bar */}
+      {/* Dedicated Top Title Bar & View Mode Toggle */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
-        <h2 className="text-lg font-bold text-zen-charcoal">Invitation Requests</h2>
+        <h2 className="text-lg font-bold text-zen-charcoal">
+          {viewMode === 'requests' ? 'Invitation Requests' : 'Automated Email Studio'}
+        </h2>
         {/* Single Consolidated Global Access Link Trigger */}
         <button
           onClick={handleCopyGlobalVipLink}
@@ -115,111 +137,214 @@ export default function AdminDashboardView({ initialInvites }: AdminDashboardVie
         </button>
       </div>
 
-      {/* Scrollbar-Free Glassmorphic Filter Tabs Deck */}
-      <div className="flex flex-wrap items-center bg-white/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/30 gap-1.5 mb-2" role="tablist" aria-label="Filter invitation requests">
-        {tabs.map(tab => (
+      {/* Navigation & Filtering Header Bar */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2 pb-4 border-b border-white/30 flex-wrap">
+        {/* View Mode Switching */}
+        <div className="flex items-center bg-white/40 p-1 rounded-xl border border-white/30 gap-1 shrink-0" role="group" aria-label="View mode selection">
           <button
-            key={tab.key}
-            id={`tab-${tab.key}`}
-            role="tab"
-            aria-selected={activeTab === tab.key}
-            aria-controls={activeTab === tab.key ? `panel-${tab.key}` : undefined}
-            onClick={() => setActiveTab(tab.key)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
-              activeTab === tab.key 
-                ? 'bg-zen-charcoal text-zen-base shadow-sm border-zen-charcoal' 
-                : 'text-zen-charcoal/80 hover:bg-white/60 hover:text-zen-charcoal border-none bg-transparent'
+            onClick={() => setViewMode('requests')}
+            aria-current={viewMode === 'requests' ? 'true' : undefined}
+            aria-pressed={viewMode === 'requests'}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'requests' ? 'bg-zen-charcoal text-zen-base shadow-sm' : 'text-zen-charcoal/80 hover:text-zen-charcoal bg-transparent border-none'
             }`}
           >
-            <span>{tab.label}</span>
-            <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${activeTab === tab.key ? 'bg-zen-base/20 text-zen-base' : 'bg-zen-charcoal/10 text-zen-charcoal'}`}>
-              {countByStatus(tab.key)}
-            </span>
+            Invites ({initialInvites.length})
           </button>
-        ))}
-      </div>
+          <button
+            onClick={() => setViewMode('template')}
+            aria-current={viewMode === 'template' ? 'true' : undefined}
+            aria-pressed={viewMode === 'template'}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'template' ? 'bg-zen-charcoal text-zen-base shadow-sm' : 'text-zen-charcoal/80 hover:text-zen-charcoal bg-transparent border-none'
+            }`}
+          >
+            Email Template Studio
+          </button>
+        </div>
 
-      {/* Dense Bounded Cockpit Row Matrix with overflow-x-auto safety to guarantee zero action truncation */}
-      <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} tabIndex={0} className="bg-white/20 border border-white/30 rounded-2xl divide-y divide-white/20 overflow-y-auto overflow-x-auto max-h-[400px] scrollbar-thin shadow-inner focus:outline-none focus:ring-1 focus:ring-zen-charcoal/20">
-        {filteredInvites.length === 0 ? (
-          <div className="text-center py-10 text-zen-charcoal/80 bg-white/10 backdrop-blur-sm">
-            <p className="font-bold text-sm">No {activeTab !== 'all' ? activeTab : 'invitation'} requests found.</p>
-            <p className="text-xs mt-1 text-zen-charcoal/60">Incoming access applications will populate in this table.</p>
-          </div>
-        ) : (
-          <div className="min-w-[500px]">
-            {filteredInvites.map((invite) => (
-              <div 
-                key={invite.id} 
-                className="grid grid-cols-1 md:grid-cols-12 items-start md:items-center justify-between p-4 hover:bg-white/40 transition-all gap-4 text-sm"
+        {/* Scrollbar-Free Glassmorphic Filter Tabs Deck (Visible in Requests Mode Only) */}
+        {viewMode === 'requests' && (
+          <div className="flex flex-wrap items-center bg-white/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/30 gap-1.5" role="tablist" aria-label="Filter invitation requests">
+            {tabs.map(tab => (
+              <button
+                key={tab.key}
+                id={`tab-${tab.key}`}
+                role="tab"
+                aria-selected={activeTab === tab.key}
+                aria-controls={activeTab === tab.key ? `panel-${tab.key}` : undefined}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
+                  activeTab === tab.key 
+                    ? 'bg-zen-charcoal text-zen-base shadow-sm border-zen-charcoal' 
+                    : 'text-zen-charcoal/80 hover:bg-white/60 hover:text-zen-charcoal border-none bg-transparent'
+                }`}
               >
-                {/* Column 1: Spacious Email & Status Header (Cols 1-4) */}
-                <div className="md:col-span-4 flex flex-col gap-1.5 min-w-0 w-full">
-                  <span className="font-bold text-sm text-zen-charcoal break-words whitespace-normal">{invite.email}</span>
-                  <span className={`w-fit px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shrink-0 ${
-                    invite.status === 'approved' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                    invite.status === 'claimed' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
-                    invite.status === 'rejected' ? 'bg-red-100 text-red-800 border border-red-300' :
-                    'bg-amber-100 text-amber-800 border border-amber-300'
-                  }`}>
-                    {invite.status === 'pending' && <Clock size={10} />}
-                    {invite.status === 'approved' && <Check size={10} />}
-                    {invite.status === 'claimed' && <UserCheck size={10} />}
-                    {invite.status === 'rejected' && <X size={10} />}
-                    {invite.status}
-                  </span>
-                </div>
-
-                {/* Column 2: Full Motivation Quote Box (Cols 5-8) */}
-                <div className="md:col-span-4 lg:col-span-5 min-w-0 w-full">
-                  <p className="text-zen-charcoal/80 text-xs italic bg-white/30 px-3 py-2 rounded-lg border border-white/20 m-0 whitespace-normal">
-                    &ldquo;{invite.message || 'No motivation message provided.'}&rdquo;
-                  </p>
-                </div>
-
-                {/* Column 3: Stable Timestamps & Action Targets (Cols 9-12 permanently visible) */}
-                <div className="md:col-span-4 lg:col-span-3 flex flex-col items-start md:items-end gap-2 min-w-0 w-full shrink-0">
-                  <div className="min-h-[16px]">
-                    {isMounted && (
-                      <div className="text-xs text-zen-charcoal/80 font-medium whitespace-nowrap">
-                        {new Date(invite.created_at).toLocaleDateString()} {new Date(invite.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 w-full justify-start md:justify-end">
-                    {invite.status === 'pending' ? (
-                      <>
-                        <button
-                          disabled={loadingIds.has(invite.id)}
-                          aria-label={`Reject request for ${invite.email}`}
-                          onClick={() => handleUpdateStatus(invite.id, 'rejected')}
-                          className="flex-1 md:flex-none px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
-                        >
-                          <X size={14} /> Reject
-                        </button>
-                        <button
-                          disabled={loadingIds.has(invite.id)}
-                          aria-label={`Approve request for ${invite.email}`}
-                          onClick={() => handleUpdateStatus(invite.id, 'approved')}
-                          className="flex-1 md:flex-none px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
-                        >
-                          <Check size={14} /> Approve
-                        </button>
-                      </>
-                    ) : (
-                      <div className="text-xs text-zen-charcoal/70 italic flex items-center justify-start md:justify-end w-full">
-                        {invite.status === 'approved' && 'Auth Authorized'}
-                        {invite.status === 'claimed' && 'Active Member'}
-                        {invite.status === 'rejected' && 'Uninvited'}
-                      </div>
-                    )}       
-                  </div>
-                </div>
-              </div>
+                <span>{tab.label}</span>
+                <span className={`px-1.5 py-0.5 rounded-md text-[10px] font-black ${activeTab === tab.key ? 'bg-zen-base/20 text-zen-base' : 'bg-zen-charcoal/10 text-zen-charcoal'}`}>
+                  {countByStatus(tab.key)}
+                </span>
+              </button>
             ))}
           </div>
         )}
       </div>
+
+      {/* Dynamic Layout Panel: Switches between Invitation Matrix and Email Template Form */}
+      {viewMode === 'template' ? (
+        <form onSubmit={handleSaveTemplate} className="bg-white/60 border border-white/30 rounded-2xl p-6 shadow-inner flex flex-col gap-6">
+          <div className="flex items-center justify-between border-b border-white/30 pb-4 flex-wrap gap-4">
+            <div>
+              <h3 className="text-base font-bold text-zen-charcoal">Resend Automated Invitation Email Copy</h3>
+              <p className="text-xs text-zen-charcoal/80">Design custom HTML markup and subjects for onboarding approved members.</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPreviewMode(!previewMode)}
+                className="px-3 py-2 bg-white/80 hover:bg-white text-zen-charcoal font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 border border-white/40 shadow-sm cursor-pointer"
+              >
+                {previewMode ? <><Edit size={14} /> Edit Code</> : <><Eye size={14} /> Preview Layout</>}
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingTemplate || previewMode}
+                className="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-all flex items-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
+              >
+                <Save size={14} /> {isSavingTemplate ? 'Saving...' : 'Update Template'}
+              </button>
+            </div>
+          </div>
+
+          {/* Form Studio Notifications */}
+          {templateError || templateSuccess ? (
+            <div className="flex flex-col gap-2">
+              {templateError && <div className="p-3 bg-red-100 text-red-800 text-xs font-bold rounded-xl">{templateError}</div>}
+              {templateSuccess && <div className="p-3 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-xl">{templateSuccess}</div>}
+            </div>
+          ) : null}
+
+          {/* Sandboxed Opaque Iframe Preview Mode vs Raw DOM Editor */}
+          {previewMode ? (
+            <div className="flex flex-col gap-4">
+              <div className="p-4 bg-white/80 border border-white/40 rounded-xl text-sm font-bold text-zen-charcoal">
+                Subject: {subject}
+              </div>
+              <div className="border border-white/40 rounded-xl bg-white overflow-hidden shadow-inner">
+                <iframe sandbox="" srcDoc={htmlBody} title="HTML Mail Preview" className="w-full h-[400px] border-none bg-white" />
+              </div>
+            </div>
+          ) : null}
+
+          {/* Retain Inputs in DOM during preview mode for strict validation */}
+          <div className={`flex flex-col gap-4 ${previewMode ? 'hidden' : 'flex'}`}>
+            <div>
+              <label htmlFor="template-subject" className="block text-xs font-bold text-zen-charcoal uppercase tracking-wider mb-2">Email Subject</label>
+              <input
+                id="template-subject"
+                type="text"
+                required
+                value={subject}
+                onChange={(e) => { setSubject(e.target.value); setTemplateSuccess(null); setTemplateError(null); }}
+                className="w-full px-4 py-3 bg-white/80 text-zen-charcoal border border-white/40 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-zen-charcoal/20"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="template-body" className="block text-xs font-bold text-zen-charcoal uppercase tracking-wider mb-2">HTML Mail Template</label>
+              <textarea
+                id="template-body"
+                rows={14}
+                required
+                value={htmlBody}
+                onChange={(e) => { setHtmlBody(e.target.value); setTemplateSuccess(null); setTemplateError(null); }}
+                className="w-full p-4 bg-zen-charcoal/95 text-zen-base font-mono text-xs rounded-xl outline-none focus:ring-2 focus:ring-zen-charcoal/40 shadow-inner resize-y leading-relaxed"
+              />
+            </div>
+          </div>
+        </form>
+      ) : (
+        <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} tabIndex={0} className="bg-white/20 border border-white/30 rounded-2xl divide-y divide-white/20 overflow-y-auto overflow-x-auto max-h-[400px] scrollbar-thin shadow-inner focus:outline-none focus:ring-1 focus:ring-zen-charcoal/20">
+          {filteredInvites.length === 0 ? (
+            <div className="text-center py-10 text-zen-charcoal/80 bg-white/10 backdrop-blur-sm">
+              <p className="font-bold text-sm">No {activeTab !== 'all' ? activeTab : 'invitation'} requests found.</p>
+              <p className="text-xs mt-1 text-zen-charcoal/60">Incoming access applications will populate in this table.</p>
+            </div>
+          ) : (
+            <div className="min-w-[500px]">
+              {filteredInvites.map((invite) => (
+                <div 
+                  key={invite.id} 
+                  className="grid grid-cols-1 md:grid-cols-12 items-start md:items-center justify-between p-4 hover:bg-white/40 transition-all gap-4 text-sm"
+                >
+                  {/* Column 1: Spacious Email & Status Header */}
+                  <div className="md:col-span-4 flex flex-col gap-1.5 min-w-0 w-full">
+                    <span className="font-bold text-sm text-zen-charcoal break-words whitespace-normal">{invite.email}</span>
+                    <span className={`w-fit px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 shrink-0 ${
+                      invite.status === 'approved' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                      invite.status === 'claimed' ? 'bg-blue-100 text-blue-800 border border-blue-300' :
+                      invite.status === 'rejected' ? 'bg-red-100 text-red-800 border border-red-300' :
+                      'bg-amber-100 text-amber-800 border border-amber-300'
+                    }`}>
+                      {invite.status === 'pending' && <Clock size={10} />}
+                      {invite.status === 'approved' && <Check size={10} />}
+                      {invite.status === 'claimed' && <UserCheck size={10} />}
+                      {invite.status === 'rejected' && <X size={10} />}
+                      {invite.status}
+                    </span>
+                  </div>
+
+                  {/* Column 2: Full Motivation Quote Box */}
+                  <div className="md:col-span-4 lg:col-span-5 min-w-0 w-full">
+                    <p className="text-zen-charcoal/80 text-xs italic bg-white/30 px-3 py-2 rounded-lg border border-white/20 m-0 whitespace-normal">
+                      &ldquo;{invite.message || 'No motivation message provided.'}&rdquo;
+                    </p>
+                  </div>
+
+                  {/* Column 3: Stable Timestamps & Action Targets */}
+                  <div className="md:col-span-4 lg:col-span-3 flex flex-col items-start md:items-end gap-2 min-w-0 w-full shrink-0">
+                    <div className="min-h-[16px]">
+                      {isMounted && (
+                        <div className="text-xs text-zen-charcoal/80 font-medium whitespace-nowrap">
+                          {new Date(invite.created_at).toLocaleDateString()} {new Date(invite.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 w-full justify-start md:justify-end">
+                      {invite.status === 'pending' ? (
+                        <>
+                          <button
+                            disabled={loadingIds.has(invite.id)}
+                            aria-label={`Reject request for ${invite.email}`}
+                            onClick={() => handleUpdateStatus(invite.id, 'rejected')}
+                            className="flex-1 md:flex-none px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-600 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                          >
+                            <X size={14} /> Reject
+                          </button>
+                          <button
+                            disabled={loadingIds.has(invite.id)}
+                            aria-label={`Approve request for ${invite.email}`}
+                            onClick={() => handleUpdateStatus(invite.id, 'approved')}
+                            className="flex-1 md:flex-none px-3 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 cursor-pointer shadow-sm"
+                          >
+                            <Check size={14} /> Approve
+                          </button>
+                        </>
+                      ) : (
+                        <div className="text-xs text-zen-charcoal/70 italic flex items-center justify-start md:justify-end w-full">
+                          {invite.status === 'approved' && 'Auth Authorized'}
+                          {invite.status === 'claimed' && 'Active Member'}
+                          {invite.status === 'rejected' && 'Uninvited'}
+                        </div>
+                      )}       
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
