@@ -16,6 +16,8 @@
     "@supabase/ssr": "^0.1.0",
     "@supabase/supabase-js": "^2.105.3",
     "@tailwindcss/typography": "^0.5.19",
+    "@upstash/ratelimit": "^2.0.8",
+    "@upstash/redis": "^1.38.0",
     "chart.js": "^4.5.1",
     "chartjs-plugin-datalabels": "^2.2.0",
     "class-variance-authority": "^0.7.1",

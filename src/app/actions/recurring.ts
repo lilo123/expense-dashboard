@@ -102,6 +102,7 @@ export async function getRecurringExpensesAction(): Promise<{ success: boolean; 
   const { data, error } = await supabase
     .from('recurring_expenses')
     .select('*, categories(name)')
+    .eq('user_id', userData.user.id)
     .order('created_at', { ascending: false });
 
   if (error) {

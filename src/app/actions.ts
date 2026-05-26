@@ -5,6 +5,7 @@ import { createClient as createServiceClient } from '@supabase/supabase-js'
 import { revalidatePath } from 'next/cache'
 import { Expense } from '@/types/database'
 import { z } from 'zod'
+import { ExpenseInputSchema, CategoryInputSchema } from '@/lib/validators'
 import { headers } from 'next/headers'
 import { checkRateLimit } from '@/lib/rateLimiter'
 
@@ -19,6 +20,12 @@ export async function addExpenseAction(data: {
   is_recurring?: boolean
   recurring_expense_id?: string | null
 }): Promise<{ success: boolean; data?: Expense; error?: string }> {
+  const validation = ExpenseInputSchema.safeParse(data)
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message }
+  }
+  const validatedData = validation.data
+
   const supabase = await createClient()
   const { data: userData, error: userError } = await supabase.auth.getUser()
   
@@ -31,15 +38,15 @@ export async function addExpenseAction(data: {
     .insert([
       {
         user_id: userData.user.id,
-        item: data.item,
-        amount: data.amount,
-        original_amount: data.original_amount,
-        original_currency: data.original_currency,
-        currency: data.currency,
-        category_id: data.category_id,
-        date: data.date,
-        is_recurring: data.is_recurring || false,
-        recurring_expense_id: data.recurring_expense_id || null
+        item: validatedData.item,
+        amount: validatedData.amount,
+        original_amount: validatedData.original_amount,
+        original_currency: validatedData.original_currency,
+        currency: validatedData.currency,
+        category_id: validatedData.category_id,
+        date: validatedData.date,
+        is_recurring: validatedData.is_recurring || false,
+        recurring_expense_id: validatedData.recurring_expense_id || null
       }
     ])
     .select('*, categories(name)')
@@ -88,6 +95,12 @@ export async function updateExpenseAction(
     recurring_expense_id: string | null;
   }>
 ): Promise<{ success: boolean; data?: Expense; error?: string }> {
+  const validation = ExpenseInputSchema.partial().safeParse(updates)
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message }
+  }
+  const validatedUpdates = validation.data
+
   const supabase = await createClient()
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError || !userData?.user) {
@@ -96,7 +109,7 @@ export async function updateExpenseAction(
 
   const { data, error } = await supabase
     .from('expenses')
-    .update(updates)
+    .update(validatedUpdates)
     .eq('id', id)
     .eq('user_id', userData.user.id)
     .select('*, categories(name)')
@@ -136,6 +149,12 @@ export async function addCategoryAction(name: string): Promise<{ success: boolea
 }
 
 export async function updateCategoryAction(id: string, name: string): Promise<{ success: boolean; data?: { id: string, name: string }; error?: string }> {
+  const validation = CategoryInputSchema.safeParse({ name })
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message }
+  }
+  const validatedName = validation.data.name
+
   const supabase = await createClient()
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError || !userData?.user) {
@@ -144,8 +163,9 @@ export async function updateCategoryAction(id: string, name: string): Promise<{ 
 
   const { data, error } = await supabase
     .from('categories')
-    .update({ name })
+    .update({ name: validatedName })
     .eq('id', id)
+    .eq('user_id', userData.user.id)
     .select('*')
     .single()
 
@@ -225,13 +245,23 @@ export async function bulkUpdateAction(
     recurring_expense_id?: string | null;
   }>
 ): Promise<{ success: boolean; error?: string }> {
+  const validation = ExpenseInputSchema.partial().safeParse(updates)
+  if (!validation.success) {
+    return { success: false, error: validation.error.issues[0].message }
+  }
+  const validatedUpdates = validation.data
+
   const supabase = await createClient()
   const { data: userData, error: userError } = await supabase.auth.getUser()
   if (userError || !userData?.user) {
     return { success: false, error: 'Unauthorized' }
   }
 
-  const { error } = await supabase.from('expenses').update(updates).in('id', ids)
+  const { error } = await supabase
+    .from('expenses')
+    .update(validatedUpdates)
+    .in('id', ids)
+    .eq('user_id', userData.user.id)
   
   if (error) {
     return { success: false, error: error.message }

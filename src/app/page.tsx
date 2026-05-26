@@ -41,6 +41,12 @@ export default function LandingPage() {
           </Link>
         </div>
       </div>
+
+      <footer className="absolute bottom-6 text-center text-xs text-zen-charcoal/50 flex gap-4 justify-center z-10">
+        <span>© 2026 An-yen Wealth. All rights reserved.</span>
+        <Link href="/terms" className="hover:underline font-medium">Terms of Service</Link>
+        <Link href="/privacy" className="hover:underline font-medium">Privacy Policy</Link>
+      </footer>
     </div>
   );
 }

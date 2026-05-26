@@ -45,6 +45,9 @@ function LoginCard() {
   const [message, setMessage] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [displayName, setDisplayName] = useState('');
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
+  const [agreeToAge, setAgreeToAge] = useState(false);
   
   const searchParams = useSearchParams();
 
@@ -111,6 +114,7 @@ function LoginCard() {
       const formData = new FormData();
       formData.append('email', email);
       formData.append('password', password);
+      if (displayName) formData.append('displayName', displayName);
       if (secretKey) formData.append('secret', secretKey);
       
       await signup(formData);
@@ -123,7 +127,7 @@ function LoginCard() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 relative" id="auth-screen">
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative" id="auth-screen">
       <Link 
         href="/" 
         className="absolute top-6 left-6 flex items-center gap-2 text-zen-charcoal/60 hover:text-zen-charcoal font-semibold transition-colors z-50 no-underline"
@@ -142,12 +146,24 @@ function LoginCard() {
             {isSignUp 
               ? (isInviteFormActive 
                   ? "An-yen is currently invite-only. Leave your email and a message explaining why you'd like to join, and we'll get back to you." 
-                  : 'Sign up to start tracking your expenses.') 
+                  : 'Sign up to start tracking your expenses. Please sign up using the exact email address where you received your invitation.') 
               : 'Please sign in to manage your expenses.'}
           </p>
         </div>
         
         <form onSubmit={handleAuth} className="space-y-4">
+          {isSignUp && !isInviteFormActive && (
+            <div className="relative">
+              <input 
+                type="text" 
+                required 
+                placeholder="Display Name" 
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                className="w-full px-5 py-4 rounded-full bg-white/50 border border-white/30 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50"
+              />
+            </div>
+          )}
           <div className="relative">
             <input 
               type="email" 
@@ -219,6 +235,40 @@ function LoginCard() {
             </div>
           )}
 
+          {isSignUp && (
+            <div className="space-y-2 text-sm text-zen-charcoal/80 px-1 my-4">
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  required
+                  checked={agreeToTerms}
+                  onChange={(e) => setAgreeToTerms(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-white/30 accent-zen-sage"
+                />
+                <span>
+                  I agree to the{' '}
+                  <Link href="/terms" className="font-semibold underline hover:text-zen-charcoal">
+                    Terms of Service
+                  </Link>{' '}
+                  and{' '}
+                  <Link href="/privacy" className="font-semibold underline hover:text-zen-charcoal">
+                    Privacy Policy
+                  </Link>.
+                </span>
+              </label>
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  required
+                  checked={agreeToAge}
+                  onChange={(e) => setAgreeToAge(e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-white/30 accent-zen-sage"
+                />
+                <span>I confirm that I am at least 18 years of age (COPPA Gate).</span>
+              </label>
+            </div>
+          )}
+
           {/* Remember Me and Forgot Password links - ONLY during Sign In */}
           {!isSignUp && (
             <div className="flex justify-between items-center text-sm px-1">
@@ -254,6 +304,12 @@ function LoginCard() {
         {error && <p className="mt-4 text-center text-sm font-semibold text-zen-charcoal bg-zen-peach/20 border border-zen-peach/50 p-3 rounded-full">{error}</p>}
         {message && <p className="mt-4 text-center text-sm font-semibold text-zen-charcoal bg-zen-sage/20 border border-zen-sage/50 p-3 rounded-full">{message}</p>}
       </div>
+
+      <footer className="mt-6 text-center text-xs text-zen-charcoal/50 flex gap-4 justify-center z-10">
+        <span>© 2026 An-yen Wealth. All rights reserved.</span>
+        <Link href="/terms" className="hover:underline font-medium">Terms of Service</Link>
+        <Link href="/privacy" className="hover:underline font-medium">Privacy Policy</Link>
+      </footer>
     </div>
   );
 }

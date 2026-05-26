@@ -28,6 +28,7 @@ export async function signup(formData: FormData) {
   const rawEmail = formData.get('email') as string
   const password = formData.get('password') as string
   const secret = formData.get('secret') as string | null
+  const displayName = formData.get('displayName') as string | null
   const email = rawEmail.toLowerCase().trim()
 
   const secretParam = secret ? `&secret=${secret}` : ''
@@ -72,6 +73,13 @@ export async function signup(formData: FormData) {
   if (createError || !authData?.user) {
     redirect(`/login?error=${encodeURIComponent('Could not create user account')}${secretParam}`)
     return
+  }
+
+  if (displayName) {
+    await serviceClient
+      .from('profiles')
+      .update({ display_name: displayName.trim() })
+      .eq('id', authData.user.id)
   }
 
   // 3. Transition invite status to claimed

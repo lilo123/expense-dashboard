@@ -1,7 +1,7 @@
 'use server';
 
 import { createClient } from '@/utils/supabase/server';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient, createClient as createServiceClient } from '@supabase/supabase-js';
 
 // 7 Core Currencies backed by local conversion map
 const CORE_CURRENCIES = ['CAD', 'VND', 'USD', 'EUR', 'JPY', 'GBP', 'SGD'];
@@ -60,8 +60,12 @@ export async function syncExchangeRates(supabaseClient?: SupabaseClient): Promis
       filteredRates[curr] = apiRates[curr] || FALLBACK_RATES[curr];
     });
 
-    // 4. Cache the new rates inside our local DB
-    const { error: upsertError } = await supabase
+    // 4. Cache the new rates inside our local DB using the administrative service client
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+    const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
+    const { error: upsertError } = await serviceClient
       .from('exchange_rates')
       .insert([
         {

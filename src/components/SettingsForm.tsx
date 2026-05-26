@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { updateProfile, updateEmail, updatePassword, getProfile } from '@/app/actions/profile';
 import { syncExchangeRates } from '@/app/actions/rates';
+import { purgeUserAccount } from '@/app/actions/compliance';
 import { SupportedCurrency, Profile } from '@/types/database';
 import { Info, Lock, ArrowLeft, Edit3 } from 'lucide-react';
 import CategoryManager from './CategoryManager';
@@ -223,6 +224,68 @@ function SettingsForm({ userEmail }: SettingsFormProps) {
       setPasswordMessage({ text: 'Failed to save password.', isError: true });
     } finally {
       setIsSavingPassword(false);
+    }
+  };
+
+  // 5. Compliance & Privacy States
+  const [isExporting, setIsExporting] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [showPurgeConfirm, setShowPurgeConfirm] = useState(false);
+  const [complianceMessage, setComplianceMessage] = useState<{ text: string; isError: boolean } | null>(null);
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+    setComplianceMessage(null);
+    try {
+      const response = await fetch('/api/compliance/export');
+      if (!response.ok) {
+        throw new Error('Failed to export data');
+      }
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const disposition = response.headers.get('content-disposition');
+      let filename = 'anyen-data-export.json';
+      if (disposition && disposition.indexOf('attachment') !== -1) {
+        const filenameRegex = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/;
+        const matches = filenameRegex.exec(disposition);
+        if (matches != null && matches[1]) { 
+          filename = matches[1].replace(/['"]/g, '');
+        }
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      setComplianceMessage({ text: 'Data exported successfully!', isError: false });
+    } catch (err) {
+      console.error('[EXPORT DATA FAILED]:', err);
+      setComplianceMessage({ text: 'Failed to export data. Please try again.', isError: true });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handlePurgeAccount = async () => {
+    setIsPurging(true);
+    setComplianceMessage(null);
+    try {
+      const response = await purgeUserAccount();
+      if (response.success) {
+        setComplianceMessage({ text: 'Account and data purged successfully. Redirecting...', isError: false });
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+      } else {
+        setComplianceMessage({ text: response.error || 'Failed to purge account.', isError: true });
+        setIsPurging(false);
+      }
+    } catch (err) {
+      console.error('[PURGE ACCOUNT FAILED]:', err);
+      setComplianceMessage({ text: 'An unexpected error occurred while purging data.', isError: true });
+      setIsPurging(false);
     }
   };
 
@@ -499,6 +562,78 @@ function SettingsForm({ userEmail }: SettingsFormProps) {
             </div>
           </form>
         )}
+      </div>
+
+      {/* CARD 4: Compliance & Data Privacy */}
+      <div className="bg-white/40 backdrop-blur-md border border-white/20 shadow-xl rounded-3xl p-6 text-left">
+        <h2 className="text-lg font-bold text-zen-charcoal mb-4 mt-0">Data Privacy & Compliance</h2>
+        
+        {complianceMessage && (
+          <div className={`p-4 rounded-2xl mb-4 text-sm font-medium border ${
+            complianceMessage.isError 
+              ? 'bg-zen-peach/20 border-zen-peach text-zen-charcoal' 
+              : 'bg-zen-sage/20 border-zen-sage text-zen-charcoal'
+          }`}>
+            {complianceMessage.text}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-4">
+          {/* Export Data Button */}
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-bold text-zen-charcoal my-0">Export Financial Data</h3>
+            <p className="text-xs text-zen-charcoal/60 margin-0 leading-relaxed">
+              Download a copy of all your personal profiles, expenses, budgets, and recurring transactions in a structured JSON format (CCPA Right to Access).
+            </p>
+            <button 
+              onClick={handleExportData}
+              disabled={isExporting}
+              className="w-full py-4 bg-white/60 border border-zen-lavender/40 hover:bg-white/80 text-zen-charcoal rounded-full font-bold text-base cursor-pointer transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {isExporting ? 'Exporting...' : 'Export All My Financial Data'}
+            </button>
+          </div>
+
+          <hr className="border-t border-zen-lavender/20 my-2" />
+
+          {/* Purge Account / Delete Data Button */}
+          <div className="flex flex-col gap-2">
+            <h3 className="text-sm font-bold text-zen-peach my-0">Delete Account & Purge Data</h3>
+            <p className="text-xs text-zen-charcoal/60 margin-0 leading-relaxed">
+              Permanently erase your account, profiles, invite logs, and financial transactions from our servers. This action is irreversible (CCPA Right to Delete).
+            </p>
+
+            {!showPurgeConfirm ? (
+              <button 
+                onClick={() => setShowPurgeConfirm(true)}
+                className="w-full py-4 bg-zen-peach/10 border border-zen-peach hover:bg-zen-peach/20 text-zen-charcoal rounded-full font-bold text-base cursor-pointer transition-all flex items-center justify-center gap-2"
+              >
+                Delete Account & Purge My Data
+              </button>
+            ) : (
+              <div className="flex flex-col gap-3 p-4 rounded-2xl bg-zen-peach/15 border border-zen-peach/30 mt-1">
+                <p className="text-xs font-bold text-zen-charcoal margin-0">
+                  ⚠️ Are you absolutely sure? This will permanently wipe all your data and can NOT be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button 
+                    onClick={() => setShowPurgeConfirm(false)}
+                    className="flex-1 py-3 border border-zen-lavender/40 hover:bg-white/80 text-zen-charcoal rounded-full font-bold text-sm cursor-pointer transition-all bg-transparent"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handlePurgeAccount}
+                    disabled={isPurging}
+                    className="flex-1 py-3 bg-zen-peach text-white rounded-full font-bold text-sm hover:bg-zen-peach/90 transition-all cursor-pointer border-none disabled:opacity-50"
+                  >
+                    {isPurging ? 'Purging...' : 'Yes, Purge My Account'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
       {/* Category Management Card */}

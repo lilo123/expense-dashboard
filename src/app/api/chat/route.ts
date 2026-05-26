@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { saveExpense } from '@/lib/expenses';
-import { extractExpenseFromMessage } from '@/lib/ai';
+import { extractExpenseFromMessage, sanitizeUserInput } from '@/lib/ai';
 import { syncExchangeRates } from '@/app/actions/rates';
 import { convertAmount, formatFriendlyCurrency } from '@/lib/utils';
 
@@ -20,6 +20,8 @@ export async function POST(request: Request) {
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
+
+    const sanitizedMessage = sanitizeUserInput(message);
 
     // Fetch user's base currency and timezone from profile
     const { data: profileData } = await supabase
@@ -42,7 +44,7 @@ export async function POST(request: Request) {
     }
 
     // Extract via unified AI service (passes baseline currency and user timezone)
-    const extracted = await extractExpenseFromMessage(message, categoriesList, baseCurrency, { userTimezone });
+    const extracted = await extractExpenseFromMessage(sanitizedMessage, categoriesList, baseCurrency, { userTimezone });
     if ('error' in extracted) {
       if (extracted.status === 200) return NextResponse.json({ reply: extracted.error });
       return NextResponse.json({ error: extracted.error }, { status: extracted.status || 400 });
