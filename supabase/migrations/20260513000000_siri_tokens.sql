@@ -10,5 +10,6 @@ CREATE TABLE IF NOT EXISTS public.siri_tokens (
 ALTER TABLE public.siri_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can only manage their own tokens
+DROP POLICY IF EXISTS "Users can manage their own siri tokens" ON public.siri_tokens;
 CREATE POLICY "Users can manage their own siri tokens"
 ON public.siri_tokens FOR ALL USING (auth.uid() = user_id);

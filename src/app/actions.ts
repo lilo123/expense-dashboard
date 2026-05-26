@@ -271,12 +271,14 @@ export async function requestInviteAction(email: string, message: string): Promi
 
   const supabase = createServiceClient(supabaseUrl, supabaseServiceKey);
   
+  const normalizedEmail = validation.data.email.toLowerCase().trim();
   const { error } = await supabase
     .from('invite_requests')
-    .insert([{ email: validation.data.email, message: validation.data.message }]);
+    .insert([{ email: normalizedEmail, message: validation.data.message }]);
 
   if (error) {
-    return { success: false, error: 'Failed to log invite request.' };
+    console.error('[DATABASE INSERT INVITE FAILED]:', error);
+    return { success: false, error: `Failed to log invite request: ${error.message || error.code}` };
   }
 
   return { success: true };

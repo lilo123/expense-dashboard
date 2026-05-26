@@ -5,10 +5,10 @@ import Link from 'next/link';
 import { createClient } from '@/utils/supabase/client';
 import { useExpenseStore, StoreProvider } from '@/store/useExpenseStore';
 import { syncExchangeRates } from '@/app/actions/rates';
-import { getProfile, updateProfile } from '@/app/actions/profile';
+import { updateProfile } from '@/app/actions/profile';
 import { Category } from '@/types/database';
 import { Expense, User, Profile, Budget } from '@/types/database';
-import { Settings, Sliders, Repeat, Mic, LogOut, Bot, Plus } from 'lucide-react';
+import { Settings, Sliders, Repeat, Mic, LogOut, Bot, Plus, Shield } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 import Tabs from './Tabs';
@@ -167,6 +167,7 @@ function ClientDashboardContent() {
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIsMounted(true);
   }, []);
 
@@ -246,6 +247,16 @@ function ClientDashboardContent() {
                     className="absolute right-0 mt-2 w-48 bg-white/60 backdrop-blur-md border border-white/20 shadow-lg rounded-2xl p-2 flex flex-col gap-1 z-50 text-left"
                     style={{ transformOrigin: 'top right' }}
                   >
+                    {profile?.role === 'admin' && (
+                      <Link 
+                        href="/admin" 
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
+                      >
+                        <Shield size={16} /> Admin Dashboard
+                      </Link>
+                    )}
+
                     <Link 
                       href="/settings" 
                       onClick={() => setIsDropdownOpen(false)}

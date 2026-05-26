@@ -11,9 +11,19 @@ const MIGRATION_FILES = [
   'supabase/migrations/20260510150000_phase_1_65_extensions.sql',
   'supabase/migrations/20260510170000_phase_1_7.sql',
   'supabase/migrations/20260511000000_phase_1_8_recurring.sql',
+  'supabase/migrations/20260511140000_phase_1_8_refinement.sql',
   'supabase/migrations/20260512000000_decouple_recurring.sql',
+  'supabase/migrations/20260512010000_profile_backfill.sql',
+  'supabase/migrations/20260513000000_siri_tokens.sql',
+  'supabase/migrations/20260513010000_restore_refined_recurring.sql',
+  'supabase/migrations/20260516221900_enable_realtime.sql',
   'supabase/migrations/20260516232346_add_budgets_category_idx.sql',
-  'supabase/migrations/20260518000000_mvp_v2_foundation.sql'
+  'supabase/migrations/20260518000000_mvp_v2_foundation.sql',
+  'supabase/migrations/20260518000001_save_bulk_budgets_rpc.sql',
+  'supabase/migrations/20260518000002_fix_recurring_insert.sql',
+  'supabase/migrations/20260521000000_invite_workflow.sql',
+  'supabase/migrations/20260522000000_architectural_fixes.sql',
+  'supabase/migrations/20260523000000_exchange_rates_rls.sql'
 ];
 
 async function initDb() {

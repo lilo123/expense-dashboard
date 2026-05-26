@@ -47,6 +47,7 @@ export interface Profile {
   ai_tone: string;
   timezone: string;
   onboarding_status: 'pending' | 'completed';
+  role?: 'user' | 'admin';
   updated_at: string;
 }
 
@@ -74,4 +75,13 @@ export interface RecurringExpense {
   categories?: {
     name: string;
   };
+}
+
+export interface InviteRequest {
+  id: string;
+  email: string;
+  message: string;
+  status: 'pending' | 'approved' | 'rejected' | 'claimed';
+  created_at: string;
+  updated_at: string;
 }
