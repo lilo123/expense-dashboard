@@ -141,6 +141,11 @@ Our frontend tests validate that the UI correctly aligns with the An-yen Zen aes
 *   **Modals (`AddExpenseModal.tsx`)**: Asserts ARIA-labeled selects and converts foreign currency values to base currency on submit.
 *   **Recurring Manager (`RecurringModal.tsx`)**: Unit tests verify real-time client-side first execution date calculations, Ends radio button selections, and active input state enabling/disabling.
 *   **Database Calendar Math Triggers (`recurring_db.test.ts`)**: Verifies pg_cron triggers under past frozen years to assert Month Cap (May 31 -> June 30), Feb Non-Leap (Jan 30 -> Feb 28), and Feb Leap Year (Jan 31 -> Feb 29) boundary transitions.
+*   **Zero-Trust Pre-Registration & Authentication Suites (`__tests__/actions/signup.test.ts`)**: Asserts secure passkey verification (`secret=flow-vip`), case-insensitive email normalization, and robust rejection of unauthorized users lacking an approved allocation record.
+*   **Admin Governance & Concurrency Assertions (`__tests__/actions/admin.test.ts`)**:
+    *   **Authorization Barriers & Claimed Safeguards**: Asserts robust rejection of unauthenticated users and non-admin regular users attempting to invoke administrative mutations. Confirms that records with status `'claimed'` cannot be modified.
+    *   **`PGRST116` Zero-Row Concurrency Conflicts**: Verifies that when simultaneous administrative users attempt to approve or reject the same invitation request, atomic single-row update constraints intercept PostgreSQL `PGRST116` (0 rows returned) state errors cleanly.
+    *   **Recommended Extensions (External Dispatch Validation)**: Simulating external REST API network failures (`!fetchRes.ok`) to verify automatic fallback reversions from optimistic `processing` lock states back to `pending` represents a powerful recommended expansion for future testing iterations.
 
 ### B. E2E Integration Tests (Playwright)
 *   **Trigger Seeding (`currency.spec.ts`)**: Asserts the Postgres categories trigger automatically auto-seeds all 16 categories inside `public.categories` on user signup.

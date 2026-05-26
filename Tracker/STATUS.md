@@ -11,6 +11,7 @@ This document tracks the status of all development phases, milestones, and featu
 - [x] **Phase 1.65:** Postgres Trigger Categories Auto-Seeding & Multi-Currency conversion pipeline.
 - [x] **Phase 1.7:** User Profile Management, Protected settings routes, and transactional category seeding.
 - [x] **Phase 1.8:** Background Chron Automation, pg_cron hourly workers, janitor purges, Yearly Stacked Breakdown Charts, and Advanced Touch Gestures long-press bulk selection.
+- [x] **Phase 1.9:** Complete Authentication Workflow, Professional Executive Cockpit Revamp, and Dynamic Resend Email Studio.
 - [x] **Phase 2:** RPG-style Budget "Health Bars" & Next.js 15 Route Refinements (MVP v2).
 - [ ] **Phase 3:** Budget Rollovers and Avatars Gamification.
 
@@ -40,3 +41,31 @@ This document tracks the status of all development phases, milestones, and featu
 - [x] Write Playwright E2E tests for weekly/monthly configs creation, deletion, and pg_cron validations.
 - [x] Write Playwright E2E mathematical height alignment assertions to check filter heights.
 - [x] Sequential browser validation passed perfectly (36/36 E2E tests passed green!).
+
+---
+
+## 3. Phase 1.9 Detailed Checklists (Kanban Status)
+
+### A. Authentication & Early Adopter Workflow [100% COMPLETED]
+- [x] Integrate fully automated early adopter invitation workflow (Option A).
+- [x] Protect authentication URLs with static secret parameter (`?secret=flow-vip`).
+- [x] Enforce backend zero-trust email validation prior to user profile provisioning.
+
+### B. Executive Platform Cockpit UI (`/admin`) [100% COMPLETED]
+- [x] Develop secure `/admin` management deck restricted to 'admin' profile roles.
+- [x] Display real-time total registered accounts aggregate counter.
+- [x] Compute and render active user engagement past-7-day window at UTC midnight via distinct transactional logging.
+- [x] Implement WAI-ARIA compliant filter tabs deck ('all', 'pending', 'approved', 'claimed', 'rejected').
+- [x] Build consolidated global copy access trigger with automatic success state dismissal.
+
+### C. Dynamic Email Studio & Testing Verification [100% COMPLETED]
+- [x] Construct dynamic Resend automated email template studio inside `/admin` cockpit.
+- [x] Add real-time interactive HTML layout iframe preview vs raw DOM code editor modes.
+- [x] Verify API dispatch resilience, exception handling, and database optimistic concurrency locks.
+- [x] Complete E2E and functional verification across all authentication and administrative workflows.
+
+### D. Database Integrity & DevSecOps Hardening [100% COMPLETED]
+- [x] Enforce relational integrity with `ON DELETE CASCADE` foreign keys across expenses, budgets, and categories.
+- [x] Create `api_rate_limits` cache table and secure sliding-window rate limiter RPC restricted to `service_role`.
+- [x] Schedule daily midnight `pg_cron` purges for expired API rate limit entries.
+- [x] Remove public insertion policies on `exchange_rates`.

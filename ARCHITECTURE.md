@@ -155,7 +155,12 @@ const hydratedDisplay = data.displayCurrency || preferredDisplay || (activeProfi
 ```
 This ensures that user currency preferences persist seamlessly across browser sessions while remaining tightly synchronized with backend database profile metadata.
 
----
+### Admin Email Studio & Sandboxed Opaque Iframe Live Preview
+Within the administrative portal (`src/app/(dashboard)/admin/AdminDashboardView.tsx`), administrators can customize Resend email invitations in an integrated template studio. To guarantee cross-site scripting (XSS) immunity and structural container isolation while previewing raw untrusted HTML code, the UI features a sandboxed opaque iframe live preview:
+```tsx
+<iframe sandbox="" srcDoc={htmlBody} title="HTML Mail Preview" className="w-full h-[400px] border-none bg-white" />
+```
+The empty `sandbox=""` attribute strictly restricts JavaScript execution, form submissions, and popups, rendering the raw HTML/CSS inside an isolated, immutable preview document.
 
 ---
 
@@ -198,6 +203,22 @@ Automated recurring expenses are processed by an advanced PostgreSQL database wo
 - **Relational Data Integrity**: The worker explicitly inserts the `is_recurring = true` flag on automated entries, preventing downstream visual discrepancies and safeguarding relationship templates from silent clearing on subsequent frontend updates.
 - **Null-Safety Advancement**: Increments are protected via `COALESCE` (evaluating `COALESCE(num_occurrences, 0) + 1`) to prevent null values from stalling advancement parameters or visual loops.
 - **Expiration Bounds**: The worker automatically toggles `is_active = false` when schedules exceed `max_occurrences` caps or cross `end_date` calendar boundaries.
+
+### G. Zero-Trust Authentication Interceptor & `enable_signup = false`
+To eliminate public attack vectors, identity enumeration, and bot account creations, public Supabase REST API identity creation is explicitly disabled (`enable_signup = false`). Provisioning is handled via a **Zero-Trust Authentication Interceptor** inside the `signup` server action (`src/app/(auth)/login/actions.ts`):
+1. Incoming registrants must supply a pre-approved email and secret passkey (`secret=flow-vip`).
+2. The backend queries `invite_requests` using a secure service role client to ensure an `approved` allocation exists.
+3. Upon pre-validation, the server action securely provisions the account through administrative overrides (`supabase.auth.admin.createUser`).
+
+### H. `email_templates` Persistence Layer & Admin Row Level Security (RLS)
+Invitation email subjects and body copy are stored within a dedicated `email_templates` table (`id = 'invite_approval'`). To protect administrative communications from tampering, strict Row Level Security (RLS) policies are active. Server actions (`updateEmailTemplateAction`) enforce dual-layer compile-time and runtime validation by checking the user's JWT authorization and confirming an `admin` role in `profiles` before committing template modifications.
+
+### I. Transactional Email Execution Order & Lockout Prevention
+Administrative approval flows (`updateInviteStatusAction`) adhere to a highly resilient transactional execution order to guarantee data synchronization and prevent administrative lockout:
+1. **Intermediary Optimistic Concurrency Lock**: The request status is atomically updated to `processing` prior to network dispatch.
+2. **Network Pre-Dispatch**: The server attempts HTTP POST communication with the Resend email relay (`https://api.resend.com/emails`).
+3. **Graceful Error Reversion**: If network dispatch fails or times out, the database status is immediately reverted back to `pending`, allowing administrators to cleanly retry the operation.
+4. **Permanent Commit**: Only upon receiving successful HTTP confirmation from Resend is the database permanently updated to `approved`.
 
 ---
 

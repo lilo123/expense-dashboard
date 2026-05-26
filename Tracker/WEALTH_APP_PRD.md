@@ -66,6 +66,21 @@
 * `next_occurrence` (DATE type - calculated dynamically by triggers)
 * `is_active` (Boolean, default true)
 * `created_at` (Timestamp with timezone)
+### `invite_requests` table [NEW]
+* `id` (UUID Primary Key)
+* `email` (String - target user email)
+* `message` (String - applicant motivation message, NOT NULL)
+* `status` (String: 'pending' | 'approved' | 'claimed' | 'rejected' - Note: 'processing' is utilized as an intermediary application-level optimistic lock during execution)
+* `created_at` (Timestamp with timezone)
+* `updated_at` (Timestamp with timezone)
+* **Row Level Security**: Explicitly active. Only authenticated profiles with `role = 'admin'` are granted UPDATE permissions.
+
+### `email_templates` table [NEW]
+* `id` (String Primary Key, Default: 'invite_approval')
+* `subject` (String - email subject template)
+* `html_body` (String - email body markup template)
+* `updated_at` (Timestamp with timezone)
+* **Row Level Security**: Explicitly active. Authenticated administrative profiles receive SELECT, INSERT, and UPDATE permissions.
 
 ### `stored_procedures` [NEW]
 * `get_monthly_aggregates(p_user_id UUID, p_start_date DATE, p_end_date DATE)`: RPC SQL stored procedure offloading complex category expense summing and budget comparisons from browser memory directly to PostgreSQL.
@@ -141,6 +156,19 @@
         * **Responsive Layout Shifting**: Duplicate-render the Sort dropdown (Desktop instance inside the filters box; Mobile instance on the left edge of the controls row next to shortened `"Edit"` and `"Delete"` action buttons). Hide the desktop instance on mobile to eliminate layout duplicates.
         * **Transparent Overlay Select Pattern**: Style a custom button displaying `Sort by [Selected Option]` dynamically (e.g., `Sort by Date: Newest` as the default prompt), overlaying a fully transparent native `<select>` on top of it. This locks standard desktop/mobile responsive picker menus with custom visual prefixes beautifully.
         * **Automated Height Validation Guardrails**: Lock the vertical height of all filter search dropdown buttons to exactly `36px` (`h-9`) with explicit `minHeight: 0` and `box-border` overrides. Enforce this visual symmetry by compiling a mathematical E2E height comparison test case inside the test runner.
+* **Phase 1.9: Executive Platform Cockpit & Early Adopter Auth Workflow - [COMPLETED]:**
+  * **Early Adopter Invitation Workflow:**
+    * Fully automated early adopter invitation onboarding workflow (Option A) utilizing static secret parameters (`?secret=flow-vip`).
+    * Backed by zero-trust backend email validation enforcing strict invite-list verification before profile provisioning.
+  * **Executive Platform Cockpit UI (`/admin`):**
+    * Professional executive control deck restricted to authenticated profiles matching `role = 'admin'`.
+    * Real-time metrics dashboard rendering total registered accounts and past-7-day active user engagement computed at UTC midnight via distinct transactional logging.
+    * WAI-ARIA compliant filter tabs component allowing immediate sorting across states: 'all', 'pending', 'approved', 'claimed', 'rejected'.
+    * Single consolidated global copy access URL trigger (`https://an-yen.com/login?secret=flow-vip#toggle-to-signup`) with automated dismissible clipboard alerts.
+  * **Dynamic Email Studio:**
+    * Dynamic Resend automated email template studio allowing real-time subject and HTML template layout overrides.
+    * Toggleable interactive preview layout mode via sandboxed iframe vs native raw HTML code textarea editor.
+    * Integrated optimistic concurrency locking via intermediate 'processing' state during dispatch to guarantee zero duplicate emails.
 * **Phase 2: Budget "Health Bars" & Route Refinements (MVP v2) - [COMPLETED]:**
   * **State & Database:** Integrate `budgets` data fetches into store.
   * **Zustand Hydration Synchronization (`useIsomorphicLayoutEffect`) [NEW]**: Resolved React 19 console state warnings cleanly by wrapping store hydration in an isomorphic layout effect wrapper (`useLayoutEffect` on client; `useEffect` on server). Incorporated the `areInitialDataEqual` deep comparison helper to prevent redundant store updates during server-side revalidations.
