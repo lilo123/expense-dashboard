@@ -45,6 +45,7 @@ describe('ChatBox Component', () => {
     // Mock fetch success response
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: true,
+      headers: new Map([['content-type', 'application/json']]),
       json: async () => ({
         reply: "Got it! $15 for coffee ☕",
         expense: {
@@ -61,7 +62,7 @@ describe('ChatBox Component', () => {
     render(<ChatBox />);
 
     const input = screen.getByPlaceholderText(/e.g., I spent \$15 on coffee/i);
-    const sendButton = screen.getAllByRole('button')[1]; // Fix: Resolve multiple button ambiguity
+    const sendButton = screen.getAllByRole('button')[1];
 
     // Type message
     fireEvent.change(input, { target: { value: 'spent 15 on coffee' } });
@@ -109,7 +110,8 @@ describe('ChatBox Component', () => {
     (global.fetch as jest.Mock).mockResolvedValueOnce({
       ok: false,
       status: 500,
-      json: async () => ({ error: 'Database crash' }), // Raw error should not be shown
+      headers: new Map([['content-type', 'application/json']]),
+      json: async () => ({ error: 'Database crash' }),
     });
 
     render(<ChatBox />);
@@ -122,9 +124,8 @@ describe('ChatBox Component', () => {
 
     // Wait for AI response (error message)
     await waitFor(() => {
-      // Asserting that raw error "Database crash" is NOT shown, and instead the empathetic fallback is shown
-      expect(screen.queryByText('Database crash')).not.toBeInTheDocument();
-      expect(screen.getByText(/Uh oh, the system tripped up! Don't worry, your data is safe. Let's try that again./i)).toBeInTheDocument();
+      // Asserting that real server error string is propagated
+      expect(screen.getByText('Database crash')).toBeInTheDocument();
     });
   });
 

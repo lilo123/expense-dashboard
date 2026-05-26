@@ -2,6 +2,7 @@
 
 import { createClient } from '@/utils/supabase/server';
 import { Profile, SupportedCurrency } from '@/types/database';
+import { revalidatePath } from 'next/cache';
 
 export async function getProfile(): Promise<{ success: boolean; data?: Profile; error?: string }> {
   const supabase = await createClient();
@@ -20,9 +21,9 @@ export async function getProfile(): Promise<{ success: boolean; data?: Profile; 
 
     if (profileError) throw profileError;
 
-    return { success: true, data: profile as Profile };
-  } catch (err: any) {
-    console.error('[SERVER ACTION getProfile FAILURE]:', err.message || err);
+    return { success: true, data: { ...profile, email: userData.user.email } as Profile };
+  } catch (err: unknown) {
+    console.error('[SERVER ACTION getProfile FAILURE]:', err instanceof Error ? err.message : err);
     return { success: false, error: 'Failed to load account profile.' };
   }
 }
@@ -35,7 +36,8 @@ export async function updateProfile(data: Partial<{
   ai_tone: string;
   timezone: string;
   onboarding_status: 'pending' | 'completed';
-}>): Promise<{ success: boolean; message?: string; error?: string }> {
+  tier: 'standard' | 'premium';
+}>, targetUserId?: string): Promise<{ success: boolean; message?: string; error?: string }> {
   const supabase = await createClient();
 
   try {
@@ -44,10 +46,19 @@ export async function updateProfile(data: Partial<{
       return { success: false, error: 'Unauthorized' };
     }
 
-    const userId = userData.user.id;
+    const sessionUserId = userData.user.id;
+    let userIdToUpdate = sessionUserId;
+
+    if (targetUserId && targetUserId !== sessionUserId) {
+      const { data: adminCheck } = await supabase.from('profiles').select('role').eq('id', sessionUserId).single();
+      if (adminCheck?.role !== 'admin') {
+        return { success: false, error: 'Unauthorized: Admin role required to update other user profiles.' };
+      }
+      userIdToUpdate = targetUserId;
+    }
 
     // Build dynamic update payload to only update provided fields
-    const updatePayload: any = {
+    const updatePayload: Record<string, unknown> = {
       updated_at: new Date().toISOString()
     };
     if (data.display_name !== undefined) updatePayload.display_name = data.display_name;
@@ -57,17 +68,18 @@ export async function updateProfile(data: Partial<{
     if (data.ai_tone !== undefined) updatePayload.ai_tone = data.ai_tone;
     if (data.timezone !== undefined) updatePayload.timezone = data.timezone;
     if (data.onboarding_status !== undefined) updatePayload.onboarding_status = data.onboarding_status;
+    if (data.tier !== undefined) updatePayload.tier = data.tier;
 
     // Update Metadata in public.profiles Table and select the mutated row
     const { data: updatedData, error: profileUpdateError } = await supabase
       .from('profiles')
       .update(updatePayload)
-      .eq('id', userId)
+      .eq('id', userIdToUpdate)
       .select();
 
     if (profileUpdateError) throw profileUpdateError;
 
-    // STRICT VERIFICATION: Throw error if no rows were affected (profile row missing!)
+    // STRICT VERIFICATION: Throw error if no rows were affected
     if (!updatedData || updatedData.length === 0) {
       return {
         success: false,
@@ -75,12 +87,27 @@ export async function updateProfile(data: Partial<{
       };
     }
 
+    // Explicit check against database trigger rejection (preventing client tier spoofing)
+    if (data.tier !== undefined && updatedData[0].tier !== data.tier) {
+      return {
+        success: false,
+        error: 'Unauthorized: Premium tier modification requires administrative clearance.'
+      };
+    }
+
+    try {
+      revalidatePath('/settings', 'layout');
+      revalidatePath('/dashboard', 'layout');
+    } catch {
+      // Ignore static generation context unmocked warnings during unit testing
+    }
+
     return { 
       success: true, 
       message: 'General details saved successfully!' 
     };
-  } catch (err: any) {
-    console.error('[SERVER ACTION updateProfile FAILURE]:', err.message || err);
+  } catch (err: unknown) {
+    console.error('[SERVER ACTION updateProfile FAILURE]:', err instanceof Error ? err.message : err);
     return { 
       success: false, 
       error: 'Uh oh, the system tripped up! Don\'t worry, your data is safe. Let\'s try that again.' 
@@ -116,8 +143,8 @@ export async function updateEmail(newEmail: string): Promise<{ success: boolean;
       success: true,
       message: 'Verification links have been sent to both your old and new email addresses. Please check both inboxes to verify.'
     };
-  } catch (err: any) {
-    console.error('[SERVER ACTION updateEmail FAILURE]:', err.message || err);
+  } catch (err: unknown) {
+    console.error('[SERVER ACTION updateEmail FAILURE]:', err instanceof Error ? err.message : err);
     return {
       success: false,
       error: 'Failed to request email update. Please try again.'
@@ -156,8 +183,8 @@ export async function updatePassword(data: { currentPassword: string; newPasswor
     if (updateError) throw updateError;
 
     return { success: true, message: 'Password updated successfully!' };
-  } catch (err: any) {
-    console.error('[SERVER ACTION updatePassword FAILURE]:', err.message || err);
+  } catch (err: unknown) {
+    console.error('[SERVER ACTION updatePassword FAILURE]:', err instanceof Error ? err.message : err);
     return { 
       success: false, 
       error: 'Failed to update password. Please try again.' 

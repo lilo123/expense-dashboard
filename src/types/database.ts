@@ -39,6 +39,7 @@ export type SupportedCurrency = 'CAD' | 'VND' | 'USD' | 'EUR' | 'JPY' | 'GBP' | 
 
 export interface Profile {
   id: string;
+  email?: string;
   display_name: string | null;
   avatar_url: string | null;
   base_currency: SupportedCurrency;
@@ -48,6 +49,7 @@ export interface Profile {
   timezone: string;
   onboarding_status: 'pending' | 'completed';
   role?: 'user' | 'admin';
+  tier?: 'standard' | 'premium';
   updated_at: string;
 }
 

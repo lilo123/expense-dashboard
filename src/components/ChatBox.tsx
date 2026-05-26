@@ -33,9 +33,10 @@ export default function ChatBox() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: userMsg.content })
       });
-      const data = await res.json();
+      const isJson = res.headers.get('content-type')?.includes('application/json');
+      const data = isJson ? await res.json() : { error: await res.text() };
       
-      let aiContent = data.reply;
+      let aiContent = data.reply || '';
       
       if (res.ok && data.expense) {
         // Immediately update the local Zustand store
@@ -44,11 +45,17 @@ export default function ChatBox() {
            aiContent = `Got it! I've added $${data.expense.amount} for ${data.expense.item} under ${(data.expense.categories?.name || data.expense.category_id)}.`;
         }
       } else if (!res.ok) {
-        aiContent = "Uh oh, the system tripped up! Don't worry, your data is safe. Let's try that again.";
+        const rawErr = data.error || '';
+        const hasHtml = rawErr.toLowerCase().includes('<html') || rawErr.toLowerCase().includes('<!doctype');
+        aiContent = hasHtml ? "Unexpected gateway network error. Please try again." : (rawErr || "Uh oh, the system tripped up! Don't worry, your data is safe. Let's try that again.");
+      }
+
+      if (!aiContent) {
+        aiContent = "Got it! Your request has been successfully recorded.";
       }
 
       setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
-    } catch (err: any) {
+    } catch {
       setMessages(prev => [...prev, { role: 'ai', content: "Uh oh, the system tripped up! Don't worry, your data is safe. Let's try that again." }]);
     } finally {
       setIsLoading(false);
@@ -105,6 +112,7 @@ export default function ChatBox() {
                   id="chat-input" 
                   placeholder="e.g., I spent $15 on coffee..." 
                   value={input}
+                  maxLength={300}
                   onChange={e => setInput(e.target.value)}
                   onKeyDown={e => e.key === 'Enter' && handleSend()}
                   className="flex-1 px-4 py-3 rounded-full bg-white/50 border border-zen-lavender/60 focus:outline-none focus:ring-2 focus:ring-zen-sage text-zen-charcoal placeholder-zen-charcoal/50 text-[15px] outline-none"

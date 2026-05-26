@@ -228,78 +228,103 @@ function ClientDashboardContent() {
           </Link>
           <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }} className="relative">
             {isMounted ? (
-              <div className="relative">
-                <button 
-                  id="profile-btn"
-                  aria-label="Profile Menu"
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  style={{ minHeight: 0 }}
-                  className="w-10 h-10 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-bold text-sm flex items-center justify-center transition-all cursor-pointer select-none shadow-sm shrink-0 min-h-0"
-                >
-                  {profile?.display_name
-                    ? profile.display_name.substring(0, 2).toUpperCase()
-                    : (user?.email ? user.email.substring(0, 2).toUpperCase() : 'U')}
-                </button>
+              <div className="flex items-center gap-2">
+                <div className={`px-3 py-1 rounded-full text-xs font-bold tracking-wider shadow-sm transition-all select-none border shrink-0 ${
+                  profile?.tier === 'premium'
+                    ? 'bg-gradient-to-r from-amber-200 via-amber-300 to-amber-400 text-amber-900 border-amber-300/60 shadow-amber-200/30'
+                    : 'bg-white/40 backdrop-blur-md text-zen-charcoal/80 border-white/30'
+                }`}>
+                  {profile?.tier === 'premium' ? '★ PREMIUM' : 'STANDARD'}
+                </div>
 
-                {isDropdownOpen && (
-                  <div 
-                    id="profile-dropdown"
-                    className="absolute right-0 mt-2 w-48 bg-white/60 backdrop-blur-md border border-white/20 shadow-lg rounded-2xl p-2 flex flex-col gap-1 z-50 text-left"
-                    style={{ transformOrigin: 'top right' }}
+                <div className="relative">
+                  <button 
+                    id="profile-btn"
+                    aria-label="Profile Menu"
+                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    style={{ minHeight: 0 }}
+                    className="w-10 h-10 rounded-full border border-zen-lavender/40 bg-white/60 hover:bg-white/80 text-zen-charcoal font-bold text-sm flex items-center justify-center transition-all cursor-pointer select-none shadow-sm shrink-0 min-h-0"
                   >
-                    {profile?.role === 'admin' && (
+                    {profile?.display_name
+                      ? profile.display_name.substring(0, 2).toUpperCase()
+                      : (user?.email ? user.email.substring(0, 2).toUpperCase() : 'U')}
+                  </button>
+
+                  {isDropdownOpen && (
+                    <div 
+                      id="profile-dropdown"
+                      className="absolute right-0 mt-2 w-48 bg-white/60 backdrop-blur-md border border-white/20 shadow-lg rounded-2xl p-2 flex flex-col gap-1 z-50 text-left"
+                      style={{ transformOrigin: 'top right' }}
+                    >
+                      <div className="px-3 py-1.5 flex items-center justify-between">
+                        <span className="text-xs font-bold text-zen-charcoal/70 uppercase tracking-wider">Tier:</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold tracking-wide border shadow-sm ${
+                          profile?.tier === 'premium'
+                            ? 'bg-gradient-to-r from-amber-200 to-amber-400 text-amber-950 border-amber-300'
+                            : 'bg-white/60 text-zen-charcoal/80 border-white/40'
+                        }`}>
+                          {profile?.tier === 'premium' ? '★ PREMIUM' : 'STANDARD'}
+                        </span>
+                      </div>
+                      <hr className="border-t border-zen-lavender/20 my-1" />
+
+                      {profile?.role === 'admin' && (
+                        <Link 
+                          href="/admin" 
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
+                        >
+                          <Shield size={16} /> Admin Dashboard
+                        </Link>
+                      )}
+
                       <Link 
-                        href="/admin" 
+                        href="/settings" 
                         onClick={() => setIsDropdownOpen(false)}
                         className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
                       >
-                        <Shield size={16} /> Admin Dashboard
+                        <Settings size={16} /> Account Overview
                       </Link>
-                    )}
 
-                    <Link 
-                      href="/settings" 
-                      onClick={() => setIsDropdownOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
-                    >
-                      <Settings size={16} /> Account Overview
-                    </Link>
+                      <Link 
+                        href="/budget"
+                        onClick={() => setIsDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
+                      >
+                        <Sliders size={16} /> Set Monthly Budget
+                      </Link>
 
-                    <Link 
-                      href="/budget"
-                      onClick={() => setIsDropdownOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
-                    >
-                      <Sliders size={16} /> Set Monthly Budget
-                    </Link>
+                      <button 
+                        onClick={() => { setIsDropdownOpen(false); toggleRecurringModal(); }}
+                        className="flex items-center gap-2 text-left px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all cursor-pointer border-none bg-transparent w-full"
+                      >
+                        <Repeat size={16} /> Recurring Expense
+                      </button>
+                      
+                      <button 
+                        onClick={() => { setIsDropdownOpen(false); toggleSiriModal(); }}
+                        className="flex items-center gap-2 text-left px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all cursor-pointer border-none bg-transparent w-full"
+                      >
+                        <Mic size={16} /> Siri Setup
+                      </button>
 
-                    <button 
-                      onClick={() => { setIsDropdownOpen(false); toggleRecurringModal(); }}
-                      className="flex items-center gap-2 text-left px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all cursor-pointer border-none bg-transparent w-full"
-                    >
-                      <Repeat size={16} /> Recurring Expense
-                    </button>
-                    
-                    <button 
-                      onClick={() => { setIsDropdownOpen(false); toggleSiriModal(); }}
-                      className="flex items-center gap-2 text-left px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all cursor-pointer border-none bg-transparent w-full"
-                    >
-                      <Mic size={16} /> Siri Setup
-                    </button>
+                      <hr className="border-t border-zen-lavender/20 my-1" />
 
-                    <hr className="border-t border-zen-lavender/20 my-1" />
-
-                    <button 
-                      onClick={() => { setIsDropdownOpen(false); handleSignOut(); }}
-                      className="flex items-center gap-2 text-left px-3 py-2 rounded-xl hover:bg-zen-peach/30 text-zen-charcoal font-bold text-sm transition-all cursor-pointer border-none bg-transparent w-full"
-                    >
-                      <LogOut size={16} /> Sign Out
-                    </button>
-                  </div>
-                )}
+                      <button 
+                        onClick={() => { setIsDropdownOpen(false); handleSignOut(); }}
+                        className="flex items-center gap-2 text-left px-3 py-2 rounded-xl hover:bg-zen-peach/30 text-zen-charcoal font-bold text-sm transition-all cursor-pointer border-none bg-transparent w-full"
+                      >
+                        <LogOut size={16} /> Sign Out
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
-              <div className="w-10 h-10 rounded-full border border-zen-lavender/20 bg-white/40 flex items-center justify-center select-none shadow-sm animate-pulse" />
+              <div className="flex items-center gap-2">
+                <div className="w-20 h-6 rounded-full bg-white/30 animate-pulse"></div>
+                <div className="w-10 h-10 rounded-full bg-white/30 animate-pulse"></div>
+              </div>
             )}
           </div>
         </div>
