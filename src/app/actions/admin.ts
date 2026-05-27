@@ -3,11 +3,12 @@
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { revalidatePath } from 'next/cache';
-import { InviteRequest, EmailTemplate } from '@/types/database';
+import { InviteRequest, EmailTemplate, Profile } from '@/types/database';
 
 export async function getInviteRequestsAction(): Promise<{ 
   success: boolean; 
   data?: InviteRequest[]; 
+  profiles?: Profile[];
   totalRegisteredAccounts?: number; 
   activePast7Days?: number; 
   emailTemplate?: EmailTemplate;
@@ -19,9 +20,6 @@ export async function getInviteRequestsAction(): Promise<{
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) return { success: false, error: 'Unauthorized' };
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', userData.user.id).single();
-    if (profile?.role !== 'admin') return { success: false, error: 'Unauthorized: Admin role required.' };
-
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -31,13 +29,20 @@ export async function getInviteRequestsAction(): Promise<{
 
     const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
 
+    const jwtAdmin = userData.user.app_metadata?.role === 'admin' || userData.user.user_metadata?.role === 'admin';
+    if (!jwtAdmin) {
+      // Secure fallback verification bypassing RLS policies to permanently eliminate Postgres Error 42P17 recursion risks
+      const { data: profile } = await serviceClient.from('profiles').select('role').eq('id', userData.user.id).single();
+      if (profile?.role !== 'admin') return { success: false, error: 'Unauthorized: Admin role required.' };
+    }
+
     const now = new Date();
     const sevenDaysAgoDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - 7, 0, 0, 0, 0));
     const sevenDaysAgo = sevenDaysAgoDate.toISOString();
 
     const results = await Promise.allSettled([
       serviceClient.from('invite_requests').select('*').order('created_at', { ascending: false }),
-      serviceClient.from('profiles').select('*', { count: 'exact', head: true }),
+      serviceClient.from('profiles').select('*', { count: 'exact' }).order('created_at', { ascending: false }),
       serviceClient.from('expenses').select('user_id').gte('created_at', sevenDaysAgo),
       serviceClient.from('email_templates').select('*').eq('id', 'invite_approval').single()
     ]);
@@ -47,8 +52,14 @@ export async function getInviteRequestsAction(): Promise<{
     const expensesResult = results[2];
     const templateResult = results[3];
 
-    if (invitesResult.status === 'rejected' || invitesResult.value.error) {
-      throw invitesResult.status === 'rejected' ? invitesResult.reason : invitesResult.value.error;
+    if (invitesResult.status === 'rejected' || (invitesResult.status === 'fulfilled' && invitesResult.value.error)) {
+      console.error('[Supabase Invite Matrix Error]:', invitesResult.status === 'rejected' ? invitesResult.reason : invitesResult.value.error);
+      return { success: false, error: 'Failed to fetch invitation requests.' };
+    }
+
+    if (profilesResult.status === 'rejected' || (profilesResult.status === 'fulfilled' && profilesResult.value.error)) {
+      console.error('[Supabase Profiles Query Error]:', profilesResult.status === 'rejected' ? profilesResult.reason : profilesResult.value.error);
+      return { success: false, error: 'Failed to fetch registered user profiles.' };
     }
 
     if (templateResult.status === 'rejected' || (templateResult.status === 'fulfilled' && templateResult.value.error && templateResult.value.error.code !== 'PGRST116')) {
@@ -56,10 +67,8 @@ export async function getInviteRequestsAction(): Promise<{
       return { success: false, error: 'Failed to fetch configuration state. Aborting to prevent unintended data overwrites.' };
     }
 
-    const initialInvites = invitesResult.value.data as InviteRequest[];
-    const totalRegisteredAccounts = (profilesResult.status === 'fulfilled' && !profilesResult.value.error) 
-      ? profilesResult.value.count || 0 
-      : 0;
+    const initialInvites = invitesResult.status === 'fulfilled' && Array.isArray(invitesResult.value.data) ? invitesResult.value.data as InviteRequest[] : [];
+    const totalRegisteredAccounts = profilesResult.status === 'fulfilled' ? profilesResult.value.count || 0 : 0;
 
     let activePast7Days = 0;
     if (expensesResult.status === 'fulfilled' && !expensesResult.value.error && expensesResult.value.data) {
@@ -71,16 +80,56 @@ export async function getInviteRequestsAction(): Promise<{
       ? templateResult.value.data as EmailTemplate
       : undefined;
 
+    let profiles = profilesResult.status === 'fulfilled' && Array.isArray(profilesResult.value.data) 
+      ? profilesResult.value.data as Profile[] 
+      : [];
+
+    // Safely join and enrich user profiles with email and created_at from Supabase Auth admin user list via pagination loop
+    try {
+      if (serviceClient.auth && serviceClient.auth.admin && serviceClient.auth.admin.listUsers) {
+        let allAuthUsers: { id: string; email?: string; created_at?: string }[] = [];
+        let curPage = 1;
+        let hasMore = true;
+        while (hasMore) {
+          const { data: usersData, error: usersErr } = await serviceClient.auth.admin.listUsers({ page: curPage, perPage: 1000 });
+          if (usersErr || !usersData || !usersData.users || usersData.users.length === 0) {
+            hasMore = false;
+          } else {
+            allAuthUsers = allAuthUsers.concat(usersData.users);
+            if (usersData.users.length < 1000 || curPage >= 10) {
+              hasMore = false;
+            } else {
+              curPage++;
+            }
+          }
+        }
+        if (allAuthUsers.length > 0) {
+          const userMetaMap = new Map(allAuthUsers.map(u => [u.id, { email: u.email, created_at: u.created_at }]));
+          profiles = profiles.map((p) => {
+            const authObj = userMetaMap.get(p.id);
+            return {
+              ...p,
+              email: authObj?.email || p.email || 'No Email',
+              created_at: authObj?.created_at || p.created_at
+            };
+          });
+        }
+      }
+    } catch (authMetaErr) {
+      console.error('[Supabase Auth Enrichment Warning]: Failed to merge email metadata into profiles list:', authMetaErr);
+    }
+
     return { 
       success: true, 
       data: initialInvites,
+      profiles,
       totalRegisteredAccounts,
       activePast7Days,
       emailTemplate
     };
   } catch (err: unknown) {
     console.error('[ADMIN ACTION getInviteRequestsAction ERROR]:', err);
-    return { success: false, error: 'Failed to fetch invitation requests.' };
+    return { success: false, error: 'Failed to fetch platform dashboard metrics.' };
   }
 }
 
@@ -90,15 +139,26 @@ export async function updateEmailTemplateAction(subject: string, htmlBody: strin
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) return { success: false, error: 'Unauthorized' };
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', userData.user.id).single();
-    if (profile?.role !== 'admin') return { success: false, error: 'Unauthorized: Admin role required.' };
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return { success: false, error: 'Server configuration error.' };
+    }
+
+    const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
+    const jwtAdmin = userData.user.app_metadata?.role === 'admin' || userData.user.user_metadata?.role === 'admin';
+    if (!jwtAdmin) {
+      const { data: profile } = await serviceClient.from('profiles').select('role').eq('id', userData.user.id).single();
+      if (profile?.role !== 'admin') return { success: false, error: 'Unauthorized: Admin role required.' };
+    }
 
     if (!subject.trim() || !htmlBody.trim()) {
       return { success: false, error: 'Subject and HTML content cannot be empty whitespace.' };
     }
 
-    // Adhering to PostgreSQL Row Level Security policies via authenticated supabase client
-    const { data, error } = await supabase
+    const { data, error } = await serviceClient
       .from('email_templates')
       .upsert({ id: 'invite_approval', subject: subject.trim(), html_body: htmlBody.trim(), updated_at: new Date().toISOString() })
       .select('*')
@@ -124,9 +184,6 @@ export async function updateInviteStatusAction(id: string, status: 'approved' | 
     const { data: userData, error: userError } = await supabase.auth.getUser();
     if (userError || !userData?.user) return { success: false, error: 'Unauthorized' };
 
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', userData.user.id).single();
-    if (profile?.role !== 'admin') return { success: false, error: 'Unauthorized: Admin role required.' };
-
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
@@ -136,21 +193,25 @@ export async function updateInviteStatusAction(id: string, status: 'approved' | 
 
     const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
 
-    // Fetch current request safely
+    const jwtAdmin = userData.user.app_metadata?.role === 'admin' || userData.user.user_metadata?.role === 'admin';
+    if (!jwtAdmin) {
+      const { data: profile } = await serviceClient.from('profiles').select('role').eq('id', userData.user.id).single();
+      if (profile?.role !== 'admin') return { success: false, error: 'Unauthorized: Admin role required.' };
+    }
+
     const { data: currentInvite, error: currErr } = await serviceClient.from('invite_requests').select('*').eq('id', id).single();
     if (currErr || !currentInvite) {
       return { success: false, error: 'Invitation request not found.' };
     }
 
-    if (currentInvite.status !== 'pending') {
+    if (currentInvite.status !== 'pending' && currentInvite.status !== 'processing') {
       return { success: false, error: 'This invitation request was already processed.' };
     }
 
     if (status === 'approved' && currentInvite.email) {
-      // Optimistic Concurrency Locking: Atomically set intermediary 'processing' state to prevent duplicate dispatches
       const { data: lockedInvite, error: lockErr } = await serviceClient
         .from('invite_requests')
-        .update({ status: 'processing', updated_at: new Date().toISOString() } as unknown as { status: 'pending'; updated_at: string })
+        .update({ status: 'processing', updated_at: new Date().toISOString() })
         .eq('id', id)
         .eq('status', 'pending')
         .select('*')
@@ -205,23 +266,21 @@ export async function updateInviteStatusAction(id: string, status: 'approved' | 
           if (!fetchRes.ok) {
             const errPayload = await fetchRes.text();
             console.error(`[RESEND API HTTP DISPATCH FAILURE]: HTTP Status ${fetchRes.status} - ${errPayload}`);
-            
-            // Revert state back to pending to permit clean administrative retry
-            await serviceClient.from('invite_requests').update({ status: 'pending' }).eq('id', id);
+            await serviceClient.from('invite_requests').update({ status: 'pending' }).eq('id', id).eq('status', 'processing');
             return { success: false, error: 'Email dispatch failed. Invitation status not updated so you may retry.' };
           }
         } catch (apiErr) {
           console.error(`[RESEND NATIVE FETCH DISPATCH FAILURE]:`, apiErr);
-          await serviceClient.from('invite_requests').update({ status: 'pending' }).eq('id', id);
+          await serviceClient.from('invite_requests').update({ status: 'pending' }).eq('id', id).eq('status', 'processing');
           return { success: false, error: 'Network error communicating with mail relay. Status not updated.' };
         }
       }
 
-      // Finalize database commit from processing lock state to approved
       const { data: finalData, error: finalErr } = await serviceClient
         .from('invite_requests')
         .update({ status: 'approved', updated_at: new Date().toISOString() })
         .eq('id', id)
+        .eq('status', 'processing')
         .select('*')
         .single();
 
@@ -233,7 +292,6 @@ export async function updateInviteStatusAction(id: string, status: 'approved' | 
       return { success: true, data: finalData as InviteRequest };
     }
 
-    // Standard non-email status transition for rejected
     const { data, error } = await serviceClient
       .from('invite_requests')
       .update({ status, updated_at: new Date().toISOString() })
@@ -254,5 +312,50 @@ export async function updateInviteStatusAction(id: string, status: 'approved' | 
   } catch (err: unknown) {
     console.error('[ADMIN ACTION updateInviteStatusAction ERROR]:', err);
     return { success: false, error: 'Failed to update invite request status.' };
+  }
+}
+
+export async function updateUserTierAction(id: string, tier: 'standard' | 'premium'): Promise<{ success: boolean; data?: Profile; error?: string }> {
+  if (!id || typeof id !== 'string' || !['standard', 'premium'].includes(tier)) {
+    return { success: false, error: 'Invalid input parameters.' };
+  }
+
+  const supabase = await createClient();
+  try {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) return { success: false, error: 'Unauthorized' };
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      return { success: false, error: 'Server configuration error.' };
+    }
+
+    const serviceClient = createServiceClient(supabaseUrl, supabaseServiceKey);
+
+    const jwtAdmin = userData.user.app_metadata?.role === 'admin' || userData.user.user_metadata?.role === 'admin';
+    if (!jwtAdmin) {
+      const { data: profile } = await serviceClient.from('profiles').select('role').eq('id', userData.user.id).single();
+      if (profile?.role !== 'admin') return { success: false, error: 'Unauthorized: Admin role required.' };
+    }
+
+    const { data, error } = await serviceClient
+      .from('profiles')
+      .update({ tier, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select('*')
+      .single();
+
+    if (error || !data) {
+      console.error('[Supabase Update Tier Error]:', error);
+      return { success: false, error: 'Failed to update user tier.' };
+    }
+
+    revalidatePath('/', 'layout');
+    return { success: true, data: data as Profile };
+  } catch (err: unknown) {
+    console.error('[ADMIN ACTION updateUserTierAction ERROR]:', err);
+    return { success: false, error: 'Failed to update user tier.' };
   }
 }

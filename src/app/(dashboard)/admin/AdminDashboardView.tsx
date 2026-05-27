@@ -1,21 +1,25 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { InviteRequest, EmailTemplate } from '@/types/database';
-import { updateInviteStatusAction, updateEmailTemplateAction } from '@/app/actions/admin';
-import { Check, X, Clock, AlertCircle, ShieldCheck, UserCheck, Copy, Save, Eye, Edit } from 'lucide-react';
+import { InviteRequest, EmailTemplate, Profile } from '@/types/database';
+import { updateInviteStatusAction, updateEmailTemplateAction, updateUserTierAction } from '@/app/actions/admin';
+import { Check, X, Clock, AlertCircle, ShieldCheck, UserCheck, Copy, Save, Eye, Edit, Loader2 } from 'lucide-react';
 
 interface AdminDashboardViewProps {
   initialInvites: InviteRequest[];
+  initialProfiles: Profile[];
   initialEmailTemplate?: EmailTemplate;
+  initialError?: string | null;
 }
 
 type FilterStatus = 'all' | 'pending' | 'approved' | 'claimed' | 'rejected';
-type ViewMode = 'requests' | 'template';
+type ViewMode = 'requests' | 'template' | 'users';
 
-export default function AdminDashboardView({ initialInvites, initialEmailTemplate }: AdminDashboardViewProps) {
+export default function AdminDashboardView({ initialInvites, initialProfiles, initialEmailTemplate, initialError }: AdminDashboardViewProps) {
   const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
-  const [error, setError] = useState<string | null>(null);
+  const [loadingTierIds, setLoadingTierIds] = useState<Set<string>>(new Set());
+  const [optimisticTiers, setOptimisticTiers] = useState<Record<string, 'standard' | 'premium'>>({});
+  const [error, setError] = useState<string | null>(initialError || null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   
@@ -51,6 +55,29 @@ export default function AdminDashboardView({ initialInvites, initialEmailTemplat
       setError(err instanceof Error ? err.message : 'Error communicating with server.'); 
     } finally { 
       setLoadingIds(prev => { const next = new Set(prev); next.delete(id); return next; }); 
+    }
+  };
+
+  const handleUpdateUserTier = async (id: string, tier: 'standard' | 'premium', currentActiveTier: 'standard' | 'premium') => {
+    setLoadingTierIds(prev => new Set(prev).add(id));
+    setOptimisticTiers(prev => ({ ...prev, [id]: tier }));
+    setError(null); setSuccessMsg(null);
+    try {
+      const res = await updateUserTierAction(id, tier);
+      if (res.success && res.data && res.data.tier) {
+        setSuccessMsg(`User tier successfully updated to ${tier.toUpperCase()}.`);
+        const confirmedTier = res.data.tier;
+        setOptimisticTiers(prev => ({ ...prev, [id]: confirmedTier }));
+      } else {
+        setError(res.error || 'Failed to update user tier.');
+        // Revert cleanly to confirmed preceding state
+        setOptimisticTiers(prev => ({ ...prev, [id]: currentActiveTier }));
+      }
+    } catch (err: unknown) { 
+      setError(err instanceof Error ? err.message : 'Error communicating with server.'); 
+      setOptimisticTiers(prev => ({ ...prev, [id]: currentActiveTier }));
+    } finally { 
+      setLoadingTierIds(prev => { const next = new Set(prev); next.delete(id); return next; }); 
     }
   };
 
@@ -117,7 +144,7 @@ export default function AdminDashboardView({ initialInvites, initialEmailTemplat
       {/* Dedicated Top Title Bar & View Mode Toggle */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2">
         <h2 className="text-lg font-bold text-zen-charcoal">
-          {viewMode === 'requests' ? 'Invitation Requests' : 'Automated Email Studio'}
+          {viewMode === 'requests' ? 'Invitation Requests' : viewMode === 'users' ? 'User Tier Control' : 'Automated Email Studio'}
         </h2>
         {/* Single Consolidated Global Access Link Trigger */}
         <button
@@ -139,12 +166,14 @@ export default function AdminDashboardView({ initialInvites, initialEmailTemplat
 
       {/* Navigation & Filtering Header Bar */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2 pb-4 border-b border-white/30 flex-wrap">
-        {/* View Mode Switching */}
-        <div className="flex items-center bg-white/40 p-1 rounded-xl border border-white/30 gap-1 shrink-0" role="group" aria-label="View mode selection">
+        {/* View Mode Switching - WAI-ARIA tablist mutually exclusive navigation tabs with correct unmounted aria-controls pairing */}
+        <div className="flex items-center bg-white/40 p-1 rounded-xl border border-white/30 gap-1 shrink-0" role="tablist" aria-label="Dashboard view navigation">
           <button
+            id="tab-view-requests"
+            role="tab"
+            aria-selected={viewMode === 'requests'}
+            aria-controls={viewMode === 'requests' ? 'panel-view-requests' : undefined}
             onClick={() => setViewMode('requests')}
-            aria-current={viewMode === 'requests' ? 'true' : undefined}
-            aria-pressed={viewMode === 'requests'}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               viewMode === 'requests' ? 'bg-zen-charcoal text-zen-base shadow-sm' : 'text-zen-charcoal/80 hover:text-zen-charcoal bg-transparent border-none'
             }`}
@@ -152,9 +181,23 @@ export default function AdminDashboardView({ initialInvites, initialEmailTemplat
             Invites ({initialInvites.length})
           </button>
           <button
+            id="tab-view-users"
+            role="tab"
+            aria-selected={viewMode === 'users'}
+            aria-controls={viewMode === 'users' ? 'panel-view-users' : undefined}
+            onClick={() => setViewMode('users')}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+              viewMode === 'users' ? 'bg-zen-charcoal text-zen-base shadow-sm' : 'text-zen-charcoal/80 hover:text-zen-charcoal bg-transparent border-none'
+            }`}
+          >
+            User Tiers ({initialProfiles.length})
+          </button>
+          <button
+            id="tab-view-template"
+            role="tab"
+            aria-selected={viewMode === 'template'}
+            aria-controls={viewMode === 'template' ? 'panel-view-template' : undefined}
             onClick={() => setViewMode('template')}
-            aria-current={viewMode === 'template' ? 'true' : undefined}
-            aria-pressed={viewMode === 'template'}
             className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
               viewMode === 'template' ? 'bg-zen-charcoal text-zen-base shadow-sm' : 'text-zen-charcoal/80 hover:text-zen-charcoal bg-transparent border-none'
             }`}
@@ -163,16 +206,14 @@ export default function AdminDashboardView({ initialInvites, initialEmailTemplat
           </button>
         </div>
 
-        {/* Scrollbar-Free Glassmorphic Filter Tabs Deck (Visible in Requests Mode Only) */}
+        {/* Scrollbar-Free Glassmorphic Filter Group Deck (Visible in Requests Mode Only) */}
         {viewMode === 'requests' && (
-          <div className="flex flex-wrap items-center bg-white/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/30 gap-1.5" role="tablist" aria-label="Filter invitation requests">
+          <div className="flex flex-wrap items-center bg-white/50 backdrop-blur-md p-1.5 rounded-2xl border border-white/30 gap-1.5" role="group" aria-label="Filter invitation requests">
             {tabs.map(tab => (
               <button
                 key={tab.key}
-                id={`tab-${tab.key}`}
-                role="tab"
-                aria-selected={activeTab === tab.key}
-                aria-controls={activeTab === tab.key ? `panel-${tab.key}` : undefined}
+                id={`filter-${tab.key}`}
+                aria-pressed={activeTab === tab.key}
                 onClick={() => setActiveTab(tab.key)}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
                   activeTab === tab.key 
@@ -190,9 +231,100 @@ export default function AdminDashboardView({ initialInvites, initialEmailTemplat
         )}
       </div>
 
-      {/* Dynamic Layout Panel: Switches between Invitation Matrix and Email Template Form */}
-      {viewMode === 'template' ? (
-        <form onSubmit={handleSaveTemplate} className="bg-white/60 border border-white/30 rounded-2xl p-6 shadow-inner flex flex-col gap-6">
+      {/* Dynamic Layout Panels: Mutually exclusive WAI-ARIA tabpanel views */}
+      {viewMode === 'users' ? (
+        <div id="panel-view-users" role="tabpanel" aria-labelledby="tab-view-users" tabIndex={0} className="bg-white/20 border border-white/30 rounded-2xl divide-y divide-white/20 overflow-y-auto overflow-x-auto max-h-[500px] scrollbar-thin shadow-inner focus:outline-none focus:ring-1 focus:ring-zen-charcoal/20">
+          {initialProfiles.length === 0 ? (
+            <div className="text-center py-10 text-zen-charcoal/80 bg-white/10 backdrop-blur-sm">
+              <p className="font-bold text-sm">No registered user profiles found.</p>
+              <p className="text-xs mt-1 text-zen-charcoal/60">Verified user accounts will populate here.</p>
+            </div>
+          ) : (
+            <div className="min-w-[600px]">
+              {initialProfiles.map((profile) => {
+                const effectiveTier = optimisticTiers[profile.id] || profile.tier || 'standard';
+                const isLoading = loadingTierIds.has(profile.id);
+                return (
+                  <div 
+                    key={profile.id} 
+                    className="grid grid-cols-1 md:grid-cols-12 items-start md:items-center justify-between p-4 hover:bg-white/40 transition-all gap-4 text-sm"
+                  >
+                    {/* Account Information with Stable Layout Shields */}
+                    <div className="md:col-span-5 flex flex-col gap-1 min-w-0 w-full">
+                      <span className="font-bold text-sm text-zen-charcoal break-words whitespace-normal">
+                        {profile.email || 'No Email'}
+                      </span>
+                      <span className="text-xs text-zen-charcoal/70 font-medium">
+                        Display Name: {profile.display_name || 'Not configured'}
+                      </span>
+                      <div className="min-h-[20px]">
+                        {isMounted && (
+                          <span className="text-[11px] text-zen-charcoal/60 font-medium">
+                            Joined: {profile.created_at ? new Date(profile.created_at).toLocaleDateString() : 'N/A'}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Current Tier Status */}
+                    <div className="md:col-span-3 flex items-center min-w-0 w-full">
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm ${
+                        effectiveTier === 'premium'
+                          ? 'bg-amber-100 text-amber-800 border-amber-300'
+                          : 'bg-white/60 text-zen-charcoal/80 border-white/40'
+                      }`}>
+                        {effectiveTier === 'premium' ? '★ Premium' : 'Standard'}
+                      </span>
+                    </div>
+
+                    {/* Interactive WAI-ARIA Toggle Radiogroup for mutually exclusive tier switching */}
+                    <div className="md:col-span-4 flex items-center justify-end gap-2 min-w-0 w-full shrink-0">
+                      <div 
+                        role="radiogroup" 
+                        aria-label="User subscription tier selection" 
+                        aria-busy={isLoading}
+                        className="flex items-center bg-white/30 backdrop-blur-md p-1 rounded-xl border border-white/30 gap-1 shadow-sm"
+                      >
+                        <button
+                          role="radio"
+                          aria-disabled={isLoading}
+                          aria-checked={effectiveTier === 'standard'}
+                          aria-label={`Set subscription to standard for ${profile.email || 'user'}`}
+                          onClick={() => { if (!isLoading && effectiveTier !== 'standard') handleUpdateUserTier(profile.id, 'standard', effectiveTier); }}
+                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer aria-disabled:opacity-50 ${
+                            effectiveTier === 'standard'
+                              ? 'bg-white/80 text-zen-charcoal shadow-sm border border-white/50 cursor-default'
+                              : 'text-zen-charcoal/80 hover:text-zen-charcoal hover:bg-white/40 border border-transparent'
+                          }`}
+                        >
+                          {isLoading && effectiveTier === 'standard' ? <Loader2 size={12} className="animate-spin shrink-0" /> : null}
+                          Standard
+                        </button>
+                        <button
+                          role="radio"
+                          aria-disabled={isLoading}
+                          aria-checked={effectiveTier === 'premium'}
+                          aria-label={`Set subscription to premium for ${profile.email || 'user'}`}
+                          onClick={() => { if (!isLoading && effectiveTier !== 'premium') handleUpdateUserTier(profile.id, 'premium', effectiveTier); }}
+                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer aria-disabled:opacity-50 ${
+                            effectiveTier === 'premium'
+                              ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md border border-amber-400 cursor-default'
+                              : 'bg-transparent text-zen-charcoal/80 hover:text-zen-charcoal hover:bg-amber-500/10 border border-transparent'
+                          }`}
+                        >
+                          {isLoading && effectiveTier === 'premium' ? <Loader2 size={12} className="animate-spin shrink-0" /> : null}
+                          ★ Premium
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : viewMode === 'template' ? (
+        <form id="panel-view-template" role="tabpanel" aria-labelledby="tab-view-template" tabIndex={0} onSubmit={handleSaveTemplate} className="bg-white/60 border border-white/30 rounded-2xl p-6 shadow-inner flex flex-col gap-6 focus:outline-none focus:ring-1 focus:ring-zen-charcoal/20">
           <div className="flex items-center justify-between border-b border-white/30 pb-4 flex-wrap gap-4">
             <div>
               <h3 className="text-base font-bold text-zen-charcoal">Resend Automated Invitation Email Copy</h3>
@@ -264,7 +396,7 @@ export default function AdminDashboardView({ initialInvites, initialEmailTemplat
           </div>
         </form>
       ) : (
-        <div id={`panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`} tabIndex={0} className="bg-white/20 border border-white/30 rounded-2xl divide-y divide-white/20 overflow-y-auto overflow-x-auto max-h-[400px] scrollbar-thin shadow-inner focus:outline-none focus:ring-1 focus:ring-zen-charcoal/20">
+        <div id="panel-view-requests" role="tabpanel" aria-labelledby="tab-view-requests" tabIndex={0} className="bg-white/20 border border-white/30 rounded-2xl divide-y divide-white/20 overflow-y-auto overflow-x-auto max-h-[400px] scrollbar-thin shadow-inner focus:outline-none focus:ring-1 focus:ring-zen-charcoal/20">
           {filteredInvites.length === 0 ? (
             <div className="text-center py-10 text-zen-charcoal/80 bg-white/10 backdrop-blur-sm">
               <p className="font-bold text-sm">No {activeTab !== 'all' ? activeTab : 'invitation'} requests found.</p>
@@ -303,7 +435,7 @@ export default function AdminDashboardView({ initialInvites, initialEmailTemplat
 
                   {/* Column 3: Stable Timestamps & Action Targets */}
                   <div className="md:col-span-4 lg:col-span-3 flex flex-col items-start md:items-end gap-2 min-w-0 w-full shrink-0">
-                    <div className="min-h-[16px]">
+                    <div className="min-h-[20px]">
                       {isMounted && (
                         <div className="text-xs text-zen-charcoal/80 font-medium whitespace-nowrap">
                           {new Date(invite.created_at).toLocaleDateString()} {new Date(invite.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

@@ -10,8 +10,11 @@ export default async function AdminPage() {
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError || !authData?.user) redirect('/login');
 
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', authData.user.id).single();
-  if (profile?.role !== 'admin') redirect('/dashboard');
+  const jwtAdmin = authData.user.app_metadata?.role === 'admin' || authData.user.user_metadata?.role === 'admin';
+  if (!jwtAdmin) {
+    const { data: profile } = await supabase.from('profiles').select('role').eq('id', authData.user.id).single();
+    if (profile?.role !== 'admin') redirect('/dashboard');
+  }
 
   const invitesRes = await getInviteRequestsAction();
   const initialInvites = invitesRes.success ? invitesRes.data || [] : [];
@@ -62,7 +65,12 @@ export default async function AdminPage() {
       </div>
 
       {/* Executive Cockpit Request Matrix */}
-      <AdminDashboardView initialInvites={initialInvites} initialEmailTemplate={initialEmailTemplate} />
+      <AdminDashboardView 
+        initialInvites={initialInvites} 
+        initialProfiles={invitesRes.success && invitesRes.profiles ? invitesRes.profiles : []} 
+        initialEmailTemplate={initialEmailTemplate} 
+        initialError={invitesRes.error || null}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { getInviteRequestsAction, updateInviteStatusAction, updateEmailTemplateAction } from '@/app/actions/admin';
+import { getInviteRequestsAction, updateInviteStatusAction, updateEmailTemplateAction, updateUserTierAction } from '@/app/actions/admin';
 import { createClient } from '@/utils/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 
@@ -36,6 +36,7 @@ describe('Admin Action Security Hardening & Dynamic Mail Templates', () => {
       })
     };
     (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    (createServiceClient as jest.Mock).mockReturnValue(mockSupabase);
 
     const res = await updateEmailTemplateAction('Sub', 'Body');
     expect(res.success).toBe(false);
@@ -44,7 +45,7 @@ describe('Admin Action Security Hardening & Dynamic Mail Templates', () => {
 
   it('safeguards against modifying an already claimed invitation via atomic constraints', async () => {
     mockSupabase = {
-      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin-1' } } }) },
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin-1', app_metadata: { role: 'admin' } } } }) },
       from: jest.fn().mockImplementation((table) => {
         if (table === 'profiles') {
           return {
@@ -81,7 +82,7 @@ describe('Admin Action Security Hardening & Dynamic Mail Templates', () => {
 
   it('intercepts PGRST116 zero-row concurrent processing errors cleanly', async () => {
     mockSupabase = {
-      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin-1' } } }) },
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin-1', app_metadata: { role: 'admin' } } } }) },
       from: jest.fn().mockImplementation((table) => {
         if (table === 'profiles') {
           return {
@@ -118,13 +119,18 @@ describe('Admin Action Security Hardening & Dynamic Mail Templates', () => {
 
   it('cleanly returns metrics and dynamic template tuples on successful administrative lookup', async () => {
     mockSupabase = {
-      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin-1' } } }) },
+      auth: { 
+        getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin-1', app_metadata: { role: 'admin' } } } }),
+        admin: {
+          listUsers: jest.fn().mockResolvedValue({ data: { users: [{ id: 'user-1', email: 'auth@user1.com', created_at: '2026-05-01' }] }, error: null })
+        }
+      },
       from: jest.fn().mockImplementation((table) => {
         if (table === 'profiles') {
           return {
             select: jest.fn().mockImplementation((query, opts) => {
               if (opts?.count === 'exact') {
-                return Promise.resolve({ data: null, count: 42, error: null });
+                return { order: jest.fn().mockResolvedValue({ data: [{ id: 'user-1', email: 'user1@test.com', tier: 'standard' }], count: 42, error: null }) };
               }
               return { eq: jest.fn().mockReturnValue({ single: jest.fn().mockResolvedValue({ data: { role: 'admin' } }) }) };
             })
@@ -167,5 +173,38 @@ describe('Admin Action Security Hardening & Dynamic Mail Templates', () => {
     expect(res.activePast7Days).toBe(2);
     expect(res.emailTemplate?.subject).toBe('Dynamic Sub');
     expect(res.data).toHaveLength(1);
+    expect(res.profiles).toHaveLength(1);
+    expect(res.profiles?.[0].email).toBe('auth@user1.com');
+  });
+
+  it('rejects updateUserTierAction with invalid parameters', async () => {
+    const res = await updateUserTierAction('', 'premium');
+    expect(res.success).toBe(false);
+    expect(res.error).toBe('Invalid input parameters.');
+  });
+
+  it('mutates user subscription tiers securely with admin verification', async () => {
+    mockSupabase = {
+      auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'admin-1', app_metadata: { role: 'admin' } } } }) },
+      from: jest.fn().mockImplementation((table) => {
+        if (table === 'profiles') {
+          return {
+            update: jest.fn().mockReturnValue({
+              eq: jest.fn().mockReturnValue({
+                select: jest.fn().mockReturnValue({
+                  single: jest.fn().mockResolvedValue({ data: { id: 'user-1', tier: 'premium' }, error: null })
+                })
+              })
+            })
+          };
+        }
+      })
+    };
+    (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    (createServiceClient as jest.Mock).mockReturnValue(mockSupabase);
+
+    const res = await updateUserTierAction('user-1', 'premium');
+    expect(res.success).toBe(true);
+    expect(res.data?.tier).toBe('premium');
   });
 });

@@ -50,6 +50,7 @@ export interface Profile {
   onboarding_status: 'pending' | 'completed';
   role?: 'user' | 'admin';
   tier?: 'standard' | 'premium';
+  created_at?: string;
   updated_at: string;
 }
 
@@ -83,7 +84,7 @@ export interface InviteRequest {
   id: string;
   email: string;
   message: string;
-  status: 'pending' | 'approved' | 'rejected' | 'claimed';
+  status: 'pending' | 'approved' | 'rejected' | 'claimed' | 'processing';
   created_at: string;
   updated_at: string;
 }
