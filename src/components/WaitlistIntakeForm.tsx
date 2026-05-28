@@ -32,7 +32,7 @@ export default function WaitlistIntakeForm() {
 
   if (success) {
     return (
-      <div className="bg-zen-sage/30 border border-white/30 backdrop-blur-md rounded-full px-8 py-4 text-center max-w-md w-full shadow-sm mx-auto">
+      <div className="bg-zen-sage/30 border border-white/30 backdrop-blur-md rounded-2xl sm:rounded-full px-6 sm:px-8 py-4 text-center max-w-xl w-full shadow-sm mx-auto">
         <p className="text-zen-charcoal font-bold text-sm sm:text-base">
           Your invitation request has been logged. We will reach out quietly when your spot opens.
         </p>
@@ -41,22 +41,22 @@ export default function WaitlistIntakeForm() {
   }
 
   return (
-    <div className="w-full max-w-md mx-auto">
+    <div className="w-full max-w-xl mx-auto">
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <div className="flex flex-col sm:flex-row items-center bg-white/60 backdrop-blur-md border border-white/40 shadow-sm rounded-full p-1.5 w-full gap-2">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center bg-white/60 backdrop-blur-md border border-white/40 shadow-sm rounded-2xl sm:rounded-full p-2 sm:p-1.5 w-full gap-3 sm:gap-2">
           <input
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter email for private access"
             aria-label="Email address for private access"
-            className="flex-1 bg-transparent text-zen-charcoal placeholder:text-zen-charcoal/50 px-6 py-3 outline-none text-base w-full border-none"
+            className="flex-1 bg-transparent text-zen-charcoal placeholder:text-zen-charcoal/50 px-4 sm:pl-6 sm:pr-3 py-3 outline-none text-base w-full border-none"
             disabled={isPending}
           />
           <button
             type="submit"
             disabled={isPending}
-            className="bg-zen-charcoal text-zen-base rounded-full font-bold px-8 py-3.5 hover:bg-zen-charcoal/90 disabled:opacity-50 transition-all text-base shrink-0 shadow-md flex items-center justify-center w-full sm:w-auto hover:scale-[1.02] active:scale-[0.98]"
+            className="bg-zen-charcoal text-zen-base rounded-full font-bold px-6 sm:px-8 py-3 sm:py-3.5 hover:bg-zen-charcoal/90 disabled:opacity-50 disabled:pointer-events-none transition-all text-base shrink-0 shadow-md flex items-center justify-center w-full sm:w-auto sm:min-w-[220px] hover:scale-[1.02] active:scale-[0.98]"
           >
             {isPending ? 'Requesting...' : 'Request Private Access'}
           </button>
