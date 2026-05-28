@@ -1,6 +1,6 @@
 /**
  * An-yen Zero-Quota Content Publishing Engine
- * Integrates synchronized multi-channel distribution across Facebook, Instagram, and Twitter.
+ * Integrates synchronized active multi-channel broadcasting across Facebook Business Pages, Instagram, and Twitter.
  */
 
 import fs from 'node:fs';
@@ -50,20 +50,21 @@ async function publishSocial(rawContent: string, localImagePath: string) {
 
   const igApiToken = process.env.IG_API_TOKEN;
   const igAccountId = process.env.IG_ACCOUNT_ID;
+  const fbPageId = "1123016337560584";
 
   // 1. Upload local asset to cloud
   const publicImageUrl = await uploadToFreeCDN(localImagePath);
   console.log(`[Verified Live CDN Endpoint]: ${publicImageUrl}`);
 
-  // 2. Dispatch to Facebook Business Page via Page Token Scope
-  console.log(`\n[Facebook Page] Phase 1: Dispatching content and visual asset to POST /me/photos...`);
+  // 2. Dispatch to Facebook Business Page via Page Token Scope and Explicit Node ID
+  console.log(`\n[Facebook Page] Phase 1: Dispatching content and visual asset to POST /${fbPageId}/photos...`);
   if (!igApiToken) {
     console.error(`[Error] Missing Meta access token configuration in environment.`);
     return;
   }
 
   try {
-    const fbPostUrl = `https://graph.facebook.com/v19.0/me/photos?url=${encodeURIComponent(publicImageUrl)}&message=${encodeURIComponent(content)}&access_token=${igApiToken}`;
+    const fbPostUrl = `https://graph.facebook.com/v19.0/${fbPageId}/photos?url=${encodeURIComponent(publicImageUrl)}&message=${encodeURIComponent(content)}&access_token=${igApiToken}`;
     const fbRes = await fetch(fbPostUrl, { method: "POST" });
 
     if (!fbRes.ok) {
