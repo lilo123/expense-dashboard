@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "builtin": "schedule",
+  "args": [
+    "0 10 * * *",
+    "agentapi",
+    "new-conversation",
+    "Draft a premium, 3-sentence mindful wealth tip for An-yen (rejecting budgeting stress, emphasizing value alignment). Then execute 'npx tsx scripts/publish_social.ts' with the drafted content."
+  ],
+  "restart_policy": "always",
+  "description": "Daily automated An-yen social media engagement workflow.",
+  "display_name": "An-yen Social Publisher"
+}
