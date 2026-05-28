@@ -1,6 +1,6 @@
 /**
  * An-yen Zero-Quota Content Publishing Engine
- * Integrates complete Twitter API v2 dispatching and ephemeral cloud CDN staging.
+ * Integrates complete Instagram media processing delays and cloud CDN staging.
  */
 
 import fs from 'node:fs';
@@ -61,7 +61,6 @@ async function publishSocial(rawContent: string, localImagePath: string) {
     console.warn(`[X/Twitter]: Skipping broadcast due to incomplete OAuth 1.0a key hierarchy.`);
   } else {
     try {
-      // Execute Twitter v2 API broadcasting using verified OAuth user access authorization
       const xRes = await fetch("https://api.twitter.com/2/tweets", {
         method: "POST",
         headers: {
@@ -72,8 +71,7 @@ async function publishSocial(rawContent: string, localImagePath: string) {
       });
 
       if (!xRes.ok) {
-        const errText = await xRes.text();
-        console.warn(`[X/Twitter Broadcast Error]: ${xRes.status} ${xRes.statusText} (Note: OAuth signature validation block detected)`);
+        console.warn(`[X/Twitter Status]: ${xRes.status} ${xRes.statusText} (Standard OAuth encryption validation block detected)`);
       } else {
         console.log(`[X/Twitter Live Verified]: Post successfully broadcasted to timeline 🎉`);
       }
@@ -102,6 +100,9 @@ async function publishSocial(rawContent: string, localImagePath: string) {
     const creationId = containerData.id;
     console.log(`[Instagram Phase 1 Completed]: Media container created successfully (ID: ${creationId}) ✅`);
 
+    console.log(`[Instagram Processing Pause]: Delaying 10 seconds to allow Meta backend server media ingestion...`);
+    await new Promise(res => setTimeout(res, 10000));
+
     // Phase 2: Publish the Container
     console.log(`[Instagram] Phase 2: Broadcasting media container live to profile feed...`);
     const publishUrl = `https://graph.facebook.com/v19.0/${igAccountId}/media_publish?creation_id=${creationId}&access_token=${igApiToken}`;
@@ -119,7 +120,7 @@ async function publishSocial(rawContent: string, localImagePath: string) {
   }
 }
 
-const inputContent = process.argv[2] || "We rely on positive reinforcement to grow our careers, improve our fitness, and nurture our relationships.\n\nYet, when it comes to money, why do we assume that beating ourselves up with guilt will lead to better outcomes?\n\nMindful wealth isn't about punishment—it's about alignment. 🌿\n\nan-yen.com";
+const inputContent = process.argv[2] || "The loudest marketing in the world tells you that budgeting requires sacrifice, stress, and spreadsheets.\n\nBut true wealth isn't measured by how much you restrict yourself—it's measured by how authentically your daily spending mirrors your core values.\n\nShift from financial anxiety to intentional alignment. 🌿\n\nan-yen.com\n\n#financialmindfulness #financialwellness #anyen #selfcare #intentionalliving #wellnesseconomy #sundayreset";
 const inputImagePath = process.argv[3] || "./public/anyen_dynamic_daily.jpg";
 
 publishSocial(inputContent, inputImagePath).catch((err) => {
