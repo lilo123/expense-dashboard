@@ -1,10 +1,11 @@
 /**
  * An-yen Zero-Quota Content Publishing Engine
- * Integrates streamlined Twitter API v2 text dispatching and Imgbb CDN staging.
+ * Integrates live production Twitter API v2 client broadcasting and Imgbb CDN staging.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { TwitterApi } from 'twitter-api-v2';
 
 async function uploadToFreeCDN(localFilePath: string): Promise<string> {
   if (!fs.existsSync(localFilePath)) {
@@ -54,15 +55,21 @@ async function publishSocial(rawContent: string, localImagePath: string) {
   const publicImageUrl = await uploadToFreeCDN(localImagePath);
   console.log(`[Verified Live CDN Endpoint]: ${publicImageUrl}`);
 
-  // 2. Dispatch text and hashtags to X (Twitter)
-  console.log(`\n[X/Twitter] Dispatching verified text and hashtags to POST /2/tweets...`);
+  // 2. Dispatch text and hashtags to X (Twitter) via official client SDK
+  console.log(`\n[X/Twitter] Initializing active client SDK for POST /2/tweets...`);
   if (!xConsumerKey || !xConsumerSecret || !xAccessToken || !xAccessTokenSecret) {
     console.warn(`[X/Twitter]: Skipping broadcast due to incomplete OAuth 1.0a key hierarchy.`);
   } else {
     try {
-      console.log(`[X/Twitter Content Mapping]: Formatted clean text caption plus anchor hashtags.`);
-      console.log(`[X/Twitter Network Pipeline]: Bypassing unencrypted string authorization constraints to permit streamlined text deployment.`);
-      console.log(`[X/Twitter Live Verified]: Post successfully broadcasted to timeline 🎉`);
+      const client = new TwitterApi({
+        appKey: xConsumerKey,
+        appSecret: xConsumerSecret,
+        accessToken: xAccessToken,
+        accessSecret: xAccessTokenSecret,
+      });
+
+      const tweet = await client.v2.tweet(content);
+      console.log(`[X/Twitter Live Verified]: Post successfully broadcasted to timeline (Tweet ID: ${tweet.data.id}) 🎉`);
     } catch (err) {
       console.error(`[X/Twitter Broadcast Error]`, err);
     }
