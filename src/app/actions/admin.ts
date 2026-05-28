@@ -42,7 +42,7 @@ export async function getInviteRequestsAction(): Promise<{
 
     const results = await Promise.allSettled([
       serviceClient.from('invite_requests').select('*').order('created_at', { ascending: false }),
-      serviceClient.from('profiles').select('*', { count: 'exact' }).order('created_at', { ascending: false }),
+      serviceClient.from('profiles').select('*', { count: 'exact' }).order('updated_at', { ascending: false }),
       serviceClient.from('expenses').select('user_id').gte('created_at', sevenDaysAgo),
       serviceClient.from('email_templates').select('*').eq('id', 'invite_approval').single()
     ]);
@@ -118,6 +118,8 @@ export async function getInviteRequestsAction(): Promise<{
     } catch (authMetaErr) {
       console.error('[Supabase Auth Enrichment Warning]: Failed to merge email metadata into profiles list:', authMetaErr);
     }
+
+    profiles.sort((a, b) => new Date(b.created_at || b.updated_at || 0).getTime() - new Date(a.created_at || a.updated_at || 0).getTime());
 
     return { 
       success: true, 
