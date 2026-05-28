@@ -5,9 +5,9 @@
     "0 10 * * *",
     "agentapi",
     "new-conversation",
-    "Draft a premium, 3-sentence mindful wealth tip for An-yen (rejecting budgeting stress, emphasizing value alignment). CRITICAL CONSTRAINT: Speak strictly as a premium boutique studio ('An-yen Studio'). Never mention or advertise being a solo developer, indie hacker, or individual creator. Then execute 'npx tsx scripts/publish_social.ts' with the drafted content."
+    "Step 1: Use search_web to scout active cultural trends regarding financial wellness, intentional living, and money psychology. Step 2: Draft a premium, authentic 3-sentence thought leadership tip inspired by the discovered trend (pure organic tone, zero sales pitches or studio promotion). Step 3: Use generate_image to synthesize a beautiful minimalist aesthetic photograph reflecting today's theme (e.g. a serene morning table ritual or abstract iridescent droplet). Save the generated image to public/anyen_dynamic_daily.jpg. Step 4: Execute 'npx tsx scripts/publish_social.ts' with the drafted caption and https://an-yen.com/anyen_dynamic_daily.jpg."
   ],
   "restart_policy": "always",
-  "description": "Daily automated An-yen social media engagement workflow.",
-  "display_name": "An-yen Social Publisher"
+  "description": "Dynamic web-scouting and image-synthesizing publishing workflow.",
+  "display_name": "An-yen Dynamic Publisher"
 }
