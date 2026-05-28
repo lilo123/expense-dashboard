@@ -240,17 +240,17 @@ export default function AdminDashboardView({ initialInvites, initialProfiles, in
               <p className="text-xs mt-1 text-zen-charcoal/60">Verified user accounts will populate here.</p>
             </div>
           ) : (
-            <div className="min-w-[720px]">
+            <div className="w-full">
               {initialProfiles.map((profile) => {
                 const effectiveTier = optimisticTiers[profile.id] || profile.tier || 'standard';
                 const isLoading = loadingTierIds.has(profile.id);
                 return (
                   <div 
                     key={profile.id} 
-                    className="grid grid-cols-1 md:grid-cols-12 items-start md:items-center justify-between p-4 hover:bg-white/40 transition-all gap-4 text-sm"
+                    className="flex flex-col md:flex-row md:items-center justify-between p-4 hover:bg-white/40 transition-all gap-4 text-sm border-b border-white/10 last:border-none"
                   >
-                    {/* Account Information with Stable Layout Shields */}
-                    <div className="md:col-span-4 flex flex-col gap-1 min-w-0 w-full">
+                    {/* Account Information */}
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
                       <span className="font-bold text-sm text-zen-charcoal break-words whitespace-normal">
                         {profile.email || 'No Email'}
                       </span>
@@ -266,8 +266,8 @@ export default function AdminDashboardView({ initialInvites, initialProfiles, in
                       </div>
                     </div>
 
-                    {/* Current Tier Status */}
-                    <div className="md:col-span-3 flex items-center min-w-0 w-full">
+                    {/* Current Tier Status and Interactive Toggle Group */}
+                    <div className="flex flex-wrap items-center gap-4 shrink-0">
                       <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border shadow-sm ${
                         effectiveTier === 'premium'
                           ? 'bg-amber-100 text-amber-800 border-amber-300'
@@ -275,10 +275,7 @@ export default function AdminDashboardView({ initialInvites, initialProfiles, in
                       }`}>
                         {effectiveTier === 'premium' ? '★ Premium' : 'Standard'}
                       </span>
-                    </div>
 
-                    {/* Interactive WAI-ARIA Toggle Radiogroup for mutually exclusive tier switching */}
-                    <div className="md:col-span-5 flex items-center justify-end gap-2 min-w-0 w-full shrink-0">
                       <div 
                         role="radiogroup" 
                         aria-label="User subscription tier selection" 

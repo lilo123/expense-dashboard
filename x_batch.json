@@ -1,0 +1,9 @@
+[
+  {"action": "navigate", "url": "https://x.com/i/flow/signup"},
+  {"action": "sleep", "duration": "3s"},
+  {"action": "fill", "selector": "input[name='username_or_email']", "value": "admin@an-yen.com"},
+  {"action": "sleep", "duration": "1s"},
+  {"action": "eval", "expression": "Array.from(document.querySelectorAll('button, [role=\"button\"]')).find(b => b.innerText.includes('Continue') && !b.innerText.includes('Google') && !b.innerText.includes('Apple') && !b.innerText.includes('phone')).click()"},
+  {"action": "sleep", "duration": "5s"},
+  {"action": "screenshot", "file": "x_step2.png"}
+]

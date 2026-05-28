@@ -1,0 +1,8 @@
+[
+  {"action": "navigate", "url": "https://x.com/i/flow/signup"},
+  {"action": "sleep", "duration": "3s"},
+  {"action": "fill", "selector": "input[name='username_or_email']", "value": "admin@an-yen.com"},
+  {"action": "sleep", "duration": "2s"},
+  {"action": "eval", "expression": "JSON.stringify(Array.from(document.querySelectorAll('button, [role=\"button\"]')).map(b => ({tag: b.tagName, text: b.innerText, html: b.innerHTML})))", "file": "x_buttons.json"},
+  {"action": "screenshot", "file": "x_after_fill.png"}
+]

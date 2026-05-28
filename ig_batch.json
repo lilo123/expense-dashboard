@@ -1,0 +1,11 @@
+[
+  {"action": "navigate", "url": "https://www.instagram.com/accounts/emailsignup/"},
+  {"action": "sleep", "duration": "4s"},
+  {"action": "fill", "selector": "input[type='text']", "value": "admin@an-yen.com"},
+  {"action": "sleep", "duration": "1s"},
+  {"action": "fill", "selector": "input[type='password']", "value": "@nyen1406"},
+  {"action": "sleep", "duration": "1s"},
+  {"action": "fill", "selector": "input[type='search']", "value": "anyenwealth"},
+  {"action": "sleep", "duration": "3s"},
+  {"action": "screenshot", "file": "ig_after_fill.png"}
+]

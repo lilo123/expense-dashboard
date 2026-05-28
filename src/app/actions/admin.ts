@@ -62,9 +62,8 @@ export async function getInviteRequestsAction(): Promise<{
       return { success: false, error: 'Failed to fetch registered user profiles.' };
     }
 
-    if (templateResult.status === 'rejected' || (templateResult.status === 'fulfilled' && templateResult.value.error && templateResult.value.error.code !== 'PGRST116')) {
-      console.error('[Supabase Email Template Error]:', templateResult.status === 'rejected' ? templateResult.reason : templateResult.value.error);
-      return { success: false, error: 'Failed to fetch configuration state. Aborting to prevent unintended data overwrites.' };
+    if (templateResult.status === 'rejected' || (templateResult.status === 'fulfilled' && templateResult.value.error)) {
+      console.warn('[Supabase Email Template Warning]: Could not fetch email template. Using default configuration fallback.', templateResult.status === 'rejected' ? templateResult.reason : templateResult.value.error);
     }
 
     const initialInvites = invitesResult.status === 'fulfilled' && Array.isArray(invitesResult.value.data) ? invitesResult.value.data as InviteRequest[] : [];

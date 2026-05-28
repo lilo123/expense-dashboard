@@ -1,51 +1,55 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
-import FrostedOrb from "@/components/ui/FrostedOrb";
+import WaitlistIntakeForm from "@/components/WaitlistIntakeForm";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-between p-4 relative overflow-hidden bg-zen-base">
       {/* Top Navigation */}
-      <nav className="absolute top-0 left-0 w-full p-6 flex justify-between items-center z-20">
+      <nav className="w-full max-w-6xl py-6 flex justify-between items-center z-20">
         <div className="flex items-center gap-2">
           <Logo className="w-20 h-20 sm:w-28 sm:h-28 text-zen-charcoal transition-all" />
+        </div>
+        <div className="flex items-center gap-4">
+          <Link 
+            href="/education" 
+            className="px-6 py-3 bg-white/40 backdrop-blur-md text-zen-charcoal rounded-full font-semibold text-sm sm:text-base border border-white/30 hover:bg-white/60 transition-all shadow-sm"
+          >
+            Education Hub
+          </Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <div className="flex flex-col items-center z-10 relative mt-12">
-        {/* The Animated Morphing Orb sits behind the text */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 w-72 h-72 opacity-50 blur-xl">
-           <FrostedOrb className="w-full h-full" />
-        </div>
-
-        <h1 className="text-6xl sm:text-7xl font-extrabold text-zen-charcoal mb-6 tracking-tight text-center">
+      <main className="flex flex-col items-center z-10 relative my-auto w-full max-w-4xl px-4 text-center py-16">
+        <h1 className="text-6xl sm:text-7xl font-extrabold text-zen-charcoal mb-4 tracking-tight">
           An-yen
         </h1>
-        <p className="text-xl text-zen-charcoal/80 mb-10 max-w-lg text-center leading-relaxed">
-          Mindful wealth tracking. Align your daily expenses with your inner values.
+        
+        <p className="text-xl sm:text-2xl text-zen-charcoal/80 mb-12 max-w-md leading-relaxed font-medium">
+          Mindful Wealth Builder
         </p>
         
-        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-          <Link 
-            href="/dashboard" 
-            className="px-8 py-4 bg-zen-charcoal text-zen-base rounded-full font-bold text-lg text-center hover:scale-[1.02] hover:bg-zen-charcoal/90 transition-all shadow-lg"
-          >
-            Enter App
-          </Link>
-          <Link 
-            href="/education" 
-            className="px-8 py-4 bg-white/40 backdrop-blur-md text-zen-charcoal rounded-full font-bold text-lg text-center border border-white/30 hover:bg-white/60 transition-all"
-          >
-            Flow Hub
-          </Link>
+        {/* Private Access Portal */}
+        <div className="w-full flex flex-col items-center gap-4">
+          <WaitlistIntakeForm />
+          
+          <div className="text-sm text-zen-charcoal/70 mt-2">
+            Already a member?{" "}
+            <Link href="/dashboard" className="font-semibold underline hover:text-zen-charcoal transition-colors">
+              Sign in
+            </Link>
+          </div>
         </div>
-      </div>
+      </main>
 
-      <footer className="absolute bottom-6 text-center text-xs text-zen-charcoal/50 flex gap-4 justify-center z-10">
-        <span>© 2026 An-yen Wealth. All rights reserved.</span>
-        <Link href="/terms" className="hover:underline font-medium">Terms of Service</Link>
-        <Link href="/privacy" className="hover:underline font-medium">Privacy Policy</Link>
+      {/* Footer */}
+      <footer className="w-full max-w-6xl py-8 text-center text-xs text-zen-charcoal/50 flex flex-col sm:flex-row gap-4 justify-between items-center z-10 border-t border-zen-charcoal/10 mt-12">
+        <span>© 2026 An-yen Studio. All rights reserved.</span>
+        <div className="flex gap-6">
+          <Link href="/terms" className="hover:underline font-medium">Terms of Service</Link>
+          <Link href="/privacy" className="hover:underline font-medium">Privacy Policy</Link>
+        </div>
       </footer>
     </div>
   );
