@@ -5,7 +5,7 @@
     "0 10 * * *",
     "agentapi",
     "new-conversation",
-    "Draft a premium, 3-sentence mindful wealth tip for An-yen (rejecting budgeting stress, emphasizing value alignment). Then execute 'npx tsx scripts/publish_social.ts' with the drafted content."
+    "Draft a premium, 3-sentence mindful wealth tip for An-yen (rejecting budgeting stress, emphasizing value alignment). CRITICAL CONSTRAINT: Speak strictly as a premium boutique studio ('An-yen Studio'). Never mention or advertise being a solo developer, indie hacker, or individual creator. Then execute 'npx tsx scripts/publish_social.ts' with the drafted content."
   ],
   "restart_policy": "always",
   "description": "Daily automated An-yen social media engagement workflow.",
