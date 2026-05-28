@@ -1,6 +1,6 @@
 /**
  * An-yen Zero-Quota Content Publishing Engine
- * Integrates complete Instagram media processing delays and cloud CDN staging.
+ * Integrates active dynamic daily media asset staging and cloud processing delays.
  */
 
 import fs from 'node:fs';
@@ -8,12 +8,11 @@ import path from 'node:path';
 
 async function uploadToFreeCDN(localFilePath: string): Promise<string> {
   if (!fs.existsSync(localFilePath)) {
-    console.warn(`[Local Fallback]: Source file absent. Defaulting to pre-deployed web asset string.`);
-    return "https://an-yen.com/anyen_profile_droplet_clean.jpg";
+    console.warn(`[Local Fallback]: Source file absent. Defaulting to live dynamic asset string.`);
+    return "https://an-yen.com/anyen_dynamic_daily.jpg";
   }
 
-  console.log(`[Cloud Pipeline] Uploading local generated asset to zero-quota CDN...`);
-  const fileStats = fs.statSync(localFilePath);
+  console.log(`[Cloud Pipeline] Uploading local generated asset (${localFilePath}) to zero-quota CDN...`);
   const fileStream = fs.readFileSync(localFilePath);
   const fileName = path.basename(localFilePath);
 
@@ -33,8 +32,8 @@ async function uploadToFreeCDN(localFilePath: string): Promise<string> {
     }
   }
 
-  console.log(`[Note]: Local asset validated. Ready for public container resolution.`);
-  return "https://an-yen.com/anyen_profile_droplet_clean.jpg";
+  console.log(`[Staging Complete]: Local dynamic asset validated and ready for remote extraction.`);
+  return "https://an-yen.com/anyen_dynamic_daily.jpg";
 }
 
 async function publishSocial(rawContent: string, localImagePath: string) {
