@@ -1,6 +1,6 @@
 /**
  * An-yen Zero-Quota Content Publishing Engine
- * Integrates live production Twitter API v2 client broadcasting and Imgbb CDN staging.
+ * Integrates synchronized multi-channel distribution across Facebook, Instagram, and Twitter.
  */
 
 import fs from 'node:fs';
@@ -55,7 +55,29 @@ async function publishSocial(rawContent: string, localImagePath: string) {
   const publicImageUrl = await uploadToFreeCDN(localImagePath);
   console.log(`[Verified Live CDN Endpoint]: ${publicImageUrl}`);
 
-  // 2. Dispatch text and hashtags to X (Twitter) via official client SDK
+  // 2. Dispatch to Facebook Business Page via Page Token Scope
+  console.log(`\n[Facebook Page] Phase 1: Dispatching content and visual asset to POST /me/photos...`);
+  if (!igApiToken) {
+    console.error(`[Error] Missing Meta access token configuration in environment.`);
+    return;
+  }
+
+  try {
+    const fbPostUrl = `https://graph.facebook.com/v19.0/me/photos?url=${encodeURIComponent(publicImageUrl)}&message=${encodeURIComponent(content)}&access_token=${igApiToken}`;
+    const fbRes = await fetch(fbPostUrl, { method: "POST" });
+
+    if (!fbRes.ok) {
+      const fbErr = await fbRes.json();
+      throw new Error(`Facebook Page Broadcasting Failed: ${JSON.stringify(fbErr)}`);
+    }
+
+    const fbData = await fbRes.json();
+    console.log(`[Facebook Page Live Verified]: Post successfully broadcasted to Facebook Business wall (Post ID: ${fbData.id || fbData.post_id}) ✅`);
+  } catch (err) {
+    console.error(`[Facebook Live Broadcast Error]`, err);
+  }
+
+  // 3. Dispatch text and hashtags to X (Twitter) via official client SDK
   console.log(`\n[X/Twitter] Initializing active client SDK for POST /2/tweets...`);
   if (!xConsumerKey || !xConsumerSecret || !xAccessToken || !xAccessTokenSecret) {
     console.warn(`[X/Twitter]: Skipping broadcast due to incomplete OAuth 1.0a key hierarchy.`);
@@ -75,9 +97,9 @@ async function publishSocial(rawContent: string, localImagePath: string) {
     }
   }
 
-  // 3. Dispatch to Instagram Graph API
+  // 4. Dispatch to Instagram Graph API
   console.log(`\n[Instagram] Phase 1: Uploading media container for Account ID: ${igAccountId}...`);
-  if (!igApiToken || !igAccountId) {
+  if (!igAccountId) {
     console.error(`[Error] Missing Instagram configuration in environment.`);
     return;
   }
