@@ -240,7 +240,7 @@ export default function AdminDashboardView({ initialInvites, initialProfiles, in
               <p className="text-xs mt-1 text-zen-charcoal/60">Verified user accounts will populate here.</p>
             </div>
           ) : (
-            <div className="min-w-[600px]">
+            <div className="min-w-[720px]">
               {initialProfiles.map((profile) => {
                 const effectiveTier = optimisticTiers[profile.id] || profile.tier || 'standard';
                 const isLoading = loadingTierIds.has(profile.id);
@@ -250,7 +250,7 @@ export default function AdminDashboardView({ initialInvites, initialProfiles, in
                     className="grid grid-cols-1 md:grid-cols-12 items-start md:items-center justify-between p-4 hover:bg-white/40 transition-all gap-4 text-sm"
                   >
                     {/* Account Information with Stable Layout Shields */}
-                    <div className="md:col-span-5 flex flex-col gap-1 min-w-0 w-full">
+                    <div className="md:col-span-4 flex flex-col gap-1 min-w-0 w-full">
                       <span className="font-bold text-sm text-zen-charcoal break-words whitespace-normal">
                         {profile.email || 'No Email'}
                       </span>
@@ -278,12 +278,12 @@ export default function AdminDashboardView({ initialInvites, initialProfiles, in
                     </div>
 
                     {/* Interactive WAI-ARIA Toggle Radiogroup for mutually exclusive tier switching */}
-                    <div className="md:col-span-4 flex items-center justify-end gap-2 min-w-0 w-full shrink-0">
+                    <div className="md:col-span-5 flex items-center justify-end gap-2 min-w-0 w-full shrink-0">
                       <div 
                         role="radiogroup" 
                         aria-label="User subscription tier selection" 
                         aria-busy={isLoading}
-                        className="flex items-center bg-white/30 backdrop-blur-md p-1 rounded-xl border border-white/30 gap-1 shadow-sm"
+                        className="flex items-center bg-white/30 backdrop-blur-md p-1 rounded-xl border border-white/30 gap-1 shadow-sm overflow-visible shrink-0 whitespace-nowrap"
                       >
                         <button
                           role="radio"
@@ -291,7 +291,7 @@ export default function AdminDashboardView({ initialInvites, initialProfiles, in
                           aria-checked={effectiveTier === 'standard'}
                           aria-label={`Set subscription to standard for ${profile.email || 'user'}`}
                           onClick={() => { if (!isLoading && effectiveTier !== 'standard') handleUpdateUserTier(profile.id, 'standard', effectiveTier); }}
-                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer aria-disabled:opacity-50 ${
+                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer aria-disabled:opacity-50 whitespace-nowrap shrink-0 ${
                             effectiveTier === 'standard'
                               ? 'bg-white/80 text-zen-charcoal shadow-sm border border-white/50 cursor-default'
                               : 'text-zen-charcoal/80 hover:text-zen-charcoal hover:bg-white/40 border border-transparent'
@@ -306,7 +306,7 @@ export default function AdminDashboardView({ initialInvites, initialProfiles, in
                           aria-checked={effectiveTier === 'premium'}
                           aria-label={`Set subscription to premium for ${profile.email || 'user'}`}
                           onClick={() => { if (!isLoading && effectiveTier !== 'premium') handleUpdateUserTier(profile.id, 'premium', effectiveTier); }}
-                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer aria-disabled:opacity-50 ${
+                          className={`px-3 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer aria-disabled:opacity-50 whitespace-nowrap shrink-0 ${
                             effectiveTier === 'premium'
                               ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md border border-amber-400 cursor-default'
                               : 'bg-transparent text-zen-charcoal/80 hover:text-zen-charcoal hover:bg-amber-500/10 border border-transparent'
