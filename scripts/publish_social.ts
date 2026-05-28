@@ -1,9 +1,12 @@
 /**
  * An-yen Automated Content Publishing Utility
- * Executes direct API broadcasts using verified X OAuth 1.0a tokens and Instagram developer credentials.
+ * Executes direct API broadcasts with automated string and newline sanitization.
  */
 
-async function publishSocial(content: string, imageUrl: string) {
+async function publishSocial(rawContent: string, imageUrl: string) {
+  // Ensure escaped newline characters passed via CLI are converted to true line breaks
+  const content = rawContent.replace(/\\n/g, '\n');
+
   console.log(`[An-yen Publisher] Executing direct API deployment...`);
   console.log(`[Content Payload]:\n${content}\n`);
 
@@ -64,7 +67,7 @@ async function publishSocial(content: string, imageUrl: string) {
 }
 
 const inputContent = process.argv[2] || "We rely on positive reinforcement to grow our careers, improve our fitness, and nurture our relationships.\n\nYet, when it comes to money, why do we assume that beating ourselves up with guilt and severe restriction will somehow lead to better outcomes?\n\nMindful wealth isn't about punishment—it's about alignment. 🌿\n\nan-yen.com";
-const inputImageUrl = process.argv[3] || "https://an-yen.com/anyen_profile_droplet_clean.jpg";
+const inputImageUrl = process.argv[3] || "https://an-yen.com/anyen_dynamic_daily.jpg";
 
 publishSocial(inputContent, inputImageUrl).catch((err) => {
   console.error(`[Fatal Error] Social deployment failed:`, err);
