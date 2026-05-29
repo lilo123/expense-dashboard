@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "builtin": "schedule",
   "args": [
-    "0 10 * * *",
+    "6 14 * * *",
     "agentapi",
     "new-conversation",
     "Step 1: Use search_web to scout active cultural trends regarding financial wellness, intentional living, and money psychology. Step 2: Draft a premium, authentic 3-sentence thought leadership tip inspired by the discovered trend (pure organic tone, zero sales pitches or studio promotion). Step 3: Append consistent anchor hashtags (#financialmindfulness #financialwellness #anyen #selfcare #intentionalliving) plus 2-3 dynamic trend hashtags to maximize algorithmic discovery. Step 4: Use generate_image to synthesize a beautiful minimalist aesthetic photograph reflecting today's theme (e.g. a serene morning table ritual or abstract iridescent droplet). Save the generated image to public/anyen_dynamic_daily.jpg. Step 5: Execute 'npx tsx scripts/publish_social.ts' with the drafted caption and https://an-yen.com/anyen_dynamic_daily.jpg."
