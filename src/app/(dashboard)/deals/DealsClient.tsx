@@ -260,7 +260,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
           <p className="text-zen-charcoal/60 font-semibold">No deals found matching your criteria.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {displayDeals.map(deal => (
             <DealCard 
               key={deal.id} 

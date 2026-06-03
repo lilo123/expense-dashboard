@@ -52,28 +52,33 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
 
   return (
     <div className="bg-white/40 backdrop-blur-md hover:bg-white/60 rounded-2xl shadow-sm border border-white/20 flex flex-col transition-all hover:shadow-md p-4">
-      {/* 1. Header Row */}
+      {/* 1. Header Row (Company Name, Status Dot & Action Buttons) */}
       <div className="flex justify-between items-start mb-3">
         <div className="min-w-0 flex-1 pr-3">
-          <h3 className="text-base font-bold text-zen-charcoal truncate">{deal.company || 'Unnamed Company'}</h3>
-          <p className="text-[10px] font-semibold text-zen-charcoal/60 uppercase tracking-wider mt-0.5">
+          <h3 className="text-lg font-extrabold text-zen-charcoal truncate">{deal.company || 'Unnamed Company'}</h3>
+          <p className="text-[10px] font-bold text-zen-charcoal/60 uppercase tracking-wider mt-0.5">
             {deal?.type?.replace('_', ' ')}
           </p>
         </div>
-        <div className="flex items-center space-x-3 shrink-0">
-          <p className="text-base font-bold text-emerald-800">
-            {formatCurrency(deal.bonus_amount, deal.currency)}
-          </p>
+        <div className="flex items-center space-x-2.5 shrink-0 pt-0.5">
           <span className={`w-2.5 h-2.5 rounded-full ${getStatusColor(deal.status).split(' ')[0]}`} title={deal.status}></span>
-          <div className="flex space-x-1.5 border-l pl-3 border-zen-lavender/40">
-            <button onClick={onEdit} className="text-zen-charcoal/40 hover:text-zen-charcoal cursor-pointer border-none bg-transparent p-1">
+          <div className="flex space-x-1 border-l pl-2.5 border-zen-lavender/40">
+            <button onClick={onEdit} className="text-zen-charcoal/40 hover:text-zen-charcoal cursor-pointer border-none bg-transparent p-1" title="Edit Deal">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
             </button>
-            <button onClick={onDelete} className="text-red-400 hover:text-red-600 cursor-pointer border-none bg-transparent p-1">
+            <button onClick={onDelete} className="text-red-400 hover:text-red-600 cursor-pointer border-none bg-transparent p-1" title="Delete Deal">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
             </button>
           </div>
         </div>
+      </div>
+
+      {/* 2. Dedicated Feature Strip: Bonus Reward Display */}
+      <div className="bg-white/60 border border-white/40 rounded-xl p-3 mb-4 flex items-center justify-between shadow-xs">
+        <span className="text-xs font-bold text-zen-charcoal/70 uppercase tracking-wider">Bonus Reward</span>
+        <span className="text-xl font-extrabold text-emerald-800 tracking-wide">
+          {formatCurrency(deal.bonus_amount, deal.currency)}
+        </span>
       </div>
 
       {/* 2. Type-Specific Core Content */}
