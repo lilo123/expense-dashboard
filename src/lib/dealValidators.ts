@@ -80,7 +80,14 @@ export interface DealRow {
   note: string | null;
   currency: string;
   bonus_amount: number;
-  type_specific_data?: Record<string, unknown> | null;
+  type_specific_data?: {
+    card_name?: string;
+    target_spend?: number;
+    spend_progress?: number;
+    action_date?: string | null;
+    fund_committed?: number;
+    [key: string]: unknown;
+  } | null;
   created_at?: string;
   updated_at?: string;
   deal_checklist_items?: ChecklistItem[];
