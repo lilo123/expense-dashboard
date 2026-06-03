@@ -53,7 +53,7 @@ export const BrokerageDealSchema = BaseDealSchema.extend({
 
 export const OtherDealSchema = BaseDealSchema.extend({
   type: z.literal('other'),
-  type_specific_data: z.record(z.unknown()).optional().nullable(),
+  type_specific_data: z.record(z.string(), z.unknown()).optional().nullable(),
 });
 
 export const DealSchema = z.discriminatedUnion('type', [
