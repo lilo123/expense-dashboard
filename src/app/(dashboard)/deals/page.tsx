@@ -17,6 +17,12 @@ export default async function DealsPage() {
     redirect('/dashboard');
   }
 
-  const deals = await getDealsAction();
+  let deals = [];
+  try {
+    deals = await getDealsAction();
+  } catch (error) {
+    console.error('[DealsPage] Error fetching deals:', error);
+    deals = [];
+  }
   return <DealsClient initialDeals={deals} />;
 }

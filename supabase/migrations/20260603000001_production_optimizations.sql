@@ -43,7 +43,8 @@ DELETE FROM public.deal_checklist_items WHERE user_id IS NULL;
 ALTER TABLE public.deal_checklist_items ADD CONSTRAINT chk_deal_checklist_items_user_id_not_null CHECK (user_id IS NOT NULL) NOT VALID;
 ALTER TABLE public.deal_checklist_items VALIDATE CONSTRAINT chk_deal_checklist_items_user_id_not_null;
 
--- Enforce denormalization integrity composite foreign key
+-- Enforce denormalization integrity composite foreign key and drop ambiguous single foreign key
+ALTER TABLE public.deal_checklist_items DROP CONSTRAINT IF EXISTS deal_checklist_items_deal_id_fkey;
 ALTER TABLE public.deal_checklist_items ADD CONSTRAINT fk_deal_checklist_items_composite FOREIGN KEY (deal_id, user_id) REFERENCES public.deals(id, user_id) ON DELETE CASCADE;
 
 CREATE INDEX IF NOT EXISTS idx_deal_checklist_items_user_id ON public.deal_checklist_items(user_id);
