@@ -95,3 +95,68 @@ export interface EmailTemplate {
   html_body: string;
   updated_at?: string;
 }
+
+export type DealType = 'credit_card' | 'bank_account' | 'brokerage_account';
+export type DealStatus = 'exploring' | 'active' | 'ready_to_claim' | 'claimed' | 'closed';
+
+export interface DealChecklistItem {
+  id: string;
+  deal_id: string;
+  user_id: string;
+  action_text: string;
+  deadline: string | null;
+  is_done: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BaseDeal {
+  id: string;
+  user_id: string;
+  title?: string | null;
+  description?: string | null;
+  company: string;
+  bonus_amount: number;
+  open_date: string;
+  status: DealStatus;
+  note?: string | null;
+  currency: string;
+  created_at: string;
+  updated_at: string;
+  checklist?: DealChecklistItem[];
+}
+
+export interface CreditCardDeal extends BaseDeal {
+  type: 'credit_card';
+  card_name: string;
+  target_spend: number;
+  spend_progress: number;
+  date_to_close?: string | null;
+  next_churn_date?: string | null;
+  date_to_check_bonus?: never;
+  fund_committed?: never;
+}
+
+export interface BankAccountDeal extends BaseDeal {
+  type: 'bank_account';
+  date_to_check_bonus?: string | null;
+  date_to_close?: string | null;
+  card_name?: never;
+  target_spend?: never;
+  spend_progress?: never;
+  next_churn_date?: never;
+  fund_committed?: never;
+}
+
+export interface BrokerageAccountDeal extends BaseDeal {
+  type: 'brokerage_account';
+  fund_committed: number;
+  date_to_check_bonus?: string | null;
+  date_to_close?: string | null;
+  card_name?: never;
+  target_spend?: never;
+  spend_progress?: never;
+  next_churn_date?: never;
+}
+
+export type Deal = CreditCardDeal | BankAccountDeal | BrokerageAccountDeal;

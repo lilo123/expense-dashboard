@@ -8,7 +8,7 @@ import { syncExchangeRates } from '@/app/actions/rates';
 import { updateProfile } from '@/app/actions/profile';
 import { Category } from '@/types/database';
 import { Expense, User, Profile, Budget } from '@/types/database';
-import { Settings, Sliders, Repeat, Mic, LogOut, Bot, Plus, Shield } from 'lucide-react';
+import { Settings, Sliders, Repeat, Mic, LogOut, Bot, Plus, Shield, Gift, Lock } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
 import Tabs from './Tabs';
@@ -285,6 +285,23 @@ function ClientDashboardContent() {
                       >
                         <Settings size={16} /> Account Overview
                       </Link>
+                      {profile?.tier === 'premium' ? (
+                        <Link 
+                          href="/deals" 
+                          onClick={() => setIsDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
+                        >
+                          <Gift size={16} /> Finance Deals
+                        </Link>
+                      ) : (
+                        <div 
+                          className="flex items-center gap-2 px-3 py-2 rounded-xl text-zen-charcoal/40 text-sm font-semibold transition-all no-underline cursor-not-allowed select-none"
+                          title="Upgrade to Premium to access Finance Deals"
+                        >
+                          <Gift size={16} /> Finance Deals
+                          <Lock size={14} className="ml-auto opacity-50" />
+                        </div>
+                      )}
 
                       <Link 
                         href="/budget"
