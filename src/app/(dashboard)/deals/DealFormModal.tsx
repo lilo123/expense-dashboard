@@ -136,32 +136,32 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
   };
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-zen-charcoal/40 backdrop-blur-sm flex items-center justify-center p-4">
+      <div className="bg-white/90 backdrop-blur-xl border border-zen-lavender/60 rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-xl">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold text-zen-charcoal">
             {editingDeal ? 'Edit Deal' : 'Add New Deal'}
           </h2>
-          <button onClick={onClose} disabled={isPending} className="text-gray-500 hover:text-gray-700 disabled:opacity-50">&times;</button>
+          <button onClick={onClose} disabled={isPending} className="text-zen-charcoal/40 hover:text-zen-charcoal text-2xl font-bold border-none bg-transparent cursor-pointer disabled:opacity-50">&times;</button>
         </div>
 
         {step === 1 && !editingDeal && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div onClick={() => handleTypeSelect('credit_card')} className="border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all text-center">
+            <div onClick={() => handleTypeSelect('credit_card')} className="border border-zen-lavender/60 bg-white/60 rounded-2xl p-6 cursor-pointer hover:border-zen-sage hover:bg-zen-sage/10 transition-all text-center shadow-xs">
               <div className="text-3xl mb-2">💳</div>
-              <h3 className="font-bold">Credit Card</h3>
+              <h3 className="font-bold text-sm text-zen-charcoal">Credit Card</h3>
             </div>
-            <div onClick={() => handleTypeSelect('bank_account')} className="border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all text-center">
+            <div onClick={() => handleTypeSelect('bank_account')} className="border border-zen-lavender/60 bg-white/60 rounded-2xl p-6 cursor-pointer hover:border-zen-sage hover:bg-zen-sage/10 transition-all text-center shadow-xs">
               <div className="text-3xl mb-2">🏦</div>
-              <h3 className="font-bold">Bank Account</h3>
+              <h3 className="font-bold text-sm text-zen-charcoal">Bank Account</h3>
             </div>
-            <div onClick={() => handleTypeSelect('brokerage_account')} className="border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all text-center">
+            <div onClick={() => handleTypeSelect('brokerage_account')} className="border border-zen-lavender/60 bg-white/60 rounded-2xl p-6 cursor-pointer hover:border-zen-sage hover:bg-zen-sage/10 transition-all text-center shadow-xs">
               <div className="text-3xl mb-2">📈</div>
-              <h3 className="font-bold">Brokerage</h3>
+              <h3 className="font-bold text-sm text-zen-charcoal">Brokerage</h3>
             </div>
-            <div onClick={() => handleTypeSelect('other')} className="border-2 border-gray-200 rounded-xl p-6 cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-all text-center">
+            <div onClick={() => handleTypeSelect('other')} className="border border-zen-lavender/60 bg-white/60 rounded-2xl p-6 cursor-pointer hover:border-zen-sage hover:bg-zen-sage/10 transition-all text-center shadow-xs">
               <div className="text-3xl mb-2">📁</div>
-              <h3 className="font-bold">Other</h3>
+              <h3 className="font-bold text-sm text-zen-charcoal">Other</h3>
             </div>
           </div>
         )}
@@ -170,12 +170,12 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Company</label>
-                <input required type="text" name="company" value={formData.company} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm p-2 border" />
+                <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Company</label>
+                <input required type="text" name="company" value={formData.company} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Status</label>
-                <select name="status" value={formData.status} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm p-2 border">
+                <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Status</label>
+                <select name="status" value={formData.status} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner cursor-pointer">
                   <option value="exploring">Exploring</option>
                   <option value="active">Active</option>
                   <option value="ready_to_claim">Ready to Claim</option>
@@ -187,58 +187,58 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
 
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Bonus Amount</label>
-                <input type="number" name="bonus_amount" value={formData.bonus_amount} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm p-2 border" />
+                <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Bonus Amount</label>
+                <input type="number" name="bonus_amount" value={formData.bonus_amount} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Currency</label>
-                <select name="currency" value={formData.currency} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm p-2 border">
+                <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Currency</label>
+                <select name="currency" value={formData.currency} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner cursor-pointer">
                   <option value="USD">USD</option>
                   <option value="CAD">CAD</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Open Date</label>
-                <input type="date" name="open_date" value={formData.open_date} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm p-2 border" />
+                <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Open Date</label>
+                <input type="date" name="open_date" value={formData.open_date} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner cursor-pointer" />
               </div>
             </div>
 
             {formData.type === 'credit_card' && (
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-4">
-                <h3 className="font-medium">Credit Card Details</h3>
+              <div className="bg-white/50 border border-zen-lavender/30 p-5 rounded-2xl space-y-4 my-4">
+                <h3 className="font-bold text-base text-zen-charcoal">Credit Card Details</h3>
                 <div>
-                  <label className="block text-sm font-medium">Card Name</label>
-                  <input required type="text" name="card_name" value={formData.card_name || ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border text-sm" />
+                  <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Card Name</label>
+                  <input required type="text" name="card_name" value={formData.card_name || ''} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner" />
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium">Target Spend</label>
-                    <input type="number" name="target_spend" value={formData.target_spend ?? ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border text-sm" />
+                    <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Target Spend</label>
+                    <input type="number" name="target_spend" value={formData.target_spend ?? ''} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium">Current Spend Progress</label>
-                    <input type="number" name="spend_progress" value={formData.spend_progress ?? ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border text-sm" />
+                    <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Spend Progress</label>
+                    <input type="number" name="spend_progress" value={formData.spend_progress ?? ''} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium">Next Action Date</label>
-                    <input type="date" name="action_date" value={formData.action_date || ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border text-sm" />
+                    <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Next Action Date</label>
+                    <input type="date" name="action_date" value={formData.action_date || ''} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner cursor-pointer" />
                   </div>
                 </div>
               </div>
             )}
 
             {formData.type === 'bank_account' && (
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-4">
-                <h3 className="font-medium">Bank Account Details</h3>
+              <div className="bg-white/50 border border-zen-lavender/30 p-5 rounded-2xl space-y-4 my-4">
+                <h3 className="font-bold text-base text-zen-charcoal">Bank Account Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium">Next Action Date</label>
-                    <input type="date" name="action_date" value={formData.action_date || ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border text-sm" />
+                    <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Next Action Date</label>
+                    <input type="date" name="action_date" value={formData.action_date || ''} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner cursor-pointer" />
                   </div>
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Checklist Items (Optional)</label>
+                  <label className="block text-sm font-semibold text-zen-charcoal/80 mb-2">Checklist Items (Optional)</label>
                   {formData.checklist_items.map((item, i) => (
                     <div key={i} className="flex items-center space-x-2 mb-2">
                       <input 
@@ -249,7 +249,7 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
                           setFormData({ ...formData, checklist_items: newItems });
                         }}
                         placeholder="Action"
-                        className="flex-1 rounded-md border-gray-300 shadow-sm p-2 border text-sm"
+                        className="flex-1 rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner"
                       />
                       <input 
                         type="date" 
@@ -258,7 +258,7 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
                           const newItems = formData.checklist_items.map((cItem, cIdx) => cIdx === i ? { ...cItem, deadline: e.target.value } : cItem);
                           setFormData({ ...formData, checklist_items: newItems });
                         }}
-                        className="w-32 rounded-md border-gray-300 shadow-sm p-2 border text-sm"
+                        className="w-32 rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner cursor-pointer"
                       />
                       <button 
                         type="button" 
@@ -266,7 +266,7 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
                           const newItems = formData.checklist_items.filter((_, cIdx) => cIdx !== i);
                           setFormData({ ...formData, checklist_items: newItems });
                         }}
-                        className="text-red-500 hover:text-red-700 font-bold px-2 py-1 text-base"
+                        className="text-red-500 hover:text-red-700 font-bold px-2 py-1 text-lg border-none bg-transparent cursor-pointer"
                         title="Remove item"
                       >
                         &times;
@@ -276,7 +276,7 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
                   <button 
                     type="button"
                     onClick={() => setFormData({ ...formData, checklist_items: [...formData.checklist_items, { action_text: '', is_done: false }]})}
-                    className="text-sm text-blue-600 hover:text-blue-800 font-medium mt-1"
+                    className="text-sm text-zen-sage hover:opacity-80 font-extrabold mt-2 cursor-pointer border-none bg-transparent"
                   >
                     + Add Item
                   </button>
@@ -285,29 +285,29 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
             )}
 
             {formData.type === 'brokerage_account' && (
-              <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg space-y-4">
-                <h3 className="font-medium">Brokerage Details</h3>
+              <div className="bg-white/50 border border-zen-lavender/30 p-5 rounded-2xl space-y-4 my-4">
+                <h3 className="font-bold text-base text-zen-charcoal">Brokerage Details</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium">Fund Committed</label>
-                    <input type="number" name="fund_committed" value={formData.fund_committed ?? ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border text-sm" />
+                    <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Fund Committed</label>
+                    <input type="number" name="fund_committed" value={formData.fund_committed ?? ''} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner" />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium">Next Action Date</label>
-                    <input type="date" name="action_date" value={formData.action_date || ''} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border text-sm" />
+                    <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Next Action Date</label>
+                    <input type="date" name="action_date" value={formData.action_date || ''} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner cursor-pointer" />
                   </div>
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Note</label>
-              <textarea name="note" value={formData.note} onChange={handleChange} rows={3} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white sm:text-sm p-2 border" />
+              <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Note</label>
+              <textarea name="note" value={formData.note} onChange={handleChange} rows={3} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner" />
             </div>
 
             <div className="pt-4 flex justify-end space-x-3">
-              <button type="button" onClick={onClose} disabled={isPending} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
-              <button type="submit" disabled={isPending} className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+              <button type="button" onClick={onClose} disabled={isPending} className="px-5 py-2.5 border border-zen-lavender/60 bg-white/60 text-zen-charcoal hover:bg-white/80 rounded-full font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50">Cancel</button>
+              <button type="submit" disabled={isPending} className="px-5 py-2.5 bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90 rounded-full font-extrabold text-xs uppercase tracking-wider transition-all shadow-md cursor-pointer border-none disabled:opacity-50">
                 {isPending ? 'Saving...' : 'Save Deal'}
               </button>
             </div>

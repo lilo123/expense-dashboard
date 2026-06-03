@@ -117,7 +117,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
       <div className="mb-4">
         <Link 
           href="/dashboard" 
-          className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-zen-charcoal hover:opacity-80 transition-colors no-underline"
         >
           <ArrowLeft size={16} />
           Back to Dashboard
@@ -125,33 +125,33 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
       </div>
 
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Finance Deals</h1>
+        <h1 className="text-2xl font-bold text-zen-charcoal">Finance Deals</h1>
         <button 
           onClick={() => { setEditingDeal(null); setModalOpen(true); }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          className="bg-zen-charcoal hover:bg-zen-charcoal/90 text-zen-base px-5 py-2.5 rounded-full font-extrabold text-xs uppercase tracking-wider transition-all shadow-md cursor-pointer border-none"
         >
           Add Deal
         </button>
       </div>
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Claimed ({primaryCurrency})</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(claimedAmount)}</p>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col items-start shadow-sm justify-between">
+          <p className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider mb-1">Claimed ({primaryCurrency})</p>
+          <p className="text-2xl font-extrabold text-zen-charcoal/90">{formatCurrency(claimedAmount)}</p>
         </div>
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Pending ({primaryCurrency})</p>
-          <p className="text-2xl font-bold text-gray-900 dark:text-white">{formatCurrency(pendingAmount)}</p>
+        <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col items-start shadow-sm justify-between">
+          <p className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider mb-1">Pending ({primaryCurrency})</p>
+          <p className="text-2xl font-extrabold text-zen-charcoal/90">{formatCurrency(pendingAmount)}</p>
         </div>
-        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 shadow-sm">
-          <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">Total Value ({primaryCurrency})</p>
-          <p className="text-2xl font-bold text-emerald-700 dark:text-emerald-300">{formatCurrency(totalAmount)}</p>
+        <div className="bg-white/60 backdrop-blur-md border border-zen-sage/40 rounded-2xl p-4 flex flex-col items-start shadow-sm justify-between">
+          <p className="text-xs font-semibold text-zen-charcoal/70 uppercase tracking-wider mb-1">Total Value ({primaryCurrency})</p>
+          <p className="text-2xl font-extrabold text-zen-charcoal">{formatCurrency(totalAmount)}</p>
         </div>
       </div>
 
       {/* Glassmorphism Search & Filters Bar */}
-      <div className="relative z-30 bg-white/60 dark:bg-gray-800/60 backdrop-blur-md border border-zen-lavender/40 dark:border-gray-700 shadow-sm rounded-3xl p-4 mb-8 flex flex-col gap-3">
+      <div className="relative z-30 bg-white/60 backdrop-blur-md border border-zen-lavender/40 shadow-sm rounded-3xl p-4 mb-8 flex flex-col gap-3">
         <div className="flex gap-2">
           <input 
             id="search-input"
@@ -159,7 +159,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
             placeholder="Search deals..." 
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="flex-grow px-4 py-2 rounded-full border border-zen-lavender/30 dark:border-gray-600 bg-white dark:bg-gray-900 text-zen-charcoal dark:text-white text-sm outline-none focus:border-zen-sage/60 focus:ring-1 focus:ring-zen-sage/60 transition-all font-semibold h-9"
+            className="flex-grow px-4 py-2 rounded-full border border-zen-lavender/30 bg-white text-zen-charcoal text-sm outline-none focus:border-zen-sage/60 focus:ring-1 focus:ring-zen-sage/60 transition-all font-semibold h-9"
           />
         </div>
         <div className="flex flex-wrap gap-2 items-center">
@@ -178,17 +178,17 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
               type="button"
               onClick={() => setIsSortOpen(!isSortOpen)}
               style={{ minHeight: 0 }}
-              className="w-full sm:w-auto h-full px-4 py-0 rounded-full border border-zen-lavender/30 dark:border-gray-600 bg-white dark:bg-gray-900 text-zen-charcoal dark:text-white !text-sm font-semibold flex items-center justify-between gap-2 hover:bg-white/90 transition-all shadow-sm box-border h-9 min-h-0 shrink-0 cursor-pointer whitespace-nowrap"
+              className="w-full sm:w-auto h-full px-4 py-0 rounded-full border border-zen-lavender/30 bg-white text-zen-charcoal !text-sm font-semibold flex items-center justify-between gap-2 hover:bg-white/90 transition-all shadow-sm box-border h-9 min-h-0 shrink-0 cursor-pointer whitespace-nowrap"
             >
               <span className="capitalize">
                 Sort: {sortDirection === 'highest' ? 'Highest' : 'Lowest'} {getMetricLabel()}
               </span>
-              <ChevronDown size={14} className={`text-zen-charcoal/50 dark:text-gray-400 shrink-0 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown size={14} className={`text-zen-charcoal/50 shrink-0 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Absolute 2-Axis Sort Popover */}
             {isSortOpen && (
-              <div className="absolute right-0 top-10 z-50 bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl border border-zen-lavender/40 dark:border-gray-700 shadow-xl rounded-3xl p-4 flex items-stretch gap-4 text-xs text-zen-charcoal dark:text-gray-200 font-semibold min-w-[240px] animate-scale-up">
+              <div className="absolute right-0 top-10 z-50 bg-white/95 backdrop-blur-xl border border-zen-lavender/40 shadow-xl rounded-3xl p-4 flex items-stretch gap-4 text-xs text-zen-charcoal font-semibold min-w-[240px] animate-scale-up">
                 {/* Column 1: Direction */}
                 <div className="flex flex-col gap-2.5 flex-1">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -214,7 +214,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
                 </div>
 
                 {/* Divider */}
-                <div className="w-[1px] bg-zen-lavender/30 dark:bg-gray-700 self-stretch mx-1" />
+                <div className="w-[1px] bg-zen-lavender/30 self-stretch mx-1" />
 
                 {/* Column 2: Metric */}
                 <div className="flex flex-col gap-2.5 flex-1">
@@ -256,8 +256,8 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
       </div>
 
       {displayDeals.length === 0 ? (
-        <div className="text-center py-12 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-          <p className="text-gray-500 dark:text-gray-400">No deals found matching your criteria.</p>
+        <div className="text-center py-12 bg-white/40 backdrop-blur-md rounded-2xl border border-white/20 shadow-sm">
+          <p className="text-zen-charcoal/60 font-semibold">No deals found matching your criteria.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
