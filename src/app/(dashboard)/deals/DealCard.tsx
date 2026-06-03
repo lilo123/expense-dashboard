@@ -80,8 +80,8 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
       <div className="flex-1 mb-3">
         {deal?.type === 'credit_card' && (
           <div>
-            {deal.type_specific_data?.card_name && (
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">{deal.type_specific_data.card_name}</p>
+            {!!deal.type_specific_data?.card_name && (
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">{String(deal.type_specific_data.card_name)}</p>
             )}
             <div className="flex justify-between items-center mb-1 text-xs">
               <span className="text-gray-500">Spend Progress</span>

@@ -1,10 +1,10 @@
 -- supabase/migrations/20260603000001_production_optimizations.sql
 
--- 1. Create index idx_deals_type on deals(type) concurrently
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_deals_type ON public.deals(type);
+-- 1. Create index idx_deals_type on deals(type)
+CREATE INDEX IF NOT EXISTS idx_deals_type ON public.deals(type);
 
--- 2. Create index idx_deal_checklist_items_deal_id on deal_checklist_items(deal_id) concurrently
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_deal_checklist_items_deal_id ON public.deal_checklist_items(deal_id);
+-- 2. Create index idx_deal_checklist_items_deal_id on deal_checklist_items(deal_id)
+CREATE INDEX IF NOT EXISTS idx_deal_checklist_items_deal_id ON public.deal_checklist_items(deal_id);
 
 -- 3. Add updated_at column to deal_checklist_items and attach dedicated trigger function
 ALTER TABLE public.deal_checklist_items
@@ -46,7 +46,7 @@ ALTER TABLE public.deal_checklist_items VALIDATE CONSTRAINT chk_deal_checklist_i
 -- Enforce denormalization integrity composite foreign key
 ALTER TABLE public.deal_checklist_items ADD CONSTRAINT fk_deal_checklist_items_composite FOREIGN KEY (deal_id, user_id) REFERENCES public.deals(id, user_id) ON DELETE CASCADE;
 
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_deal_checklist_items_user_id ON public.deal_checklist_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_deal_checklist_items_user_id ON public.deal_checklist_items(user_id);
 
 -- Simplify RLS policy with explicit WITH CHECK clause
 DROP POLICY IF EXISTS "Users can manage their own deal checklists" ON public.deal_checklist_items;
