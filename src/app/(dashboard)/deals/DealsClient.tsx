@@ -23,7 +23,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
   const [, startTransition] = useTransition();
 
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortMetric, setSortMetric] = useState<'open_date' | 'action_date' | 'amount'>('open_date');
+  const [sortMetric, setSortMetric] = useState<'open_date' | 'action_date' | 'amount'>('action_date');
   const [sortDirection, setSortDirection] = useState<'highest' | 'lowest'>('highest');
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortPopoverRef = useRef<HTMLDivElement>(null);
@@ -105,6 +105,13 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: primaryCurrency, maximumFractionDigits: 0 }).format(val);
   };
 
+  const getSortDirectionLabel = () => {
+    if (sortMetric === 'amount') {
+      return sortDirection === 'highest' ? 'Highest' : 'Lowest';
+    }
+    return sortDirection === 'highest' ? 'Oldest' : 'Newest';
+  };
+
   const getMetricLabel = () => {
     if (sortMetric === 'open_date') return 'Open Date';
     if (sortMetric === 'action_date') return 'Action Date';
@@ -181,7 +188,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
               className="w-full sm:w-auto h-full px-4 py-0 rounded-full border border-zen-lavender/30 bg-white text-zen-charcoal !text-sm font-semibold flex items-center justify-between gap-2 hover:bg-white/90 transition-all shadow-sm box-border h-9 min-h-0 shrink-0 cursor-pointer whitespace-nowrap"
             >
               <span className="capitalize">
-                Sort: {sortDirection === 'highest' ? 'Highest' : 'Lowest'} {getMetricLabel()}
+                Sort: {getSortDirectionLabel()} {getMetricLabel()}
               </span>
               <ChevronDown size={14} className={`text-zen-charcoal/50 shrink-0 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
             </button>
