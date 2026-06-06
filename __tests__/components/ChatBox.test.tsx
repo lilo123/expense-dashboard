@@ -14,20 +14,26 @@ describe('ChatBox Component', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Default mock return value
-    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
-      isChatModalOpen: true,
-      toggleChatModal: mockToggleChatModal,
-      addExpense: mockAddExpense,
+    (useExpenseStore as unknown as jest.Mock).mockImplementation((selector) => {
+      const state = {
+        isChatModalOpen: true,
+        toggleChatModal: mockToggleChatModal,
+        addExpense: mockAddExpense,
+      };
+      return selector ? selector(state) : state;
     });
     // Mock global fetch
     global.fetch = jest.fn();
   });
 
   it('should not render when isChatModalOpen is false', () => {
-    (useExpenseStore as unknown as jest.Mock).mockReturnValue({
-      isChatModalOpen: false,
-      toggleChatModal: mockToggleChatModal,
-      addExpense: mockAddExpense,
+    (useExpenseStore as unknown as jest.Mock).mockImplementation((selector) => {
+      const state = {
+        isChatModalOpen: false,
+        toggleChatModal: mockToggleChatModal,
+        addExpense: mockAddExpense,
+      };
+      return selector ? selector(state) : state;
     });
 
     const { container } = render(<ChatBox />);

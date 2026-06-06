@@ -397,7 +397,7 @@ describe('Admin Action Security Hardening & Dynamic Mail Templates', () => {
   // 6. updateUserTierAction Local Environment Bypass Check (isLocalEnv)
   it('bypasses admin check for updateUserTierAction in local environment', async () => {
     const origEnv = process.env.NODE_ENV;
-    process.env.NODE_ENV = 'development';
+    Object.defineProperty(process.env, 'NODE_ENV', { value: 'development', writable: true });
     
     mockSupabase = {
       auth: { getUser: jest.fn().mockResolvedValue({ data: { user: { id: 'user-1', app_metadata: { role: 'user' } } } }) },
@@ -427,6 +427,6 @@ describe('Admin Action Security Hardening & Dynamic Mail Templates', () => {
     const res = await updateUserTierAction('user-2', 'premium');
     expect(res.success).toBe(true);
 
-    process.env.NODE_ENV = origEnv as any;
+    Object.defineProperty(process.env, 'NODE_ENV', { value: origEnv, writable: true });
   });
 });

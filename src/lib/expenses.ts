@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server';
 import { Expense } from '@/types/database';
+import { ExpenseInputSchema } from '@/lib/validators';
 
 export async function getHistoricalExpenses(startDateUTC?: string, endDateUTC?: string): Promise<Expense[]> {
   const supabase = await createClient();
@@ -45,18 +46,28 @@ export async function saveExpense(
 ): Promise<Expense> {
   const supabase = await createClient();
 
+  const validated = ExpenseInputSchema.parse({
+    item,
+    amount,
+    category_id,
+    date: dateUTC,
+    original_amount: originalAmount !== undefined ? originalAmount : amount,
+    original_currency: originalCurrency || 'USD',
+    currency: currency || 'USD'
+  });
+
   const { data, error } = await supabase
     .from('expenses')
     .insert([
       {
         user_id,
-        item,
-        amount,
-        category_id,
-        date: dateUTC,
-        original_amount: originalAmount !== undefined ? originalAmount : amount,
-        original_currency: originalCurrency || 'USD',
-        currency: currency || 'USD'
+        item: validated.item,
+        amount: validated.amount,
+        category_id: validated.category_id,
+        date: validated.date,
+        original_amount: validated.original_amount,
+        original_currency: validated.original_currency,
+        currency: validated.currency
       }
     ])
     .select('*, categories(name)')

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@/utils/supabase/server';
 import { saveExpense } from '@/lib/expenses';
 import { extractExpenseFromMessage, sanitizeUserInput } from '@/lib/ai';
@@ -24,19 +25,28 @@ export async function POST(request: Request) {
     const sanitizedMessage = sanitizeUserInput(message);
 
     // Fetch user's base currency and timezone from profile
-    const { data: profileData } = await supabase
+    const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('base_currency, timezone')
       .eq('id', user.id)
       .single();
 
+    if (profileError && profileError.code !== 'PGRST116') {
+      console.error('Supabase profile fetch error:', profileError);
+    }
+
     const baseCurrency = profileData?.base_currency || 'CAD';
     const userTimezone = profileData?.timezone || 'UTC';
 
-    const { data: userCategories } = await supabase
+    const { data: userCategories, error: categoriesError } = await supabase
       .from('categories')
       .select('id, name')
       .eq('user_id', user.id);
+
+    if (categoriesError) {
+      console.error('Supabase categories fetch error:', categoriesError);
+      return NextResponse.json({ error: 'Failed to fetch user categories.' }, { status: 500 });
+    }
 
     const categoriesList = userCategories || [];
     if (categoriesList.length === 0) {
@@ -70,6 +80,8 @@ export async function POST(request: Request) {
       currency
     );
     const expenseData = Array.isArray(savedRecord) ? savedRecord[0] : savedRecord;
+
+    revalidatePath('/dashboard');
 
     return NextResponse.json({
       reply: `Got it! I've added ${formatFriendlyCurrency(amount, currency)} for ${item} under ${finalCategoryName}.`,

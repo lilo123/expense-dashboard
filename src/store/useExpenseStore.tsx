@@ -349,10 +349,12 @@ export function StoreProvider({ children, initialData }: { children: React.React
 }
 
 // Export context-bound custom hook with optional selector (default to entire state)
+const defaultSelector = (state: ExpenseState) => state;
+
 export function useExpenseStore(): ExpenseState;
 export function useExpenseStore<T>(selector: (state: ExpenseState) => T): T;
 export function useExpenseStore<T>(selector?: (state: ExpenseState) => T): T | ExpenseState {
   const store = useContext(StoreContext);
   if (!store) throw new Error('useExpenseStore must be used within a StoreProvider');
-  return useStore(store, selector || ((state) => state as unknown as T));
+  return useStore(store, selector || (defaultSelector as unknown as (state: ExpenseState) => T));
 }

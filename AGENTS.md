@@ -60,6 +60,14 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. NO Reward Hacking
+
+DO NOT Simplify the task merely in order to declare victory earlier. NEVER fake or
+instrument a part of the system in order to make it easier to implement some complex requirement, unless the user
+asks for this explicitly (You can do this as part of an iterative design process, but make sure you have
+communicated this to the user, and let him know the task is not finished). Do not build a fake subsystem that mocks
+a component as a fallback for when the actual subsystem fails (e.g. a fallback system that generates synthetic data).
+
 ## IMPORTANT Python style guide
 
 **Never use `except Exception as e:` by default**

@@ -3,7 +3,9 @@ import { useState, useRef, useEffect } from 'react';
 import { useExpenseStore } from '@/store/useExpenseStore';
 
 export default function ChatBox() {
-  const { isChatModalOpen, toggleChatModal, addExpense } = useExpenseStore();
+  const isChatModalOpen = useExpenseStore(state => state.isChatModalOpen);
+  const toggleChatModal = useExpenseStore(state => state.toggleChatModal);
+  const addExpense = useExpenseStore(state => state.addExpense);
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<{role: string, content: string}[]>([
     { role: 'ai', content: 'Hi! I can help you add, delete, or summarize expenses. How can I help today?' }
@@ -36,27 +38,26 @@ export default function ChatBox() {
       const isJson = res.headers.get('content-type')?.includes('application/json');
       const data = isJson ? await res.json() : { error: await res.text() };
       
-      let aiContent = data.reply || '';
-      
-      if (res.ok && data.expense) {
-        // Immediately update the local Zustand store
-        addExpense(data.expense);
-        if (!aiContent) {
-           aiContent = `Got it! I've added $${data.expense.amount} for ${data.expense.item} under ${(data.expense.categories?.name || data.expense.category_id)}.`;
-        }
-      } else if (!res.ok) {
-        const rawErr = data.error || '';
+      if (!res.ok || data.error) {
+        const rawErr = data.error || data.reply || '';
         const hasHtml = rawErr.toLowerCase().includes('<html') || rawErr.toLowerCase().includes('<!doctype');
-        aiContent = hasHtml ? "Unexpected gateway network error. Please try again." : (rawErr || "Uh oh, the system tripped up! Don't worry, your data is safe. Let's try that again.");
+        const errorContent = hasHtml ? "Unexpected gateway network error. Please try again." : (rawErr || "Uh oh, the system tripped up! Don't worry, your data is safe. Let's try that again.");
+        setMessages(prev => [...prev, { role: 'error', content: errorContent }]);
+      } else {
+        let aiContent = data.reply || '';
+        if (data.expense) {
+          addExpense(data.expense);
+          if (!aiContent) {
+             aiContent = `Got it! I've added $${data.expense.amount} for ${data.expense.item} under ${(data.expense.categories?.name || data.expense.category_id)}.`;
+          }
+        }
+        if (!aiContent) {
+          aiContent = "Got it! Your request has been successfully recorded.";
+        }
+        setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
       }
-
-      if (!aiContent) {
-        aiContent = "Got it! Your request has been successfully recorded.";
-      }
-
-      setMessages(prev => [...prev, { role: 'ai', content: aiContent }]);
     } catch {
-      setMessages(prev => [...prev, { role: 'ai', content: "Uh oh, the system tripped up! Don't worry, your data is safe. Let's try that again." }]);
+      setMessages(prev => [...prev, { role: 'error', content: "Uh oh, the system tripped up! Don't worry, your data is safe. Let's try that again." }]);
     } finally {
       setIsLoading(false);
     }
@@ -91,7 +92,9 @@ export default function ChatBox() {
                   <div 
                     key={idx} 
                     className={`chat-message px-4 py-3 max-w-[85%] text-[15px] shadow-sm transition-all duration-200 ${
-                      msg.role === 'ai' 
+                      msg.role === 'error'
+                        ? 'bg-zen-peach/20 border border-zen-peach/50 text-zen-charcoal rounded-2xl rounded-tl-none self-start font-medium'
+                        : msg.role === 'ai' 
                         ? 'bg-white/60 border border-white/30 text-zen-charcoal rounded-2xl rounded-tl-none self-start' 
                         : 'bg-zen-charcoal text-zen-base rounded-2xl rounded-tr-none self-end'
                     }`}
