@@ -82,6 +82,7 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
           bonus_amount: Number(formData.bonus_amount) || 0,
           type: formData.type,
           type_specific_data: {} as Record<string, unknown>,
+          checklist_items: formData.checklist_items.filter(i => i.action_text && i.action_text.trim() !== ''),
         };
 
         if (formData.type === 'credit_card') {
@@ -95,7 +96,6 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
           payload.type_specific_data = {
             action_date: formData.action_date || null,
           };
-          payload.checklist_items = formData.checklist_items.filter(i => i.action_text && i.action_text.trim() !== '');
         } else if (formData.type === 'brokerage_account') {
           payload.type_specific_data = {
             fund_committed: Number(formData.fund_committed) || 0,
@@ -236,51 +236,6 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
                     <input type="date" name="action_date" value={formData.action_date || ''} onChange={handleChange} className="w-full rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2.5 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner cursor-pointer" />
                   </div>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-zen-charcoal/80 mb-2">Checklist Items (Optional)</label>
-                  {formData.checklist_items.map((item, i) => (
-                    <div key={i} className="flex items-center space-x-2 mb-2">
-                      <input 
-                        type="text" 
-                        value={item.action_text} 
-                        onChange={e => {
-                          const newItems = formData.checklist_items.map((cItem, cIdx) => cIdx === i ? { ...cItem, action_text: e.target.value } : cItem);
-                          setFormData({ ...formData, checklist_items: newItems });
-                        }}
-                        placeholder="Action"
-                        className="flex-1 rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner"
-                      />
-                      <input 
-                        type="date" 
-                        value={item.deadline || ''} 
-                        onChange={e => {
-                          const newItems = formData.checklist_items.map((cItem, cIdx) => cIdx === i ? { ...cItem, deadline: e.target.value } : cItem);
-                          setFormData({ ...formData, checklist_items: newItems });
-                        }}
-                        className="w-32 rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner cursor-pointer"
-                      />
-                      <button 
-                        type="button" 
-                        onClick={() => {
-                          const newItems = formData.checklist_items.filter((_, cIdx) => cIdx !== i);
-                          setFormData({ ...formData, checklist_items: newItems });
-                        }}
-                        className="text-red-500 hover:text-red-700 font-bold px-2 py-1 text-lg border-none bg-transparent cursor-pointer"
-                        title="Remove item"
-                      >
-                        &times;
-                      </button>
-                    </div>
-                  ))}
-                  <button 
-                    type="button"
-                    onClick={() => setFormData({ ...formData, checklist_items: [...formData.checklist_items, { action_text: '', is_done: false }]})}
-                    className="text-sm text-zen-sage hover:opacity-80 font-extrabold mt-2 cursor-pointer border-none bg-transparent"
-                  >
-                    + Add Item
-                  </button>
-                </div>
               </div>
             )}
 
@@ -299,6 +254,51 @@ export default function DealFormModal({ isOpen, onClose, editingDeal, setOptimis
                 </div>
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-semibold text-zen-charcoal/80 mb-2">Checklist Items (Optional)</label>
+              {formData.checklist_items.map((item, i) => (
+                <div key={i} className="flex items-center space-x-2 mb-2">
+                  <input 
+                    type="text" 
+                    value={item.action_text} 
+                    onChange={e => {
+                      const newItems = formData.checklist_items.map((cItem, cIdx) => cIdx === i ? { ...cItem, action_text: e.target.value } : cItem);
+                      setFormData({ ...formData, checklist_items: newItems });
+                    }}
+                    placeholder="Action"
+                    className="flex-1 rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner"
+                  />
+                  <input 
+                    type="date" 
+                    value={item.deadline || ''} 
+                    onChange={e => {
+                      const newItems = formData.checklist_items.map((cItem, cIdx) => cIdx === i ? { ...cItem, deadline: e.target.value } : cItem);
+                      setFormData({ ...formData, checklist_items: newItems });
+                    }}
+                    className="w-32 rounded-2xl border border-zen-lavender/60 bg-white text-zen-charcoal p-2 text-sm outline-none focus:border-zen-sage focus:ring-1 focus:ring-zen-sage transition-all shadow-inner cursor-pointer"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      const newItems = formData.checklist_items.filter((_, cIdx) => cIdx !== i);
+                      setFormData({ ...formData, checklist_items: newItems });
+                    }}
+                    className="text-red-500 hover:text-red-700 font-bold px-2 py-1 text-lg border-none bg-transparent cursor-pointer"
+                    title="Remove item"
+                  >
+                    &times;
+                  </button>
+                </div>
+              ))}
+              <button 
+                type="button"
+                onClick={() => setFormData({ ...formData, checklist_items: [...formData.checklist_items, { action_text: '', is_done: false }]})}
+                className="text-sm text-zen-sage hover:opacity-80 font-extrabold mt-2 cursor-pointer border-none bg-transparent"
+              >
+                + Add Item
+              </button>
+            </div>
 
             <div>
               <label className="block text-sm font-semibold text-zen-charcoal/80 mb-1">Note</label>

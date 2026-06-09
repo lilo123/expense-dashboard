@@ -81,32 +81,30 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
         </span>
       </div>
 
-      {/* 2. Type-Specific Core Content */}
-      <div className="flex-1 mb-3">
-        {deal?.type === 'credit_card' && (
-          <div>
-            {!!deal.type_specific_data?.card_name && (
-              <p className="text-sm font-semibold text-zen-charcoal mb-2">{String(deal.type_specific_data.card_name)}</p>
-            )}
-            <div className="flex justify-between items-center mb-1 text-xs">
-              <span className="text-zen-charcoal/60">Spend Progress</span>
-              <span className="font-semibold text-zen-charcoal">
-                {formatCurrency(deal.type_specific_data?.spend_progress || 0, deal.currency)} / {formatCurrency(deal.type_specific_data?.target_spend || 0, deal.currency)}
-              </span>
-            </div>
-            <div className="w-full bg-zen-lavender/20 rounded-full h-1.5 overflow-hidden">
-              <div 
-                className="bg-zen-sage h-full transition-all duration-500 ease-out" 
-                style={{ width: `${Math.min(100, deal.type_specific_data?.target_spend ? ((deal.type_specific_data.spend_progress || 0) / deal.type_specific_data.target_spend) * 100 : 0)}%` }}
-              />
-            </div>
+      {/* 2. Core Content */}
+      <div className="flex-1 flex flex-col space-y-3 mb-3">
+        {deal?.type === 'credit_card' && !!deal.type_specific_data?.card_name && (
+          <p className="text-sm font-semibold text-zen-charcoal">{String(deal.type_specific_data.card_name)}</p>
+        )}
+
+        {deal?.type === 'brokerage_account' && (
+          <p className="text-sm font-medium text-zen-charcoal">
+            Fund Committed: <span className="font-bold">{formatCurrency(deal.type_specific_data?.fund_committed || 0, deal.currency)}</span>
+          </p>
+        )}
+
+        {/* Note Block */}
+        {deal.note && (
+          <div className="bg-white/40 rounded-xl p-2.5 border border-zen-lavender/30">
+            <p className="text-xs text-zen-charcoal/80 font-medium leading-relaxed whitespace-pre-wrap">{deal.note}</p>
           </div>
         )}
 
-        {deal?.type === 'bank_account' && deal.deal_checklist_items && deal.deal_checklist_items.length > 0 && (
+        {/* Universal Checklist Items */}
+        {deal.deal_checklist_items && deal.deal_checklist_items.length > 0 && (
           <div className="space-y-1.5">
-            {deal.deal_checklist_items.map(item => (
-              <label key={item.id} className="flex items-center space-x-2 cursor-pointer group">
+            {deal.deal_checklist_items.map((item, index) => (
+              <label key={item.id || index} className="flex items-center space-x-2 cursor-pointer group">
                 <input 
                   type="checkbox" 
                   checked={item.is_done} 
@@ -121,18 +119,23 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
             ))}
           </div>
         )}
-
-        {deal?.type === 'brokerage_account' && (
-          <p className="text-sm font-medium text-zen-charcoal">
-            Fund Committed: <span className="font-bold">{formatCurrency(deal.type_specific_data?.fund_committed || 0, deal.currency)}</span>
-          </p>
-        )}
       </div>
 
-      {/* Note Block */}
-      {deal.note && (
-        <div className="bg-white/40 rounded-xl p-2.5 mb-3 border border-zen-lavender/30">
-          <p className="text-xs text-zen-charcoal/80 font-medium leading-relaxed whitespace-pre-wrap">{deal.note}</p>
+      {/* Spend Progress Block (Credit Card Only) */}
+      {deal?.type === 'credit_card' && (
+        <div className="mb-3">
+          <div className="flex justify-between items-center mb-1 text-xs">
+            <span className="text-zen-charcoal/60">Spend Progress</span>
+            <span className="font-semibold text-zen-charcoal">
+              {formatCurrency(deal.type_specific_data?.spend_progress || 0, deal.currency)} / {formatCurrency(deal.type_specific_data?.target_spend || 0, deal.currency)}
+            </span>
+          </div>
+          <div className="w-full bg-zen-lavender/20 rounded-full h-1.5 overflow-hidden">
+            <div 
+              className="bg-zen-sage h-full transition-all duration-500 ease-out" 
+              style={{ width: `${Math.min(100, deal.type_specific_data?.target_spend ? ((deal.type_specific_data.spend_progress || 0) / deal.type_specific_data.target_spend) * 100 : 0)}%` }}
+            />
+          </div>
         </div>
       )}
 

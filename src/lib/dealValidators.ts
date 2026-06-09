@@ -2,6 +2,13 @@ import { z } from 'zod';
 
 const DealStatusEnum = z.enum(['exploring', 'active', 'ready_to_claim', 'claimed', 'closed']);
 
+export const ChecklistItemSchema = z.object({
+  id: z.string().optional(),
+  action_text: z.string().min(1, 'Action text is required'),
+  deadline: z.preprocess((val) => (val === '' ? null : val), z.string().nullable().optional()),
+  is_done: z.boolean().default(false),
+});
+
 export const BaseDealSchema = z.object({
   id: z.string().optional(),
   company: z.string().min(1, 'Company is required'),
@@ -10,6 +17,7 @@ export const BaseDealSchema = z.object({
   note: z.string().nullable().optional(),
   currency: z.string().default('USD'),
   bonus_amount: z.coerce.number().default(0),
+  checklist_items: z.array(ChecklistItemSchema).optional(),
 });
 
 export const CreditCardSpecificsSchema = z.object({
@@ -28,17 +36,9 @@ export const BankAccountSpecificsSchema = z.object({
   action_date: z.preprocess((val) => (val === '' ? null : val), z.string().nullable().optional()),
 });
 
-export const ChecklistItemSchema = z.object({
-  id: z.string().optional(),
-  action_text: z.string().min(1, 'Action text is required'),
-  deadline: z.preprocess((val) => (val === '' ? null : val), z.string().nullable().optional()),
-  is_done: z.boolean().default(false),
-});
-
 export const BankAccountDealSchema = BaseDealSchema.extend({
   type: z.literal('bank_account'),
   type_specific_data: BankAccountSpecificsSchema,
-  checklist_items: z.array(ChecklistItemSchema).optional(),
 });
 
 export const BrokerageSpecificsSchema = z.object({

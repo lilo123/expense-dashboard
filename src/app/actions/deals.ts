@@ -80,7 +80,7 @@ export async function createDealAction(data: unknown) {
     throw new Error('Failed to create deal');
   }
 
-  if (parsed.type === 'bank_account' && checklist_items && checklist_items.length > 0) {
+  if (checklist_items && checklist_items.length > 0) {
     const itemsToInsert = checklist_items.map((item: any) => ({
       deal_id: insertedDeal.id,
       user_id: user.id,
@@ -138,7 +138,7 @@ export async function updateDealAction(id: string, data: unknown) {
     throw new Error('Failed to update deal');
   }
 
-  if (parsed.type === 'bank_account' && checklist_items) {
+  if (checklist_items) {
     const itemsToInsert = checklist_items.filter((i: any) => !i.id).map((item: any) => ({
       deal_id: id,
       user_id: user.id,
@@ -196,9 +196,6 @@ export async function updateDealAction(id: string, data: unknown) {
       const { error: delErr } = await supabase.from('deal_checklist_items').delete().eq('deal_id', id).eq('user_id', user.id);
       if (delErr) console.error('[updateDealAction] Cleanup Error:', delErr);
     }
-  } else if (parsed.type !== 'bank_account') {
-    const { error: delErr } = await supabase.from('deal_checklist_items').delete().eq('deal_id', id).eq('user_id', user.id);
-    if (delErr) console.error('[updateDealAction] Type Shift Cleanup Error:', delErr);
   }
 
   revalidatePath('/deals', 'layout');
