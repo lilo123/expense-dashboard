@@ -85,7 +85,7 @@ export async function createDealAction(data: unknown) {
       deal_id: insertedDeal.id,
       user_id: user.id,
       action_text: item.action_text,
-      deadline: item.deadline,
+      deadline: item.deadline ?? null,
       is_done: item.is_done,
     }));
     const { error: itemsError } = await supabase
@@ -116,6 +116,46 @@ export async function updateDealAction(id: string, data: unknown) {
   const parsed = parsedResult.data;
   const { checklist_items, ...dealData } = parsed as any;
 
+  let itemsToInsert: any[] = [];
+  let itemsToUpdate: any[] = [];
+  let updatedIds: string[] = [];
+
+  if (checklist_items) {
+    itemsToInsert = checklist_items.filter((i: any) => !i.id).map((item: any) => ({
+      deal_id: id,
+      user_id: user.id,
+      action_text: item.action_text,
+      deadline: item.deadline ?? null,
+      is_done: item.is_done,
+    }));
+    
+    const itemsToUpdateRaw = checklist_items.filter((i: any) => i.id);
+    updatedIds = itemsToUpdateRaw.map((i: any) => i.id);
+
+    if (updatedIds.length > 0) {
+      const { data: existingItems, error: verifyError } = await supabase
+        .from('deal_checklist_items')
+        .select('id')
+        .eq('deal_id', id)
+        .eq('user_id', user.id)
+        .in('id', updatedIds);
+
+      if (verifyError || !existingItems || existingItems.length !== updatedIds.length) {
+        console.error('[updateDealAction] Ownership Verify Error:', verifyError);
+        throw new Error('Unauthorized item modification');
+      }
+    }
+
+    itemsToUpdate = itemsToUpdateRaw.map((item: any) => ({
+      id: item.id,
+      deal_id: id,
+      user_id: user.id,
+      action_text: item.action_text,
+      deadline: item.deadline ?? null,
+      is_done: item.is_done,
+    }));
+  }
+
   const { data: updatedDeal, error: dealError } = await supabase
     .from('deals')
     .update({
@@ -139,48 +179,22 @@ export async function updateDealAction(id: string, data: unknown) {
   }
 
   if (checklist_items) {
-    const itemsToInsert = checklist_items.filter((i: any) => !i.id).map((item: any) => ({
-      deal_id: id,
-      user_id: user.id,
-      action_text: item.action_text,
-      deadline: item.deadline,
-      is_done: item.is_done,
-    }));
-    
-    const itemsToUpdateRaw = checklist_items.filter((i: any) => i.id);
-    const updatedIds = itemsToUpdateRaw.map((i: any) => i.id);
-
+    // 1. Perform Cleanup FIRST to avoid deleting newly inserted items
     if (updatedIds.length > 0) {
-      const { data: existingItems, error: verifyError } = await supabase
-        .from('deal_checklist_items')
-        .select('id')
-        .eq('deal_id', id)
-        .eq('user_id', user.id)
-        .in('id', updatedIds);
-
-      if (verifyError || !existingItems || existingItems.length !== updatedIds.length) {
-        console.error('[updateDealAction] Ownership Verify Error:', verifyError);
-        throw new Error('Unauthorized item modification');
+      const { error: delErr } = await supabase.from('deal_checklist_items').delete().eq('deal_id', id).eq('user_id', user.id).not('id', 'in', `(${updatedIds.join(',')})`);
+      if (delErr) {
+        console.error('[updateDealAction] Cleanup Error:', delErr);
+        throw new Error('Failed to clean up obsolete items');
+      }
+    } else {
+      const { error: delErr } = await supabase.from('deal_checklist_items').delete().eq('deal_id', id).eq('user_id', user.id);
+      if (delErr) {
+        console.error('[updateDealAction] Cleanup Error:', delErr);
+        throw new Error('Failed to clean up obsolete items');
       }
     }
 
-    const itemsToUpdate = itemsToUpdateRaw.map((item: any) => ({
-      id: item.id,
-      deal_id: id,
-      user_id: user.id,
-      action_text: item.action_text,
-      deadline: item.deadline,
-      is_done: item.is_done,
-    }));
-
-    if (itemsToInsert.length > 0) {
-      const { error } = await supabase.from('deal_checklist_items').insert(itemsToInsert);
-      if (error) {
-        console.error('[updateDealAction] Insert Items Error:', error);
-        throw new Error('Failed to insert items');
-      }
-    }
-    
+    // 2. Upsert existing items
     if (itemsToUpdate.length > 0) {
       const { error } = await supabase.from('deal_checklist_items').upsert(itemsToUpdate, { onConflict: 'id' });
       if (error) {
@@ -188,13 +202,14 @@ export async function updateDealAction(id: string, data: unknown) {
         throw new Error('Failed to update items');
       }
     }
-    
-    if (updatedIds.length > 0) {
-      const { error: delErr } = await supabase.from('deal_checklist_items').delete().eq('deal_id', id).eq('user_id', user.id).not('id', 'in', `(${updatedIds.join(',')})`);
-      if (delErr) console.error('[updateDealAction] Cleanup Error:', delErr);
-    } else {
-      const { error: delErr } = await supabase.from('deal_checklist_items').delete().eq('deal_id', id).eq('user_id', user.id);
-      if (delErr) console.error('[updateDealAction] Cleanup Error:', delErr);
+
+    // 3. Insert new items LAST
+    if (itemsToInsert.length > 0) {
+      const { error } = await supabase.from('deal_checklist_items').insert(itemsToInsert);
+      if (error) {
+        console.error('[updateDealAction] Insert Items Error:', error);
+        throw new Error('Failed to insert items');
+      }
     }
   }
 
