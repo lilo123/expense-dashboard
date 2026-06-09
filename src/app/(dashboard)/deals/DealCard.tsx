@@ -93,12 +93,6 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
           </p>
         )}
 
-        {/* Note Block */}
-        {deal.note && (
-          <div className="bg-white/40 rounded-xl p-2.5 border border-zen-lavender/30">
-            <p className="text-xs text-zen-charcoal/80 font-medium leading-relaxed whitespace-pre-wrap">{deal.note}</p>
-          </div>
-        )}
 
         {/* Universal Checklist Items */}
         {deal.deal_checklist_items && deal.deal_checklist_items.length > 0 && (
