@@ -185,9 +185,9 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
               type="button"
               onClick={() => setIsSortOpen(!isSortOpen)}
               style={{ minHeight: 0 }}
-              className="w-full sm:w-auto h-full px-4 py-0 rounded-full border border-zen-lavender/30 bg-white text-zen-charcoal !text-sm font-semibold flex items-center justify-between gap-2 hover:bg-white/90 transition-all shadow-sm box-border h-9 min-h-0 shrink-0 cursor-pointer whitespace-nowrap"
+              className="w-full sm:w-auto px-4 py-0 rounded-full border border-zen-lavender/30 bg-white text-zen-charcoal !text-sm font-semibold flex items-center justify-between gap-2 hover:bg-white/90 transition-all shadow-sm box-border h-9 min-h-0 shrink-0 cursor-pointer whitespace-nowrap"
             >
-              <span className="capitalize">
+              <span className="capitalize truncate min-w-0 text-left">
                 Sort: {getSortDirectionLabel()} {getMetricLabel()}
               </span>
               <ChevronDown size={14} className={`text-zen-charcoal/50 shrink-0 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
@@ -195,7 +195,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
 
             {/* Absolute 2-Axis Sort Popover */}
             {isSortOpen && (
-              <div className="absolute right-0 top-10 z-50 bg-white/95 backdrop-blur-xl border border-zen-lavender/40 shadow-xl rounded-3xl p-4 flex items-stretch gap-4 text-xs text-zen-charcoal font-semibold min-w-[240px] animate-scale-up">
+              <div className="absolute right-0 left-0 sm:left-auto top-10 z-50 bg-white/95 backdrop-blur-xl border border-zen-lavender/40 shadow-xl rounded-3xl p-4 flex flex-col sm:flex-row items-stretch gap-4 text-xs text-zen-charcoal font-semibold min-w-[240px] animate-scale-up">
                 {/* Column 1: Direction */}
                 <div className="flex flex-col gap-2.5 flex-1">
                   <label className="flex items-center gap-2 cursor-pointer select-none">
@@ -204,7 +204,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
                       name="dealSortDir"
                       checked={sortDirection === 'highest'}
                       onChange={() => setSortDirection('highest')}
-                      className="w-3.5 h-3.5 accent-zen-sage"
+                      className="w-3.5 h-3.5 accent-zen-sage shrink-0"
                     />
                     Highest (Oldest)
                   </label>
@@ -214,14 +214,14 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
                       name="dealSortDir"
                       checked={sortDirection === 'lowest'}
                       onChange={() => setSortDirection('lowest')}
-                      className="w-3.5 h-3.5 accent-zen-sage"
+                      className="w-3.5 h-3.5 accent-zen-sage shrink-0"
                     />
                     Lowest (Newest)
                   </label>
                 </div>
 
                 {/* Divider */}
-                <div className="w-[1px] bg-zen-lavender/30 self-stretch mx-1" />
+                <div className="h-[1px] w-full sm:w-[1px] sm:h-auto bg-zen-lavender/30 self-stretch my-1 sm:my-0 sm:mx-1" />
 
                 {/* Column 2: Metric */}
                 <div className="flex flex-col gap-2.5 flex-1">
@@ -231,7 +231,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
                       name="dealSortMetric"
                       checked={sortMetric === 'open_date'}
                       onChange={() => setSortMetric('open_date')}
-                      className="w-3.5 h-3.5 accent-zen-sage"
+                      className="w-3.5 h-3.5 accent-zen-sage shrink-0"
                     />
                     Open Date
                   </label>
@@ -241,7 +241,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
                       name="dealSortMetric"
                       checked={sortMetric === 'action_date'}
                       onChange={() => setSortMetric('action_date')}
-                      className="w-3.5 h-3.5 accent-zen-sage"
+                      className="w-3.5 h-3.5 accent-zen-sage shrink-0"
                     />
                     Action Date
                   </label>
@@ -251,7 +251,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
                       name="dealSortMetric"
                       checked={sortMetric === 'amount'}
                       onChange={() => setSortMetric('amount')}
-                      className="w-3.5 h-3.5 accent-zen-sage"
+                      className="w-3.5 h-3.5 accent-zen-sage shrink-0"
                     />
                     Amount
                   </label>

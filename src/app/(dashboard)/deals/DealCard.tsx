@@ -44,6 +44,17 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
     }
   };
 
+  const getStatusDotColor = (status: string) => {
+    switch (status) {
+      case 'exploring': return 'bg-indigo-500';
+      case 'active': return 'bg-amber-500';
+      case 'ready_to_claim': return 'bg-blue-500';
+      case 'claimed': return 'bg-emerald-500';
+      case 'closed': return 'bg-zinc-400';
+      default: return 'bg-indigo-500';
+    }
+  };
+
   const formatCurrency = (val: number | null | undefined, currency: string | null = 'USD') => {
     const validCurrency = currency || 'USD';
     const validVal = Number(val || 0);
@@ -51,7 +62,7 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
   };
 
   return (
-    <div className="bg-white/40 backdrop-blur-md hover:bg-white/60 rounded-2xl shadow-sm border border-white/20 flex flex-col transition-all hover:shadow-md p-4">
+    <div className="bg-white/40 backdrop-blur-md hover:bg-white/60 rounded-2xl shadow-sm border border-white/20 flex flex-col transition-all hover:shadow-md p-4 h-full">
       {/* 1. Header Row (Company Name, Status Dot & Action Buttons) */}
       <div className="flex justify-between items-start mb-3">
         <div className="min-w-0 flex-1 pr-3">
@@ -61,7 +72,7 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
           </p>
         </div>
         <div className="flex items-center space-x-2.5 shrink-0 pt-0.5">
-          <span className={`w-2.5 h-2.5 rounded-full ${getStatusColor(deal.status).split(' ')[0]}`} title={deal.status}></span>
+          <span className={`w-2.5 h-2.5 rounded-full ${getStatusDotColor(deal.status)}`} title={deal.status}></span>
           <div className="flex space-x-1 border-l pl-2.5 border-zen-lavender/40">
             <button onClick={onEdit} className="text-zen-charcoal/40 hover:text-zen-charcoal cursor-pointer border-none bg-transparent p-1" title="Edit Deal">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
@@ -98,13 +109,13 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
         {deal.deal_checklist_items && deal.deal_checklist_items.length > 0 && (
           <div className="space-y-1.5">
             {deal.deal_checklist_items.map((item, index) => (
-              <label key={item.id || index} className="flex items-center space-x-2 cursor-pointer group">
+              <label key={item.id || index} className="flex items-center space-x-2 cursor-pointer group min-w-0">
                 <input 
                   type="checkbox" 
                   checked={item.is_done} 
                   disabled={isPending}
                   onChange={() => handleToggleChecklist(item)}
-                  className="w-3.5 h-3.5 border-zen-lavender/40 rounded text-zen-sage focus:ring-zen-sage cursor-pointer disabled:opacity-50 accent-zen-sage"
+                  className="w-3.5 h-3.5 border-zen-lavender/40 rounded text-zen-sage focus:ring-zen-sage cursor-pointer disabled:opacity-50 accent-zen-sage shrink-0"
                 />
                 <span className={`text-xs truncate flex-1 ${item.is_done ? 'line-through text-zen-charcoal/40 opacity-60' : 'text-zen-charcoal font-semibold transition-colors'}`}>
                   {item.action_text} {item.deadline && <span className="text-zen-charcoal/50 font-semibold ml-1">({item.deadline})</span>}
@@ -118,7 +129,7 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
       {/* Spend Progress Block (Credit Card Only) */}
       {deal?.type === 'credit_card' && (
         <div className="mb-3">
-          <div className="flex justify-between items-center mb-1 text-xs">
+          <div className="flex justify-between items-center mb-1 text-xs gap-2 flex-wrap">
             <span className="text-zen-charcoal/60">Spend Progress</span>
             <span className="font-semibold text-zen-charcoal">
               {formatCurrency(deal.type_specific_data?.spend_progress || 0, deal.currency)} / {formatCurrency(deal.type_specific_data?.target_spend || 0, deal.currency)}
@@ -134,7 +145,7 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
       )}
 
       {/* 3. Metadata Strip */}
-      <div className="flex justify-between items-center text-[11px] text-zen-charcoal/60 bg-white/30 p-3 -mx-4 -mb-4 mt-auto rounded-b-2xl border-t border-white/20">
+      <div className="flex justify-between items-center text-[11px] text-zen-charcoal/60 bg-white/30 p-3 -mx-4 -mb-4 mt-auto rounded-b-2xl border-t border-white/20 gap-2 whitespace-nowrap">
         <span>Open: <strong className="font-bold text-zen-charcoal">{deal.open_date || '—'}</strong></span>
         <span>Action: <strong className="font-bold text-emerald-800">{deal.type_specific_data?.action_date || '—'}</strong></span>
       </div>
