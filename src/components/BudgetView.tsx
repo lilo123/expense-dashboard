@@ -2,7 +2,7 @@
 import { useMemo, useState, useEffect, useRef, memo } from 'react';
 import { useIsMounted } from '@/lib/hooks';
 import { useExpenseStore } from '@/store/useExpenseStore';
-import { convertAmount, formatNoDecimalCurrency } from '@/lib/utils';
+import { convertAmount, formatNoDecimalCurrency, formatFriendlyDate, formatFriendlyCurrency } from '@/lib/utils';
 import { Tag, ListFilter, ChevronDown } from 'lucide-react';
 import AdjustMasterBudgetModal from './AdjustMasterBudgetModal';
 
@@ -13,6 +13,7 @@ function BudgetView() {
   const displayCurrency = useExpenseStore(state => state.displayCurrency);
   const baseCurrency = useExpenseStore(state => state.baseCurrency);
   const exchangeRates = useExpenseStore(state => state.exchangeRates);
+  const toggleEditModal = useExpenseStore(state => state.toggleEditModal);
 
   const isMounted = useIsMounted();
   const [isAdjustOpen, setIsAdjustOpen] = useState(false);
@@ -25,6 +26,20 @@ function BudgetView() {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  const toggleCategoryAccordion = (catId: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(catId)) {
+        next.delete(catId);
+      } else {
+        next.add(catId);
+      }
+      return next;
+    });
+  };
 
   // Dismiss sort popover panel when clicking outside
   useEffect(() => {
@@ -247,7 +262,7 @@ function BudgetView() {
                       onChange={() => setSortMetric('spend')}
                       className="w-3.5 h-3.5 accent-zen-sage"
                     />
-                    Spend
+                    Balance
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
@@ -277,17 +292,28 @@ function BudgetView() {
           const actualPercentage = limit > 0 ? Math.round((spent / limit) * 100) : (spent > 0 ? 100 : 0);
           const barWidth = Math.min(100, actualPercentage);
 
+          const isOpen = expandedCategories.has(cat.id);
+          const catExpenses = selectedMonthExpenses.filter(exp => exp.category_id === cat.id);
+
           return (
             <div key={cat.id} className="bg-white/60 backdrop-blur-xl border border-white/30 p-5 rounded-3xl flex flex-col gap-3 shadow-sm">
               
-              <div className="flex justify-between items-center">
+              <button 
+                type="button"
+                onClick={() => toggleCategoryAccordion(cat.id)}
+                aria-expanded={isOpen}
+                aria-controls={`category-transactions-${cat.id}`}
+                aria-label={`Toggle transaction details for ${cat.name}`}
+                className="w-full flex justify-between items-center cursor-pointer hover:opacity-80 transition-all select-none bg-transparent border-none p-0 text-left font-inherit"
+              >
                 <span className="font-bold text-base text-zen-charcoal flex items-center gap-2">
+                  <ChevronDown size={16} className={`text-zen-charcoal/50 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
                   {cat.icon && <Tag size={16} className="text-zen-charcoal/60" />}
                   {cat.name}
                   <span className="text-xs font-normal text-zen-charcoal/60">({actualPercentage}%)</span>
                 </span>
                 
-                <div className="flex items-center gap-2">
+                <span className="flex items-center gap-2">
                   <span className="text-xs font-bold text-zen-charcoal/70">
                     {displayLimit === 0 ? (
                       `Spent ${formatNoDecimalCurrency(displaySpent, displayCurrency)} / No Allocation`
@@ -295,8 +321,8 @@ function BudgetView() {
                       `Spent ${formatNoDecimalCurrency(displaySpent, displayCurrency)} of ${formatNoDecimalCurrency(displayLimit, displayCurrency)}`
                     )}
                   </span>
-                </div>
-              </div>
+                </span>
+              </button>
 
               {/* Fully Accessible Capacity Bar */}
               <div 
@@ -323,6 +349,41 @@ function BudgetView() {
                   )}
                 </span>
               </div>
+
+              {/* Expanded Category Transaction Details List */}
+              {isOpen && (
+                <div id={`category-transactions-${cat.id}`} className="mt-3 flex flex-col gap-2.5 animate-fade-in w-full">
+                  {catExpenses.length > 0 ? (
+                    catExpenses.map(exp => {
+                      const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+                      const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+                      const convertedAmount = convertAmount(amtOriginal, curOriginal, displayCurrency, exchangeRates);
+                      const formattedAmount = formatFriendlyCurrency(convertedAmount, displayCurrency);
+
+                      return (
+                        <button
+                          type="button"
+                          key={exp.id}
+                          onClick={() => toggleEditModal(exp.id)}
+                          aria-haspopup="dialog"
+                          aria-label={`Edit expense: ${exp.item} on ${formatFriendlyDate(exp.date)}, amount ${formattedAmount}`}
+                          className="w-full flex justify-between items-center text-xs font-semibold bg-white/80 backdrop-blur-md border border-zen-lavender/30 shadow-sm hover:shadow-md hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zen-sage transition-all duration-200 p-3 rounded-2xl cursor-pointer text-left font-inherit"
+                        >
+                          <span className="flex flex-col gap-0.5 text-left min-w-0 flex-1 pr-2">
+                            <span className="text-xs font-bold text-zen-charcoal truncate">{exp.item}</span>
+                            <span className="text-[10px] font-medium text-zen-charcoal/60">{formatFriendlyDate(exp.date)}</span>
+                          </span>
+                          <span className="text-xs font-extrabold text-zen-charcoal shrink-0 pl-2">
+                            {formattedAmount}
+                          </span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <span className="text-xs text-zen-charcoal/50 text-left italic">No expenses logged in this category.</span>
+                  )}
+                </div>
+              )}
 
             </div>
           );

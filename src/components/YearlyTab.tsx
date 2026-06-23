@@ -46,6 +46,7 @@ function YearlyTab() {
   const exchangeRates = useExpenseStore(state => state.exchangeRates);
   const budgets = useExpenseStore(state => state.budgets);
   const categories = useExpenseStore(state => state.categories);
+  const toggleEditModal = useExpenseStore(state => state.toggleEditModal);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const detailsRef = useRef<HTMLDivElement>(null);
   const isMounted = useIsMounted();
@@ -530,26 +531,33 @@ function YearlyTab() {
 
                       {/* Expanded Category Transaction Details List */}
                       {isOpen && (
-                        <div className="mt-2 pl-5 border-l border-zen-lavender/30 flex flex-col gap-2.5 animate-fade-in">
+                        <div className="mt-3 flex flex-col gap-2.5 animate-fade-in w-full">
                           {catExpenses.length > 0 ? (
-                            catExpenses.map(exp => (
-                              <div key={exp.id} className="flex justify-between items-center text-xs font-semibold py-1 border-b border-zen-lavender/10 last:border-none">
-                                <div className="flex flex-col gap-0.5 text-left">
-                                  <span className="text-zen-charcoal">{exp.item}</span>
-                                  <span className="text-[10px] text-zen-charcoal/60">{formatFriendlyDate(exp.date)}</span>
-                                </div>
-                                <span className="text-zen-charcoal font-bold">
-                                  {formatFriendlyCurrency(
-                                    (() => {
-                                      const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
-                                      const curOriginal = exp.original_currency || exp.currency || baseCurrency;
-                                      return convertAmount(amtOriginal, curOriginal, displayCurrency, exchangeRates);
-                                    })(),
-                                    displayCurrency
-                                  )}
-                                </span>
-                              </div>
-                            ))
+                            catExpenses.map(exp => {
+                              const amtOriginal = exp.original_amount !== null && exp.original_amount !== undefined ? Number(exp.original_amount) : (Number(exp.amount) || 0);
+                              const curOriginal = exp.original_currency || exp.currency || baseCurrency;
+                              const convertedAmount = convertAmount(amtOriginal, curOriginal, displayCurrency, exchangeRates);
+                              const formattedAmount = formatFriendlyCurrency(convertedAmount, displayCurrency);
+
+                              return (
+                                <button
+                                  type="button"
+                                  key={exp.id}
+                                  onClick={() => toggleEditModal(exp.id)}
+                                  aria-haspopup="dialog"
+                                  aria-label={`Edit expense: ${exp.item} on ${formatFriendlyDate(exp.date)}, amount ${formattedAmount}`}
+                                  className="w-full flex justify-between items-center text-xs font-semibold bg-white/80 backdrop-blur-md border border-zen-lavender/30 shadow-sm hover:shadow-md hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zen-sage transition-all duration-200 p-3 rounded-2xl cursor-pointer text-left font-inherit"
+                                >
+                                  <span className="flex flex-col gap-0.5 text-left min-w-0 flex-1 pr-2">
+                                    <span className="text-xs font-bold text-zen-charcoal truncate">{exp.item}</span>
+                                    <span className="text-[10px] font-medium text-zen-charcoal/60">{formatFriendlyDate(exp.date)}</span>
+                                  </span>
+                                  <span className="text-xs font-extrabold text-zen-charcoal shrink-0 pl-2">
+                                    {formattedAmount}
+                                  </span>
+                                </button>
+                              );
+                            })
                           ) : (
                             <span className="text-xs text-zen-charcoal/50 text-left italic">No expenses logged in this category.</span>
                           )}
