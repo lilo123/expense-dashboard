@@ -1,6 +1,5 @@
 import React, { Suspense } from 'react';
 import { CalculatorParams } from './CalculatorParams';
-import { NuqsAdapter } from 'nuqs/adapters/next/app';
 
 export const metadata = {
   title: 'Retirement Calculator | FI Calc Simulator',
@@ -20,9 +19,7 @@ export default function CalculatorPage() {
       </header>
 
       <Suspense fallback={<div className="p-12 text-center text-gray-500 animate-pulse">Loading Calculator...</div>}>
-        <NuqsAdapter>
-          <CalculatorParams />
-        </NuqsAdapter>
+        <CalculatorParams />
       </Suspense>
 
       <footer className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16 pt-8 border-t border-gray-200 text-center text-xs text-gray-500">

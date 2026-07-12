@@ -120,6 +120,7 @@ export function CalculatorParams() {
 
   useEffect(() => {
     const sub = form.watch((value, { name }) => {
+      if (!name) return;
       const parsed = simulationConfigSchema.safeParse(value);
       if (parsed.success) {
         if (name === 'withdrawalStrategy') {
