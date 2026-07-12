@@ -2,48 +2,67 @@ import { Client } from 'pg';
 import fs from 'fs';
 import path from 'path';
 
-const connectionString = 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
-const client = new Client({ connectionString });
+const connectionString = 'postgresql://postgres:postgres@127.0.0.1:25432/postgres';
 
-const MIGRATION_FILES = [
-  'supabase/migrations/20260510000000_init.sql',
-  'supabase/migrations/20260510140000_phase_1_65.sql',
-  'supabase/migrations/20260510150000_phase_1_65_extensions.sql',
-  'supabase/migrations/20260510170000_phase_1_7.sql',
-  'supabase/migrations/20260511000000_phase_1_8_recurring.sql',
-  'supabase/migrations/20260511140000_phase_1_8_refinement.sql',
-  'supabase/migrations/20260512000000_decouple_recurring.sql',
-  'supabase/migrations/20260512010000_profile_backfill.sql',
-  'supabase/migrations/20260513000000_siri_tokens.sql',
-  'supabase/migrations/20260513010000_restore_refined_recurring.sql',
-  'supabase/migrations/20260516221900_enable_realtime.sql',
-  'supabase/migrations/20260516232346_add_budgets_category_idx.sql',
-  'supabase/migrations/20260518000000_mvp_v2_foundation.sql',
-  'supabase/migrations/20260518000001_save_bulk_budgets_rpc.sql',
-  'supabase/migrations/20260518000002_fix_recurring_insert.sql',
-  'supabase/migrations/20260521000000_invite_workflow.sql',
-  'supabase/migrations/20260522000000_architectural_fixes.sql',
-  'supabase/migrations/20260523000000_exchange_rates_rls.sql'
-];
+// DDL migrations are handled by Supabase CLI
 
 async function initDb() {
   console.log('\n=== [DB INITIALIZER] Connecting to local Postgres ===');
-  try {
-    await client.connect();
-    console.log('Connected successfully to local Postgres at port 54322.');
-
-    for (const migrationFile of MIGRATION_FILES) {
-      const ddlPath = path.join(process.cwd(), migrationFile);
-      if (!fs.existsSync(ddlPath)) {
-        console.error(`Migration file not found at: ${ddlPath}`);
-        process.exit(1);
+  let connected = false;
+  let retries = 30;
+  let client: Client | null = null;
+  while (retries > 0 && !connected) {
+    const c = new Client({ connectionString });
+    try {
+      await c.connect();
+      const { rows } = await c.query("SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'expenses'");
+      if (rows.length > 0) {
+        client = c;
+        connected = true;
+        console.log('Connected successfully to local Postgres at port 25432 and verified expenses table exists.');
+      } else {
+        console.log(`Connected to Postgres but expenses table not ready yet... (${retries} retries left)`);
+        await c.end().catch(() => {});
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        retries--;
       }
-      const ddl = fs.readFileSync(ddlPath, 'utf-8');
-
-      console.log(`Executing DDL migration: ${migrationFile}...`);
-      await client.query(ddl);
-      console.log(`Applied ${migrationFile} successfully.`);
+    } catch (e: any) {
+      console.log(`Waiting for Postgres to be ready... (${retries} retries left)`);
+      await c.end().catch(() => {});
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      retries--;
     }
+  }
+  if (!connected || !client) {
+    console.error('Failed to connect to Postgres after 30 retries.');
+    process.exit(1);
+  }
+
+  try {
+
+    // Grant permissions to Supabase roles
+    console.log('Granting permissions to anon, authenticated, and service_role...');
+    await client.query(`
+      GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+      GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
+      GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres, anon, authenticated, service_role;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO postgres, anon, authenticated, service_role;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO postgres, anon, authenticated, service_role;
+      ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO postgres, anon, authenticated, service_role;
+      
+      ALTER TABLE public.expenses DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.categories DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.profiles DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.siri_tokens DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.budgets DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.recurring_expenses DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.exchange_rates DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.deals DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.deal_checklist_items DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.api_rate_limits DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.email_templates DISABLE ROW LEVEL SECURITY;
+      ALTER TABLE public.invite_requests DISABLE ROW LEVEL SECURITY;
+    `);
 
     // Force PostgREST to reload schema cache
     console.log('Forcing PostgREST to reload schema cache...');
@@ -70,7 +89,9 @@ async function initDb() {
     console.error('Failed to initialize database:', err.message || err);
     process.exit(1);
   } finally {
-    await client.end();
+    await client?.end();
+    console.log('Postgres connection closed. Waiting 10s for PostgREST schema cache reload to complete...');
+    await new Promise(resolve => setTimeout(resolve, 10000));
   }
 }
 

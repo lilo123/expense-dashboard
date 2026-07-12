@@ -1,0 +1,2 @@
+# Task: Worker M5.1 Tier 1 E2E Test Verification & Fix (Iteration 9, Instance 2)
+Implement restoring --ignore-health-check in npx supabase start, killing lingering Supabase CLI daemons (pkill -f supabase / fuser -k 54321/tcp 54322/tcp), and replacing execSync('npx playwright test ...') with asynchronous child_process.spawn in e2e/run_e2e.ts to preserve event loop liveness for the Next.js keep-alive respawn mechanism, execute process cleanup strategy, and verify Tier 1 E2E tests pass successfully.

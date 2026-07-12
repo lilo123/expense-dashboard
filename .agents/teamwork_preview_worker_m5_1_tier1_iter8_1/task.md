@@ -1,0 +1,2 @@
+# Task: Worker M5.1 Tier 1 E2E Test Verification & Fix (Iteration 8)
+Implement clean JavaScript for loop in setup() in e2e/run_e2e.ts (clean npx supabase start without --ignore-health-check) to eliminate Supabase container restart loops, Docker daemon prune race conditions, and PostgREST schema cache race conditions (permission denied for table categories), execute process cleanup strategy, and verify Tier 1 E2E tests pass successfully.

@@ -6,7 +6,7 @@ test.describe('Phase 1.8: Recurring Expenses Dashboard & Automation E2E', () => 
 
   test.beforeEach(async ({ page }) => {
     // Authenticate and login
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');

@@ -1,0 +1,8 @@
+--- a/src/components/QuickCheckWidget.tsx
++++ b/src/components/QuickCheckWidget.tsx
+@@ -183,4 +183,4 @@ export default function QuickCheckWidget() {
+       }
+     }, 300);
+     return () => clearTimeout(timer);
+-  }, [currentAge, retirementAge, currentSavings, monthlyContribution, taxJurisdiction]);
++  }, []);

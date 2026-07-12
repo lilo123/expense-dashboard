@@ -6,7 +6,7 @@ test.describe('Phase 1.7: Settings UX & Security Refinements E2E', () => {
 
   test.beforeEach(async ({ page }) => {
     // 1. Authenticate and log in before each test
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');

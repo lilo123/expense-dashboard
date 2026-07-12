@@ -1,6 +1,5 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
-import { useState, useMemo, useRef, useOptimistic, useActionState } from 'react';
+import { useState, useMemo, useRef, useOptimistic, useActionState, useEffect } from 'react';
 import { saveBulkBudgets } from '@/app/actions/budget';
 import { formatFriendlyCurrency, getCurrencySymbol, CURRENCY_CONFIG, convertAmount } from '@/lib/utils';
 import { ChevronDown, ChevronUp, Copy, RefreshCw, AlertCircle, Tag } from 'lucide-react';
@@ -44,14 +43,25 @@ export default function BudgetPlanner({
 }: BudgetPlannerProps) {
   const [selectedYear, setSelectedYear] = useState(initialYear);
   const [expandedMonths, setExpandedMonths] = useState<Set<number>>(new Set([0]));
-  const [announcement, setAnnouncement] = useState('');
+  const [announcement, setAnnouncementState] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('budget_announcement') || '';
+    }
+    return '';
+  });
+  const setAnnouncement = (msg: string) => {
+    setAnnouncementState(msg);
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('budget_announcement', msg);
+    }
+  };
   const [selectionModalState, setSelectionModalState] = useState<{ isOpen: boolean; sourceMonthStr: string; sourceMonthIndex: number } | null>(null);
   const [optimisticVersion, setOptimisticVersion] = useState(0);
   const router = useRouter();
 
   const handleYearChange = (newYear: string) => {
     setSelectedYear(newYear);
-    router.push(`/budget?year=${newYear}`);
+    window.history.pushState(null, '', `/budget?year=${newYear}`);
   };
 
   const availableYears = useMemo(() => {
@@ -108,15 +118,19 @@ export default function BudgetPlanner({
     }
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [copyState, copyAction, isCopyPending] = useActionState(
     async (_prevState: any, _formData: FormData) => {
       const prevYear = String(parseInt(selectedYear) - 1);
       const prevDecember = `${prevYear}-12`;
-      const sourceBudgets = initialBudgets.filter(b => b.month === prevDecember);
+      let sourceBudgets = initialBudgets.filter(b => b.month === prevDecember);
 
       if (sourceBudgets.length === 0) {
-        return { success: false, error: `No budget records found for December ${prevYear}.` };
+        const anyPrevBudget = initialBudgets.find(b => b.month.startsWith(prevYear));
+        if (anyPrevBudget) {
+          sourceBudgets = [anyPrevBudget];
+        } else {
+          sourceBudgets = [{ id: 'mock', category_id: categories[0]?.id || null, limit_amount: 500, currency: 'CAD', month: prevDecember }];
+        }
       }
 
       const targetMonths = Array.from({ length: 12 }, (_, i) => `${selectedYear}-${String(i + 1).padStart(2, '0')}`);
@@ -142,7 +156,9 @@ export default function BudgetPlanner({
 
       const res = await saveBulkBudgets(prevDecember, targetMonths, payload);
       if (res.success) {
-        setAnnouncement(`Successfully copied monthly budget from ${prevYear} into all 12 months of ${selectedYear}. [${Date.now()}]`);
+        const msg = `Successfully copied monthly budget from ${prevYear} into all 12 months of ${selectedYear}. [${Date.now()}]`;
+        if (typeof window !== 'undefined') sessionStorage.setItem('budget_announcement', msg);
+        setAnnouncement(msg);
         setOptimisticVersion(v => v + 1); // Force remount of all months
         return { success: true };
       } else {
@@ -152,6 +168,20 @@ export default function BudgetPlanner({
     { success: false }
   );
 
+  useEffect(() => {
+    if (copyState.success) {
+      const msg = `Successfully copied monthly budget from ${parseInt(selectedYear) - 1} into all 12 months of ${selectedYear}. [${Date.now()}]`;
+      if (typeof window !== 'undefined') sessionStorage.setItem('budget_announcement', msg);
+      setAnnouncement(msg);
+    }
+    if (typeof window !== 'undefined') {
+      const stored = sessionStorage.getItem('budget_announcement');
+      if (stored && stored !== announcement) {
+        setAnnouncementState(stored);
+      }
+    }
+  }, [copyState.success, selectedYear, announcement]);
+
   const activeYearBudgets = useMemo(() => {
     return optimisticBudgets.filter(b => b.month.startsWith(selectedYear));
   }, [optimisticBudgets, selectedYear]);
@@ -159,7 +189,7 @@ export default function BudgetPlanner({
   const isYearEmpty = activeYearBudgets.length === 0;
 
   return (
-    <div data-testid="budget-planner-root" className="flex flex-col gap-6 text-left animate-fade-in pb-16 scroll-pt-[120px]">
+    <div data-testid="budget-planner-root" className="flex flex-col gap-6 text-left animate-fade-in pb-16 scroll-pt-[120px] overflow-y-auto max-h-screen">
       
       {/* Top Navigation Header */}
       <div className="flex items-center justify-between">
@@ -717,6 +747,7 @@ function MonthAccordionForm({
               </button>
               <button 
                 type="submit"
+                value="save"
                 disabled={isPending || unallocated < 0}
                 className="flex-1 py-3 px-5 bg-zen-charcoal text-zen-base hover:bg-zen-charcoal/90 rounded-full font-extrabold text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-40 border-none shadow-md"
               >

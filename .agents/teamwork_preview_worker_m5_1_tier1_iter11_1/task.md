@@ -1,0 +1,2 @@
+# Task: Worker M5.1 Tier 1 E2E Test Verification & Fix (Iteration 11)
+Implement the exact code replacements in next.config.js (outputFileTracing: false) and e2e/run_e2e.ts (sanitizing NODE_OPTIONS: '', killing lingering run_e2e processes via pgrep/kill, and removing suppress_crashes.js) recommended by Explorer 2 in its handoff report. Execute prerequisite process cleanup, verify TypeScript compilation (npx tsc --noEmit), verify unit tests (npm run test __tests__/planner), and run the full E2E test runner command to verify all 55 tests pass genuinely with exit code 0.

@@ -4,12 +4,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 let supabaseInstance: SupabaseClient | null = null;
 
 function getSupabase() {
-  if (!supabaseInstance) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://dummy.supabase.co';
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'dummy';
-    supabaseInstance = createClient(supabaseUrl, supabaseServiceKey);
-  }
-  return supabaseInstance;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz';
+  return createClient(supabaseUrl, supabaseServiceKey);
 }
 
 export async function checkRateLimit(key: string, limit: number, windowMs: number): Promise<{ success: boolean; remaining: number; reset: Date }> {

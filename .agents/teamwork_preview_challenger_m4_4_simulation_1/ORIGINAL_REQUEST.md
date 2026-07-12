@@ -1,0 +1,2 @@
+## 2026-06-24T01:48:23Z
+Your identity is teamwork_preview_challenger. Your working directory is /usr/local/google/home/duynguyenn/expense-dashboard/.agents/teamwork_preview_challenger_m4_4_simulation_1. Load the Jetski skill at /google/src/files/head/depot/google3/research/omega/teamwork/playbooks/test_coverage_audit/SKILL.md. Please read task_description.md in your working directory, execute your empirical verification and stress testing, write handoff.md in your working directory, and report back via send_message.

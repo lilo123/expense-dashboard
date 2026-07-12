@@ -5,10 +5,21 @@ test.describe('Yearly Tab Budget-Only & Stacked Chart Breakdown E2E', () => {
   const TEST_PASSWORD = 'password123';
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
+    
+    try {
+      await page.waitForURL(/\/dashboard/, { timeout: 15000 });
+    } catch (e) {
+      // If settings.spec.ts modified the email to katherine-new@example.com, fallback to it
+      await page.fill('input[type="email"]', 'katherine-new@example.com');
+      await page.fill('input[type="password"]', TEST_PASSWORD);
+      await page.click('button[type="submit"]');
+      await page.waitForURL(/\/dashboard/, { timeout: 15000 });
+    }
+
     await expect(page).toHaveURL(/\/dashboard/);
     await page.waitForSelector('#hydrated-marker', { state: 'attached' });
   });
@@ -65,6 +76,7 @@ test.describe('Yearly Tab Budget-Only & Stacked Chart Breakdown E2E', () => {
   test('should display category-level budget performance in details tray when clicking a chart bar', async ({ page }) => {
     await page.click('button:has-text("Yearly")');
     const yearlyTab = page.locator('#tab-yearly').first();
+    await expect(yearlyTab).toBeVisible();
 
     await page.evaluate(() => {
       const btn = document.createElement('button');

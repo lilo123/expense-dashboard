@@ -1,0 +1,2 @@
+# Task: Worker M5.1 Tier 1 E2E Test Verification & Fix (Iteration 6)
+Implement bulletproof Supabase setup sequence in e2e/run_e2e.ts (sleep 10 decoupling and retry loop), create missing planner modules (src/lib/planner/types.ts, taxEngine.ts, pensionEngine.ts, spendingEngine.ts, drawdownEngine.ts, simulator.ts), create Supabase migration (20260624000000_retirement_planner.sql), execute process cleanup strategy, and verify Tier 1 E2E tests pass successfully.

@@ -1,0 +1,2 @@
+# Task: Explorer 2 M5.1 Tier 1 E2E Test Failure Analysis (Iteration 15)
+Analyze the failures and recommend a concrete fix strategy that addresses the Supabase startup and restart recovery flaws (npx supabase start falsely reporting supabase start is already running while leaving API gateway containers stopped, and docker network create conflicting with Supabase CLI) identified by the Forensic Auditor and Reviewer 1 in Iteration 14. Do NOT implement the fix yourself.

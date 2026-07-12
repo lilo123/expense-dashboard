@@ -26,8 +26,8 @@ export default async function Page() {
 
       // Fetch Expenses, Categories, Profile, Exchange Rates, Budgets concurrently
       const [expensesRes, categoriesRes, profileRes, ratesRes, budgetsRes] = await Promise.all([
-        supabase.from('expenses').select('*, categories(name)').order('date', { ascending: false }),
-        supabase.from('categories').select('id, name, icon'),
+        supabase.from('expenses').select('*, categories(name)').eq('user_id', authData.user.id).order('date', { ascending: false }),
+        supabase.from('categories').select('id, name, icon').eq('user_id', authData.user.id),
         supabase.from('profiles').select('*').eq('id', authData.user.id).single(),
         supabase.from('exchange_rates').select('*').eq('base_currency', 'CAD').order('updated_at', { ascending: false }).limit(1).single(),
         supabase.from('budgets').select('*').eq('user_id', authData.user.id)

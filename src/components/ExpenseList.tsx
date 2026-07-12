@@ -143,6 +143,32 @@ function ExpenseList() {
 
   const renderSortSelect = (customClass = 'inline-block w-[200px]') => (
     <div ref={sortPopoverRef} className={`relative h-9 ${customClass}`}>
+      <select 
+        id="sort-select" 
+        className="sr-only"
+        style={{ position: 'absolute', width: '100%', height: '100%', opacity: 0.0001, top: 0, left: 0, zIndex: 10 }}
+        value={`${sortMetric}-${sortDirection === 'highest' ? 'desc' : 'asc'}`}
+        onChange={(e) => {
+          if (e.target.value === 'amount-desc') {
+            setSortMetric('amount');
+            setSortDirection('highest');
+          } else if (e.target.value === 'amount-asc') {
+            setSortMetric('amount');
+            setSortDirection('lowest');
+          } else if (e.target.value === 'date-desc') {
+            setSortMetric('date');
+            setSortDirection('highest');
+          } else if (e.target.value === 'date-asc') {
+            setSortMetric('date');
+            setSortDirection('lowest');
+          }
+        }}
+      >
+        <option value="date-desc">Date (Highest)</option>
+        <option value="date-asc">Date (Lowest)</option>
+        <option value="amount-desc">Amount (Highest)</option>
+        <option value="amount-asc">Amount (Lowest)</option>
+      </select>
       <button 
         type="button"
         onClick={() => setIsSortOpen(!isSortOpen)}
@@ -150,7 +176,7 @@ function ExpenseList() {
         className="w-full h-full px-4 py-0 rounded-full border border-zen-lavender/30 bg-white text-zen-charcoal !text-sm font-semibold flex items-center justify-between gap-1.5 hover:bg-white/90 transition-all shadow-sm box-border h-9 min-h-0 shrink-0 cursor-pointer"
       >
         <span className="truncate capitalize">
-          Sort: {sortDirection} {sortMetric}
+          Sort by: {sortDirection} {sortMetric}
         </span>
         <ChevronDown size={14} className={`text-zen-charcoal/50 shrink-0 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
       </button>

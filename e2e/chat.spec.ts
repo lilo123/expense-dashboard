@@ -18,7 +18,7 @@ test.describe('AI Orb & Mindful Chat Flows', () => {
 
   test('should open AI assistant and log expense via mindful chat', async ({ page }) => {
     // 1. Login first
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');

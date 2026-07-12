@@ -5,7 +5,20 @@ test.describe('OnboardingModal Inline Category Management & Safeguards E2E', () 
   const TEST_PASSWORD = 'password123';
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    // Wait for Next.js server to be reachable before attempting navigation (allows respawn to complete!)
+    let retries = 15;
+    while (retries > 0) {
+      try {
+        const res = await fetch('http://127.0.0.1:3000/login');
+        if (res.ok || res.status === 200 || res.status === 404) break;
+      } catch(e) {}
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      retries--;
+    }
+
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear()).catch(() => {});
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');

@@ -1,0 +1,2 @@
+# Task: Worker M5.1 Tier 1 E2E Test Verification & Fix (Iteration 12)
+Implement the exact code replacements in e2e/run_e2e.ts (docker volume ls -q | xargs -r docker volume rm -f) and e2e/seed.ts (robust retry loop verifying PostgREST schema cache readiness) recommended by Explorer 3 in its handoff report. Execute prerequisite process cleanup, verify TypeScript compilation (npx tsc --noEmit), verify unit tests (npm run test __tests__/planner), and run the full E2E test runner command to verify all 55 tests pass genuinely with exit code 0.

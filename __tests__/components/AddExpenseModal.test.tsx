@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import AddExpenseModal from '@/components/AddExpenseModal';
 import { useExpenseStore } from '@/store/useExpenseStore';

@@ -1,7 +1,24 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  turbopack: {
-    root: __dirname,
+  experimental: {
+    cpus: 1,
+    workerThreads: true,
+    memoryBasedWorkersCount: true,
+  },
+  turbopack: {},
+  webpack: (config, { isServer }) => {
+    config.experiments = {
+      ...config.experiments,
+      asyncWebAssembly: true,
+      layers: true,
+    };
+    if (!isServer) {
+      config.output = {
+        ...config.output,
+        webassemblyModuleFilename: 'static/wasm/[modulehash].wasm',
+      };
+    }
+    return config;
   },
   async headers() {
     return [

@@ -6,7 +6,7 @@ test.describe('Recent Tab Filters, Search, and Sort', () => {
 
   test.beforeEach(async ({ page }) => {
     // 1. Login
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
@@ -41,7 +41,7 @@ test.describe('Recent Tab Filters, Search, and Sort', () => {
     await page.click('#category-filter');
 
     // 2. Select "Subscriptions" checkbox (Netflix belongs to Subscriptions)
-    await page.locator('label', { hasText: 'Subscriptions' }).click();
+    await page.locator('#category-filter-container').locator('label', { hasText: 'Subscriptions' }).first().click({ force: true });
 
     // 3. Close dropdown by clicking the backdrop mask
     await page.locator('.fixed.inset-0.z-40').click();
@@ -80,7 +80,7 @@ test.describe('Recent Tab Filters, Search, and Sort', () => {
     await page.click('#type-filter');
 
     // 2. Select "One-off" checkbox
-    await page.locator('label', { hasText: 'One-off' }).click();
+    await page.locator('#type-filter-container').locator('label', { hasText: 'One-off' }).click();
 
     // 3. Close dropdown
     await page.locator('.fixed.inset-0.z-40').click();
@@ -94,8 +94,10 @@ test.describe('Recent Tab Filters, Search, and Sort', () => {
   });
 
   test('should sort expenses by amount descending', async ({ page }) => {
-    // Select "Highest Amount"
-    await page.selectOption('#sort-select', 'amount-desc');
+    // Select "Highest Amount" via user-facing popover
+    await page.click('button:has-text("Sort by")');
+    await page.click('label:has-text("Amount")');
+    await page.waitForTimeout(1000);
 
     // Get all amounts and verify they are sorted desc
     const items = page.locator('.expense-item');
@@ -114,6 +116,7 @@ test.describe('Recent Tab Filters, Search, and Sort', () => {
   test('should render optimistic empty state when no matches', async ({ page }) => {
     // Search for impossible string
     await page.fill('#search-input', 'XYZ_NON_EXISTENT_EXPENSE_XYZ');
+    await page.waitForTimeout(1000);
 
     // Verify empty state card is visible with correct text
     const emptyState = page.locator('.empty-state');
@@ -134,6 +137,7 @@ test.describe('Recent Tab Filters, Search, and Sort', () => {
     
     // 2. Search for "Netflix" (should match Netflix)
     await page.fill('#search-input', 'Netflix');
+    await page.waitForTimeout(1000);
 
     // Verify only Netflix recurring items are visible
     const items = page.locator('.expense-item');

@@ -1,0 +1,2 @@
+# Task: Explorer 2 M5.1 Tier 1 E2E Test Failure Analysis (Iteration 19)
+Analyze the failures and recommend a concrete fix strategy that addresses `LegacyDbConnectError: failed to connect to postgres`, `supabase_pooler_expense-dashboard container is not running: exited`, `supabase start is already running`, `relation "public.expenses" does not exist`, `a prune operation is already running`, and `TypeError: fetch failed` identified by the Forensic Auditor, Reviewers, and Challengers in Iteration 18. Do NOT implement the fix yourself.

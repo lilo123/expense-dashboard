@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Automated Invitation E2E Workflows', () => {
+  test.beforeEach(async () => {
+    let retries = 15;
+    while (retries > 0) {
+      try {
+        const res = await fetch('http://127.0.0.1:3000/login');
+        if (res.ok || res.status === 200 || res.status === 404) break;
+      } catch(e) {}
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      retries--;
+    }
+  });
+
   test('visitor navigating to sign-up toggle encounters invite form and successfully requests access', async ({ page }) => {
     await page.goto('/login#toggle-to-signup');
     await expect(page.locator('h2')).toContainText('Request an Invite');
@@ -14,7 +26,7 @@ test.describe('Automated Invitation E2E Workflows', () => {
   });
 
   test('administrator clicks profile menu button to expose dropdown and navigates to admin dashboard', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', 'founder@an-yen.com');
     await page.fill('input[type="password"]', 'adminpass123');
     await page.click('button[type="submit"]');
@@ -24,14 +36,14 @@ test.describe('Automated Invitation E2E Workflows', () => {
     await profileBtn.waitFor({ state: 'visible' });
     await profileBtn.click();
 
-    const adminLink = page.locator('#profile-dropdown text=Admin Dashboard');
+    const adminLink = page.locator('#profile-dropdown').locator('text=Admin Dashboard');
     await expect(adminLink).toBeVisible();
     await adminLink.click();
     await expect(page).toHaveURL(/\/admin/);
   });
 
   test('non-admin user accessing admin management console is redirected to dashboard', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', 'standard-user@example.com');
     await page.fill('input[type="password"]', 'password123');
     await page.click('button[type="submit"]');

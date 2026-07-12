@@ -1,0 +1,5 @@
+# Original User Request
+
+## 2026-07-03T21:45:20Z
+
+You are the Sub-orchestrator for Milestone 4 (M4: UI Inputs & Toggles Implementation). Your working directory is `/usr/local/google/home/duynguyenn/expense-dashboard/.agents/sub_orch_m4_1`. Read `/usr/local/google/home/duynguyenn/expense-dashboard/PROJECT.md`, `/usr/local/google/home/duynguyenn/expense-dashboard/.agents/sub_orch_m4_1/SCOPE.md`, and `/usr/local/google/home/duynguyenn/expense-dashboard/.agents/ORIGINAL_REQUEST.md`. Your scope fits a single Explorer -> Worker -> Reviewer -> Challenger -> Auditor cycle (Procedure 2B). Execute the iteration loop to update `src/app/calculator/CalculatorParams.tsx`, `src/SimulationProvider.tsx`, and `src/app/calculator/views/*` with the Global Market Data toggle, Accumulation inputs & Timeline toggle (with greying out logic), and Simulation Mode toggle. Ensure `npx tsc --noEmit`, `npm run test`, `npm run build`, `npx tsx e2e/verify_accumulation.ts`, `npx tsx e2e/verify_monte_carlo.ts`, and `npx tsx e2e/run_e2e.ts` pass successfully. When complete, write `handoff.md` in your working directory and send a completion message to your parent.

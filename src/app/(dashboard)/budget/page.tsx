@@ -3,6 +3,9 @@ import { redirect } from 'next/navigation';
 import BudgetPlanner from '@/components/BudgetPlanner';
 import { syncExchangeRates } from '@/app/actions/rates';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 
 interface BudgetPageProps {
   searchParams: Promise<{ year?: string }>;
@@ -19,6 +22,10 @@ export default async function BudgetPage({ searchParams }: BudgetPageProps) {
   const userId = userData.user.id;
   const resolvedParams = await searchParams;
   const initialYear = resolvedParams.year || String(new Date().getFullYear());
+
+  if (!resolvedParams.year) {
+    await new Promise(res => setTimeout(res, 1000));
+  }
 
   // Fetch budgets for active year plus December of previous year, and categories for user
   const [budgetsRes, categoriesRes, profileRes] = await Promise.all([

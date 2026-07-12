@@ -292,8 +292,8 @@ export async function requestInviteAction(email: string, message: string): Promi
     return { success: false, error: 'Too many requests. Please try again in an hour.' };
   }
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'sb_secret_N7UND0UgjKTVK-Uodkm0Hg_xSvEMPvz';
 
   if (!supabaseUrl || !supabaseServiceKey) {
     return { success: false, error: 'Server configuration error.' };

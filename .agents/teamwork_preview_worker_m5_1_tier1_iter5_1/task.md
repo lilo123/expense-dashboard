@@ -1,0 +1,2 @@
+# Task: Worker M5.1 Tier 1 E2E Test Verification & Fix (Iteration 5)
+Implement bulletproof Supabase setup sequence in e2e/run_e2e.ts (combined execSync with npx supabase stop --no-backup, docker rm -f, npx supabase start --ignore-health-check preserving supabase/.temp), direct node spawn for Next.js server, optional chaining in src/app/(auth)/login/page.tsx, execute process cleanup strategy, and verify Tier 1 E2E tests pass successfully.

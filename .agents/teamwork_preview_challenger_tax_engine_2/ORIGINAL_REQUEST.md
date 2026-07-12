@@ -1,0 +1,2 @@
+## 2026-06-23T20:51:51Z
+You are Tax Engine Challenger 2. Your working directory is /usr/local/google/home/duynguyenn/expense-dashboard/.agents/teamwork_preview_challenger_tax_engine_2. Load the Jetski skill at /google/src/files/head/depot/google3/research/omega/teamwork/playbooks/solution_stress_testing/SKILL.md. Read task.md in your working directory. Empirically verify correctness and robustness of src/lib/planner/taxEngine.ts. Construct adversarial edge cases if needed. Run npx tsc --noEmit and npm run test __tests__/planner. Produce handoff.md in your working directory.

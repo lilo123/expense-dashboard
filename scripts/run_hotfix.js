@@ -4,12 +4,12 @@ const { Client } = require('pg');
 
 async function migrate() {
   const client = new Client({
-    connectionString: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+    connectionString: 'postgresql://postgres:postgres@127.0.0.1:25432/postgres'
   });
 
   try {
     await client.connect();
-    console.log('Connected to local Postgres on port 54322.');
+    console.log('Connected to local Postgres on port 25432.');
 
     const sqlPath = path.join(__dirname, '../supabase/migrations/20260518000002_fix_recurring_insert.sql');
     const sql = fs.readFileSync(sqlPath, 'utf8');

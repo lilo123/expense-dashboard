@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import '@testing-library/jest-dom';
 
 // Declare mock Supabase environment variables for Jest testing
@@ -81,5 +81,8 @@ console.error = (...args: any[]) => {
   }
   originalError(...args);
 };
-
-
+if (typeof global.gc === 'function') {
+  afterAll(() => {
+    try { (global as any).gc(); } catch(e){}
+  });
+}

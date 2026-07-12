@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 'use client';
 import { useExpenseStore } from '@/store/useExpenseStore';
 import { useMemo, useState, useEffect, useRef, memo } from 'react';

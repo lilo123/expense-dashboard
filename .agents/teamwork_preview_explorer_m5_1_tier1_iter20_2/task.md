@@ -1,0 +1,2 @@
+# Task: Explorer 2 M5.1 Tier 1 E2E Test Failure Analysis (Iteration 20)
+Analyze the failures and recommend a concrete fix strategy that addresses the infinite `while` loop deadlock in `e2e/run_e2e.ts` identified by Challenger 1 in Iteration 19 (`while docker ps -aq | grep -q . || docker volume ls -q | grep -q "supabase"; do sleep 2; done` executing before `docker volume ls -q | xargs -r docker volume rm -f`). Do NOT implement the fix yourself.

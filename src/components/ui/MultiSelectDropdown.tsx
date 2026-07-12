@@ -83,7 +83,9 @@ export default function MultiSelectDropdown({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 sm:right-auto top-10 min-w-[220px] bg-white/95 backdrop-blur-xl border border-zen-lavender/40 shadow-xl rounded-3xl p-4 z-50 flex flex-col gap-2 animate-fade-in">
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+          <div className="absolute left-0 right-0 sm:right-auto top-10 min-w-[220px] bg-white/95 backdrop-blur-xl border border-zen-lavender/40 shadow-xl rounded-3xl p-4 z-50 flex flex-col gap-2 animate-fade-in">
           <div className="flex justify-between items-center border-b border-zen-lavender/20 pb-2 mb-1 px-1">
             <button
               type="button"
@@ -100,7 +102,7 @@ export default function MultiSelectDropdown({
               Clear
             </button>
           </div>
-          <div className="max-h-[200px] overflow-y-auto flex flex-col gap-1 pr-1">
+          <div className="max-h-[400px] overflow-y-auto flex flex-col gap-1 pr-1">
             {options.map(opt => {
               const isChecked = selectedIds.has(opt.id);
               const checkboxId = `checkbox-${id}-${opt.id}`;
@@ -123,6 +125,7 @@ export default function MultiSelectDropdown({
             })}
           </div>
         </div>
+        </>
       )}
     </div>
   );

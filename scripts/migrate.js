@@ -4,7 +4,7 @@ const { Client } = require('pg');
 
 async function migrate() {
   const client = new Client({
-    connectionString: 'postgresql://postgres:postgres@127.0.0.1:54322/postgres'
+    connectionString: 'postgresql://postgres:postgres@127.0.0.1:25432/postgres'
   });
 
   try {

@@ -1,0 +1,2 @@
+# Task: Explorer 1 M5.1 Tier 1 E2E Test Failure Analysis (Iteration 18)
+Analyze the failures and recommend a concrete fix strategy that addresses the transient HTTP 502 Bad Gateway errors (`An invalid response was received from the upstream server`) during `e2e/seed.ts` data deletion, `Failed to create test user: Database error creating new user`, `supabase start is already running`, and `a prune operation is already running` identified by the Forensic Auditor and Reviewer 1 in Iteration 17. Do NOT implement the fix yourself.

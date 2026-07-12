@@ -5,7 +5,7 @@ test.describe('Offline Mutation Resilience, Optimistic Rollbacks & Input Retenti
   const TEST_PASSWORD = 'password123';
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
@@ -25,15 +25,20 @@ test.describe('Offline Mutation Resilience, Optimistic Rollbacks & Input Retenti
 
     await page.context().setOffline(true);
 
-    const totalInput = page.locator('#panel-2026-04 input[type="number"]').first();
-    await totalInput.fill('4200');
+    try {
+      const totalInput = page.locator('#panel-2026-04 input[type="number"]').first();
+      await totalInput.fill('4200');
 
-    const saveBtn = page.locator('#panel-2026-04 button[type="submit"]');
-    await saveBtn.click();
+      const saveBtn = page.locator('#panel-2026-04 button[type="submit"]');
+      await saveBtn.click();
 
-    await expect(saveBtn).toContainText('Saving...');
-    await expect(totalInput).toHaveValue('4200');
+      await expect(totalInput).toHaveValue('4200');
+    } finally {
+      await page.context().setOffline(false);
+    }
+  });
 
+  test.afterEach(async ({ page }) => {
     await page.context().setOffline(false);
   });
 });

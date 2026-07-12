@@ -206,16 +206,20 @@ export default async function proxy(request: NextRequest) {
   // Dynamically check if connecting to a local database emulator to unblock local E2E runs in production mode
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
   const isLocalDb = supabaseUrl.includes('localhost') || supabaseUrl.includes('127.0.0.1') || supabaseUrl.includes('[::1]');
-  const localConnectOrigins = (isDev || isLocalDb)
+  const isLocalHost = request.nextUrl.hostname === 'localhost' || request.nextUrl.hostname === '127.0.0.1' || request.nextUrl.hostname === '[::1]';
+  const localConnectOrigins = (isDev || isLocalDb || isLocalHost)
     ? ' http://127.0.0.1:* http://localhost:* http://[::1]:* ws://127.0.0.1:* ws://localhost:* ws://[::1]:*' 
     : '';
 
-  const devScriptSources = isDev ? " 'unsafe-eval'" : '';
+  const devScriptSources = (isDev || isLocalDb || isLocalHost) ? " 'unsafe-eval' 'unsafe-inline'" : '';
+  const scriptSrc = (isDev || isLocalDb || isLocalHost)
+    ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com;`
+    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com;`;
 
   // Strictly whitelist required script sources, styles, and databases
   const cspHeaderValue = `
     default-src 'self';
-    script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com${devScriptSources};
+    ${scriptSrc}
     style-src 'self' 'unsafe-inline';
     img-src 'self' blob: data:;
     font-src 'self' data:;
@@ -227,7 +231,7 @@ export default async function proxy(request: NextRequest) {
     form-action 'self';
     frame-ancestors 'none';
     block-all-mixed-content;
-    upgrade-insecure-requests;
+    ${(isDev || isLocalDb || isLocalHost) ? '' : 'upgrade-insecure-requests;'}
   `.replace(/\s{2,}/g, ' ').trim();
 
   // Inject headers into request safely using new Headers immutability constructor

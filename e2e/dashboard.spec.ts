@@ -5,8 +5,21 @@ test.describe('Dashboard Core Flows', () => {
   const TEST_PASSWORD = 'password123';
 
   test.beforeEach(async ({ page }) => {
+    // Wait for Next.js server to be reachable before attempting navigation (allows respawn to complete!)
+    let retries = 15;
+    while (retries > 0) {
+      try {
+        const res = await fetch('http://127.0.0.1:3000/login');
+        if (res.ok || res.status === 200 || res.status === 404) break;
+      } catch(e) {}
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      retries--;
+    }
+
     // Perform login before each test
-    await page.goto('/login');
+    await page.context().clearCookies();
+    await page.evaluate(() => localStorage.clear()).catch(() => {});
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
@@ -34,11 +47,15 @@ test.describe('Dashboard Core Flows', () => {
     // Go to Recent tab to see list updates easily
     await page.click('#action-elem-2');
 
+    const uniqueId = Date.now();
+    const expName = `E2E Test Expense ${uniqueId}`;
+    const expUpdatedName = `E2E Test Expense Updated ${uniqueId}`;
+
     // --- 1. ADD EXPENSE ---
     await page.click('#fab'); // Open Add Modal
     await expect(page.locator('#add-modal')).toBeVisible();
 
-    await page.fill('#add-item', 'E2E Test Expense');
+    await page.fill('#add-item', expName);
     await page.fill('#add-amount', '12.75');
     
     // Select first available category option (skipping disabled first option)
@@ -48,7 +65,7 @@ test.describe('Dashboard Core Flows', () => {
     
     // Verify modal closed and expense added
     await expect(page.locator('#add-modal')).not.toBeVisible();
-    const expenseItem = page.locator('.expense-item', { hasText: 'E2E Test Expense' }).first();
+    const expenseItem = page.locator('.expense-item', { hasText: expName }).first();
     await expect(expenseItem).toBeVisible();
     await expect(expenseItem.locator('.expense-amount')).toContainText('C$12.75');
 
@@ -60,16 +77,16 @@ test.describe('Dashboard Core Flows', () => {
     await expenseItem.click(); // Click to edit
     await expect(page.locator('#edit-modal')).toBeVisible(); // Assumes edit modal exists with this ID
 
-    await page.fill('#edit-item', 'E2E Test Expense Updated');
+    await page.fill('#edit-item', expUpdatedName);
     await page.click('#save-edit-btn'); // Save button inside Edit Modal
 
     await expect(page.locator('#edit-modal')).not.toBeVisible();
-    await expect(page.locator('.expense-item', { hasText: 'E2E Test Expense Updated' }).first()).toBeVisible();
+    await expect(page.locator('.expense-item', { hasText: expUpdatedName }).first()).toBeVisible();
     // We don't check for complete absence of "E2E Test Expense" because dirty DB might have duplicates, 
     // but we check that our edited item is visible.
 
     // --- 3. DELETE EXPENSE ---
-    await page.locator('.expense-item', { hasText: 'E2E Test Expense Updated' }).first().click();
+    await page.locator('.expense-item', { hasText: expUpdatedName }).first().click();
     await expect(page.locator('#edit-modal')).toBeVisible();
     
     // Handle confirm dialog
@@ -77,7 +94,7 @@ test.describe('Dashboard Core Flows', () => {
     await page.click('#delete-edit-btn'); // Delete action inside Edit Modal
 
     await expect(page.locator('#edit-modal')).not.toBeVisible();
-    await expect(page.locator('.expense-item', { hasText: 'E2E Test Expense Updated' })).not.toBeVisible();
+    await expect(page.locator('.expense-item', { hasText: expUpdatedName })).not.toBeVisible();
   });
 
   test('should support bulk selection and bulk deletion', async ({ page }) => {

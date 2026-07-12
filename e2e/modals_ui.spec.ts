@@ -6,7 +6,7 @@ test.describe('Global Modals UI & Responsiveness E2E Test Suite', () => {
 
   test.beforeEach(async ({ page }) => {
     // 1. Authenticate and Login
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
@@ -37,14 +37,25 @@ test.describe('Global Modals UI & Responsiveness E2E Test Suite', () => {
       console.log(`   Title Box: x=${titleBox.x}, y=${titleBox.y}, w=${titleBox.width}, h=${titleBox.height}`);
 
       // 1. STRICT OVERLAP CHECK: Close button must never overlap the Title text boundaries!
-      // If they are vertically stacked, they don't overlap. If they are on the same row, 
-      // the close button must be strictly to the right of the title text.
+      // Calculate actual text glyph width to prevent block-level bounding box stretching on Mobile
+      const actualTextWidth = await title.evaluate((el: HTMLElement) => {
+        const span = document.createElement('span');
+        span.style.font = window.getComputedStyle(el).font;
+        span.style.fontSize = window.getComputedStyle(el).fontSize;
+        span.style.fontWeight = window.getComputedStyle(el).fontWeight;
+        span.innerText = el.innerText;
+        document.body.appendChild(span);
+        const width = span.getBoundingClientRect().width;
+        document.body.removeChild(span);
+        return width;
+      });
+
       const isVerticallyStacked = closeBox.y >= titleBox.y + titleBox.height || titleBox.y >= closeBox.y + closeBox.height;
-      const isHorizontallySeparated = closeBox.x >= titleBox.x + titleBox.width || titleBox.x >= closeBox.x + closeBox.width;
+      const isHorizontallySeparated = closeBox.x >= titleBox.x + actualTextWidth || titleBox.x >= closeBox.x + closeBox.width;
 
       if (!(isVerticallyStacked || isHorizontallySeparated)) {
         console.log(`[FAIL DETAILS] isVerticallyStacked: ${isVerticallyStacked}, isHorizontallySeparated: ${isHorizontallySeparated}`);
-        console.log(`   closeBox.x=${closeBox.x}, titleBox.x + titleBox.width=${titleBox.x + titleBox.width}`);
+        console.log(`   closeBox.x=${closeBox.x}, titleBox.x + actualTextWidth=${titleBox.x + actualTextWidth}`);
         console.log(`   titleBox.x=${titleBox.x}, closeBox.x + closeBox.width=${closeBox.x + closeBox.width}`);
       }
 

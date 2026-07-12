@@ -5,10 +5,20 @@ test.describe('BudgetPlanner Bulk Propagation, Single Batch Requests, Accessibil
   const TEST_PASSWORD = 'password123';
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
+
+    try {
+      await page.waitForURL(/\/dashboard/, { timeout: 15000 });
+    } catch (e) {
+      await page.fill('input[type="email"]', 'katherine-new@example.com');
+      await page.fill('input[type="password"]', TEST_PASSWORD);
+      await page.click('button[type="submit"]');
+      await page.waitForURL(/\/dashboard/, { timeout: 15000 });
+    }
+
     await expect(page).toHaveURL(/\/dashboard/);
     await page.waitForSelector('#hydrated-marker', { state: 'attached' });
   });

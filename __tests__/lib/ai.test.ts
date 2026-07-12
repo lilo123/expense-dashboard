@@ -47,7 +47,7 @@ describe('AI Extraction Service & Orchestration Gate', () => {
     );
 
     expect(res).not.toHaveProperty('error');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const successRes = res as any;
     expect(successRes.amount).toBe(25.50);
     expect(successRes.currency).toBe('CAD');
@@ -92,7 +92,7 @@ describe('AI Extraction Service & Orchestration Gate', () => {
     );
 
     expect(res).not.toHaveProperty('error');
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const successRes = res as any;
     expect(successRes.amount).toBe(500000);
     expect(successRes.currency).toBe('VND');
@@ -184,7 +184,7 @@ describe('AI Extraction Service & Orchestration Gate', () => {
       );
 
       expect(res).not.toHaveProperty('error');
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+       
       const successRes = res as any;
       expect(successRes.dateToInsert).toBe('2026-05-18T12:00:00.000Z'); // Defaulted safely to fake system clock local noon ISO string!
     });

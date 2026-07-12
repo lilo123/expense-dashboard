@@ -14,14 +14,16 @@ export async function createClient() {
         },
         set(name: string, value: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value, ...options })
+            const { domain, ...restOptions } = options;
+            cookieStore.set({ name, value, ...restOptions, secure: process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('127.0.0.1') ? false : options.secure })
           } catch (error) {
             // Handle cookie setter errors in Server Components
           }
         },
         remove(name: string, options: CookieOptions) {
           try {
-            cookieStore.set({ name, value: '', ...options })
+            const { domain, ...restOptions } = options;
+            cookieStore.set({ name, value: '', ...restOptions, secure: process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('127.0.0.1') ? false : options.secure })
           } catch (error) {
             // Handle cookie setter errors in Server Components
           }

@@ -1,0 +1,2 @@
+# Task: Explorer 3 M5.1 Tier 1 E2E Test Failure Analysis (Iteration 12)
+Analyze the failures and recommend a concrete fix strategy that addresses the Supabase container flakiness (corrupted Docker volumes) and PostgREST schema cache desynchronization (permission denied during seed.ts) identified by Challenger 1, Challenger 2, and the Forensic Auditor in Iteration 11. Do NOT implement the fix yourself.

@@ -1,0 +1,2 @@
+# Task: Explorer 2 M5.1 Tier 1 E2E Test Failure Analysis (Iteration 17)
+Analyze the failures and recommend a concrete fix strategy that addresses the lingering supabase-go background daemon race conditions (Conflict. The container name ... is already in use, supabase start is already running, removal of container ... is already in progress) and Docker daemon asynchronous prune collisions (a prune operation is already running) identified by the Forensic Auditor, Challenger 1, Challenger 2, and Reviewer 2 in Iteration 16. Do NOT implement the fix yourself.

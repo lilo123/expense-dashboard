@@ -1,0 +1,2 @@
+# Task: Explorer M5.1 Tier 1 E2E Test Analysis (Iteration 9, Instance 3)
+Analyze E2E test failures and recommend restoring --ignore-health-check in npx supabase start, handling Supabase CLI daemon locks (supabase start is already running), and replacing execSync('npx playwright test ...') with asynchronous child_process.spawn to preserve event loop liveness for the Next.js keep-alive respawn mechanism.

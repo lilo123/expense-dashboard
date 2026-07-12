@@ -1,0 +1,5 @@
+## 2026-07-03T19:58:43Z
+
+You are E2E Test Infra Worker 1. Your working directory is `/usr/local/google/home/duynguyenn/expense-dashboard/.agents/teamwork_preview_worker_e2e_1_1`. Read `/usr/local/google/home/duynguyenn/expense-dashboard/.agents/teamwork_preview_worker_e2e_1_1/task_description.md` for your complete task description, objectives, scope boundaries, and completion criteria. Implement `TEST_INFRA.md`, `e2e/verify_accumulation.ts`, and `e2e/verify_monte_carlo.ts` per the synthesized recommendations in Explorer 3's handoff report (`/usr/local/google/home/duynguyenn/expense-dashboard/.agents/teamwork_preview_explorer_e2e_1_3/handoff.md`). When finished, write `handoff.md` in your working directory and send a completion message to your parent.
+
+DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A Forensic Auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.

@@ -167,7 +167,7 @@ function ClientDashboardContent() {
 
   const [isMounted, setIsMounted] = useState(false);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setIsMounted(true);
   }, []);
 
@@ -303,13 +303,13 @@ function ClientDashboardContent() {
                         </div>
                       )}
 
-                      <Link 
+                      <a 
                         href="/budget"
                         onClick={() => setIsDropdownOpen(false)}
                         className="flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-zen-sage/10 text-zen-charcoal text-sm font-semibold transition-all no-underline cursor-pointer"
                       >
                         <Sliders size={16} /> Set Monthly Budget
-                      </Link>
+                      </a>
 
                       <button 
                         onClick={() => { setIsDropdownOpen(false); toggleRecurringModal(); }}

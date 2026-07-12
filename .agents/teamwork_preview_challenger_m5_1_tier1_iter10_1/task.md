@@ -1,0 +1,2 @@
+# Task: Challenger 1 M5.1 Tier 1 E2E Test Stress Testing (Iteration 10)
+Empirically verify correctness and stress test Worker 1's implementation. Verify TypeScript compilation (npx tsc --noEmit), unit tests (npm run test __tests__/planner), and the full E2E test runner command (npx tsx e2e/run_e2e.ts && npx tsx e2e/verify_accumulation.ts && npx tsx e2e/verify_monte_carlo.ts). Verify all 16 tasks and mandatory preservations are genuinely and correctly implemented without integrity violations.

@@ -18,27 +18,33 @@ export async function updateSession(request: NextRequest, requestHeaders?: Heade
           return request.cookies.get(name)?.value
         },
         set(name: string, value: string, options: CookieOptions) {
+          const { domain, ...restOptions } = options;
           request.cookies.set({
             name,
             value,
-            ...options,
+            ...restOptions,
+            secure: process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('127.0.0.1') ? false : options.secure
           })
           supabaseResponse.cookies.set({
             name,
             value,
-            ...options,
+            ...restOptions,
+            secure: process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('127.0.0.1') ? false : options.secure
           })
         },
         remove(name: string, options: CookieOptions) {
+          const { domain, ...restOptions } = options;
           request.cookies.set({
             name,
             value: '',
-            ...options,
+            ...restOptions,
+            secure: process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('127.0.0.1') ? false : options.secure
           })
           supabaseResponse.cookies.set({
             name,
             value: '',
-            ...options,
+            ...restOptions,
+            secure: process.env.NEXT_PUBLIC_SUPABASE_URL?.includes('127.0.0.1') ? false : options.secure
           })
         },
       },

@@ -60,7 +60,7 @@ function LoginCard() {
 
   // Handle URL hash and error params on load
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setIsMounted(true);
     const hash = window.location.hash;
     if (hash === '#toggle-to-signup' || urlError) {
@@ -122,7 +122,7 @@ function LoginCard() {
       // Standard sign-in flow
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
-      else window.location.href = '/dashboard';
+      else setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
     }
   };
 
@@ -235,7 +235,7 @@ function LoginCard() {
             </div>
           )}
 
-          {isSignUp && (
+          {isSignUp && !isInviteFormActive && (
             <div className="space-y-2 text-sm text-zen-charcoal/80 px-1 my-4">
               <label className="flex items-start gap-2 cursor-pointer">
                 <input 

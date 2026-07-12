@@ -7,7 +7,7 @@ const MONTH_LABELS = [
 
 export default function BudgetPlannerSkeleton() {
   return (
-    <div data-testid="budget-planner-skeleton" className="flex flex-col gap-6 text-left animate-pulse pb-16">
+    <div data-testid="budget-planner-skeleton" className="flex flex-col gap-6 text-left animate-pulse pb-16 scroll-pt-[120px] overflow-y-auto max-h-screen">
       
       {/* Top Navigation Header Skeleton */}
       <div className="flex items-center justify-between">
@@ -19,7 +19,7 @@ export default function BudgetPlannerSkeleton() {
       </div>
 
       {/* Sticky Global Utility Toolbar Skeleton */}
-      <div className="bg-white/60 backdrop-blur-xl border border-white/40 shadow-md rounded-2xl p-4 flex items-center justify-between gap-4">
+      <div className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border border-white/40 shadow-md rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4 transition-all">
         <div className="flex items-center gap-3">
           <div className="w-24 h-8 bg-white/40 rounded-full" />
           <div className="w-32 h-4 bg-white/30 rounded-full" />
@@ -32,7 +32,7 @@ export default function BudgetPlannerSkeleton() {
         {MONTH_LABELS.map((monthName, idx) => {
           const isFirst = idx === 0;
           return (
-            <div key={monthName} className="bg-white/60 border border-white/20 shadow-sm rounded-3xl overflow-hidden">
+            <div key={monthName} className="bg-white/60 backdrop-blur-xl border border-white/30 shadow-sm rounded-3xl overflow-hidden transition-all">
               
               {/* Accordion Header Skeleton */}
               <div className="w-full px-6 py-5 flex items-center justify-between">
@@ -48,18 +48,22 @@ export default function BudgetPlannerSkeleton() {
 
               {/* Expanded January Skeleton Content to ensure zero layout shift */}
               {isFirst && (
-                <div className="px-6 pb-6 pt-2 border-t border-zen-lavender/20 flex flex-col gap-6">
+                <div className="px-6 pb-6 text-left animate-fade-in border-t border-white/20 pt-4 flex flex-col gap-6">
                   
                   {/* Total Ceil / Unallocated cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="w-full h-12 bg-white/40 rounded-full animate-pulse" />
-                    <div className="w-full h-12 bg-white/40 rounded-2xl animate-pulse" />
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="w-full h-[90px] bg-white/40 rounded-2xl animate-pulse" />
+                    <div className="w-full h-[90px] bg-white/40 rounded-2xl animate-pulse" />
+                    <div className="w-full h-[90px] bg-white/40 rounded-2xl animate-pulse" />
                   </div>
 
+                  {/* Parity Expanded Utilization Progress Card Skeleton */}
+                  <div className="w-full h-[110px] bg-white/40 rounded-2xl animate-pulse my-2" />
+
                   {/* Category Inputs Mock Rows */}
-                  <div className="flex flex-col gap-4">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="w-full h-16 bg-white/40 rounded-2xl animate-pulse" />
+                  <div className="flex flex-col gap-3.5 max-h-[40dvh] overflow-y-auto pr-2">
+                    {Array.from({ length: 16 }).map((_, i) => (
+                      <div key={i} className="w-full h-[86px] bg-white/40 rounded-2xl animate-pulse" />
                     ))}
                   </div>
 

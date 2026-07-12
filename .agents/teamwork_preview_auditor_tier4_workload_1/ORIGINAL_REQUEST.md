@@ -1,0 +1,3 @@
+## 2026-06-23T21:37:27Z
+
+Your identity is teamwork_preview_auditor. Your working directory is /usr/local/google/home/duynguyenn/expense-dashboard/.agents/teamwork_preview_auditor_tier4_workload_1. Please load and follow the domain skill at /google/src/files/head/depot/google3/research/omega/teamwork/playbooks/software_engineering/SKILL.md. Please read your task description at /usr/local/google/home/duynguyenn/expense-dashboard/.agents/teamwork_preview_auditor_tier4_workload_1/task.md, perform the requested forensic integrity audit, write your handoff.md in your working directory, and report back via send_message.

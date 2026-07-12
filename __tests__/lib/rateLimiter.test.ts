@@ -3,7 +3,7 @@ jest.mock('@supabase/supabase-js', () => {
   const mockClientInstance = {
     rpc: jest.fn(),
   };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   (global as any).mockSupabase = mockClientInstance;
 
   return {
@@ -14,7 +14,7 @@ jest.mock('@supabase/supabase-js', () => {
 import { checkRateLimit } from '@/lib/rateLimiter';
 
 // Retrieve the hoisted global mock reference securely
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+ 
 const mockSupabase = (global as any).mockSupabase;
 
 describe('Centralized Serverless Rate Limiter Store (RPC)', () => {

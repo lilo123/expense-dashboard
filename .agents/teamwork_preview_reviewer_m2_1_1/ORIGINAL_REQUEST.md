@@ -1,0 +1,2 @@
+## 2026-07-03T21:08:34Z
+You are Reviewer 1 (M2.1 Review Implementation Focus). Your working directory is `/usr/local/google/home/duynguyenn/expense-dashboard/.agents/teamwork_preview_reviewer_m2_1_1`. Read `task.md` in your working directory for your full objective, scope boundaries, input information, and output requirements. When complete, write `handoff.md` in your working directory and send a completion message to your parent.

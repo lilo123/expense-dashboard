@@ -1,0 +1,17 @@
+# Task: Challenger 1 M5.1 Tier 1 E2E Test Pass Verification (Iteration 17)
+Empirically verify correctness and stress test Worker 1's implementation.
+1. Execute the prerequisite process cleanup command to terminate all orphaned test runners, fully prune all containers, and purge all volumes:
+   `fuser -k 3000/tcp 54321/tcp 54322/tcp 25432/tcp 2>/dev/null || true && docker rm -f $(docker ps -aq) 2>/dev/null || true && docker volume ls -q | xargs -r docker volume rm -f 2>/dev/null || true`
+2. Verify TypeScript compilation and type safety:
+   `npx tsc --noEmit`
+3. Verify Unit Tests for Planner Business Logic Engines:
+   `npm run test __tests__/planner`
+4. Run the full test runner command specified in `TEST_READY.md`:
+   `export PATH=$PATH:/usr/local/google/home/duynguyenn/.nvm/versions/node/v22.22.2/bin && npx tsx e2e/run_e2e.ts && npx tsx e2e/verify_accumulation.ts && npx tsx e2e/verify_monte_carlo.ts`
+5. Verify that `e2e/run_e2e.ts` correctly includes the robust teardown sequence (`pkill -9 -f supabase`, `pkill -9 -f supabase-go`, `rm -rf supabase/.temp`, `npx supabase stop`, `docker rm -f`, `docker wait loop`, `docker volume rm -f`, `fuser -k`, `sleep 20`) across all six teardown locations.
+6. Verify that `e2e/seed.ts` correctly includes `schemaRetries = 50` and the robust schema cache reload mechanism (`execSync('npx tsx e2e/init_db.ts')`) inside the category fetching loop.
+7. Verify that `e2e/init_db.ts` correctly includes the 10s post-notification delay (`setTimeout(resolve, 10000)`).
+8. Verify that `next.config.js` retains `outputFileTracing: false`, `e2e/run_e2e.ts` retains `npx supabase migration up --include-all` (non-interactive), `NODE_OPTIONS: ''` sanitization, precise lingering process cleanup (`node.*run_e2e`, `tsx.*run_e2e`) with grandparent PID filtering, removal of `suppress_crashes.js`, `fuser -k 3000/tcp`, `docker volume ls -q | xargs -r docker volume rm -f`, and no `try...catch` around `init_db.ts` or Playwright test execution.
+9. Verify that `src/lib/planner/*.ts` and `supabase/migrations/20260624000000_retirement_planner.sql` remain genuinely implemented with strict RLS (`auth.uid() = user_id`) and Premium tier check triggers.
+
+When complete, write `handoff.md` in your working directory and send a completion message to me.

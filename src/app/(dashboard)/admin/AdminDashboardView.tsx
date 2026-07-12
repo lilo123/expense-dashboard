@@ -38,7 +38,7 @@ export default function AdminDashboardView({ initialInvites, initialProfiles, in
   const [previewMode, setPreviewMode] = useState(false);
 
   useEffect(() => { 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+     
     setIsMounted(true); 
     return () => { if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current); };
   }, []);

@@ -12,20 +12,20 @@ test.describe('Authentication Flows', () => {
   });
 
   test('should display error on invalid login credentials', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
 
     await page.fill('input[type="email"]', 'wrong@example.com');
     await page.fill('input[type="password"]', 'wrongpassword');
     await page.click('button[type="submit"]');
 
     // Assert empathetic error or standard auth error
-    const errorMsg = page.locator('p.text-zen-charcoal'); // Selector based on login page error wrapper
-    await expect(errorMsg).toBeVisible();
+    const errorMsg = page.locator('p.bg-zen-peach\\/20'); // Selector based on login page error wrapper
+    await expect(errorMsg).toBeVisible({ timeout: 15000 });
     await expect(errorMsg).not.toContainText('Game Over'); // Brand sanity check
   });
 
   test('should successfully login and persist session', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
 
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
@@ -41,7 +41,7 @@ test.describe('Authentication Flows', () => {
   });
 
   test('should navigate and complete forgot password flow', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.click('text=Forgot Password?');
 
     await expect(page).toHaveURL(/\/forgot-password/);

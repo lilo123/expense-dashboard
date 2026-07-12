@@ -5,7 +5,7 @@ test.describe('Next.js 15 Streaming, Skeleton, Zero CLS & Error Boundary E2E', (
   const TEST_PASSWORD = 'password123';
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');

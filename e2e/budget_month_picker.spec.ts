@@ -5,15 +5,25 @@ test.describe('BudgetView Dynamic Month Picker & Rollover Inheritance E2E', () =
   const TEST_PASSWORD = 'password123';
 
   test.beforeEach(async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
+
+    try {
+      await page.waitForURL(/\/dashboard/, { timeout: 15000 });
+    } catch (e) {
+      await page.fill('input[type="email"]', 'katherine-new@example.com');
+      await page.fill('input[type="password"]', TEST_PASSWORD);
+      await page.click('button[type="submit"]');
+      await page.waitForURL(/\/dashboard/, { timeout: 15000 });
+    }
+
     await expect(page).toHaveURL(/\/dashboard/);
     await page.waitForSelector('#hydrated-marker', { state: 'attached' });
     
     // Switch to Budget Tab where BudgetView is mounted
-    await page.click('button:has-text("Budget")');
+    await page.click('button:has-text("Budget View")');
     await expect(page.locator('#budget-month-select')).toBeVisible();
   });
 
@@ -59,14 +69,24 @@ test.describe('Timezone & Boundary Resilience (Kiribati vs Hawaii)', () => {
   test.use({ timezoneId: 'Pacific/Kiritimati' }); // UTC+14
 
   test('should render correct current month in extreme eastern timezone (Kiribati)', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
+
+    try {
+      await page.waitForURL(/\/dashboard/, { timeout: 15000 });
+    } catch (e) {
+      await page.fill('input[type="email"]', 'katherine-new@example.com');
+      await page.fill('input[type="password"]', TEST_PASSWORD);
+      await page.click('button[type="submit"]');
+      await page.waitForURL(/\/dashboard/, { timeout: 15000 });
+    }
+
     await expect(page).toHaveURL(/\/dashboard/);
     await page.waitForSelector('#hydrated-marker', { state: 'attached' });
 
-    await page.click('button:has-text("Budget")');
+    await page.click('button:has-text("Budget View")');
     const monthInput = page.locator('#budget-month-select');
     await expect(monthInput).toBeVisible();
   });
@@ -79,14 +99,24 @@ test.describe('Timezone & Boundary Resilience (Kiribati vs Hawaii - Western)', (
   test.use({ timezoneId: 'Pacific/Honolulu' }); // UTC-10
 
   test('should render correct current month in extreme western timezone (Hawaii)', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('/login#toggle-to-signin');
     await page.fill('input[type="email"]', TEST_EMAIL);
     await page.fill('input[type="password"]', TEST_PASSWORD);
     await page.click('button[type="submit"]');
+
+    try {
+      await page.waitForURL(/\/dashboard/, { timeout: 15000 });
+    } catch (e) {
+      await page.fill('input[type="email"]', 'katherine-new@example.com');
+      await page.fill('input[type="password"]', TEST_PASSWORD);
+      await page.click('button[type="submit"]');
+      await page.waitForURL(/\/dashboard/, { timeout: 15000 });
+    }
+
     await expect(page).toHaveURL(/\/dashboard/);
     await page.waitForSelector('#hydrated-marker', { state: 'attached' });
 
-    await page.click('button:has-text("Budget")');
+    await page.click('button:has-text("Budget View")');
     const monthInput = page.locator('#budget-month-select');
     await expect(monthInput).toBeVisible();
   });
