@@ -9,7 +9,7 @@ const globalWorker = globalThis as unknown as { __workerSingleton?: Comlink.Remo
 function getWorker() {
   if (typeof window === 'undefined' || typeof Worker === 'undefined') return null;
   if (!globalWorker.__workerSingleton) {
-    const rawWorker = new Worker(new URL('../workers/simulation.worker.ts', import.meta.url), { type: 'module' });
+    const rawWorker = new Worker(new URL('../workers/simulation.worker', import.meta.url), { type: 'module' });
     globalWorker.__workerSingleton = Comlink.wrap<SimulationService>(rawWorker);
   }
   return globalWorker.__workerSingleton;

@@ -15,6 +15,7 @@ const nextConfig = {
     if (!isServer) {
       config.output = {
         ...config.output,
+        globalObject: 'self',
         webassemblyModuleFilename: 'static/wasm/[modulehash].wasm',
       };
     }
