@@ -211,10 +211,7 @@ export default async function proxy(request: NextRequest) {
     ? ' http://127.0.0.1:* http://localhost:* http://[::1]:* ws://127.0.0.1:* ws://localhost:* ws://[::1]:*' 
     : '';
 
-  const devScriptSources = (isDev || isLocalDb || isLocalHost) ? " 'unsafe-eval' 'unsafe-inline'" : '';
-  const scriptSrc = (isDev || isLocalDb || isLocalHost)
-    ? `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com;`
-    : `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' https://challenges.cloudflare.com;`;
+  const scriptSrc = `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com;`;
 
   // Strictly whitelist required script sources, styles, and databases
   const cspHeaderValue = `
