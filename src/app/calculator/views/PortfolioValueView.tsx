@@ -38,6 +38,11 @@ export function PortfolioValueView() {
   const isMonteCarlo = config?.simulationMode === 'monte_carlo';
   const [selectedYearOption, setSelectedYearOption] = useState<string>('final');
   const [viewMode, setViewMode] = useState<'histogram' | 'table'>('histogram');
+  const [activeDomainRange, setActiveDomainRange] = useState<{ min: number | null; max: number | null }>({ min: null, max: null });
+
+  React.useEffect(() => {
+    setActiveDomainRange({ min: null, max: null });
+  }, [selectedYearOption]);
 
   const statsAndData = useMemo(() => {
     if (!result || !result.runs.length) {
@@ -91,8 +96,67 @@ export function PortfolioValueView() {
     values.forEach(v => { sqSum += Math.pow(v - average, 2); });
     const stdDev = total > 1 ? Math.sqrt(sqSum / (total - 1)) : 0;
 
-    // Create histogram bins
-    if (selectedYearOption === 'final' && result.defaultHistogramBins && result.defaultHistogramBins.length > 0) {
+    const formatPortfolioBinLabel = (v: number) => {
+      if (v === 0) return '$0';
+      if (v >= 1000000) {
+        const inM = v / 1000000;
+        return Number.isInteger(inM) ? `$${inM}M` : `$${inM.toFixed(2).replace(/\.?0+$/, '')}M`;
+      }
+      if (v >= 1000) {
+        const inK = v / 1000;
+        return Number.isInteger(inK) ? `$${inK}K` : `$${inK.toFixed(1).replace(/\.?0+$/, '')}K`;
+      }
+      return `$${Math.round(v)}`;
+    };
+
+    const buildBins = (minBound: number, maxBound: number, binCount = 20) => {
+      const rawBinSize = Math.max(1, (maxBound - minBound) / binCount);
+      let binSize = 1000;
+      const financialSteps = [
+        500, 1000, 2500, 5000, 10000, 25000, 50000, 100000,
+        250000, 500000, 1000000, 2500000, 5000000, 10000000, 25000000, 50000000
+      ];
+      for (const step of financialSteps) {
+        if (rawBinSize <= step) {
+          binSize = step;
+          break;
+        }
+      }
+      if (rawBinSize > financialSteps[financialSteps.length - 1]) {
+        binSize = Math.ceil(rawBinSize / 10000000) * 10000000;
+      }
+
+      const startVal = Math.floor(minBound / binSize) * binSize;
+      const count = Math.max(1, Math.ceil((maxBound - startVal) / binSize));
+
+      const bins = Array.from({ length: count }, (_, i) => ({
+        binMin: startVal + i * binSize,
+        binMax: startVal + (i + 1) * binSize,
+        count: 0,
+        label: formatPortfolioBinLabel(startVal + i * binSize),
+        startYears: [] as number[],
+        percentage: 0
+      }));
+
+      tableData.forEach(item => {
+        if (item.value < startVal || item.value > startVal + count * binSize) return;
+        let binIdx = Math.floor((item.value - startVal) / binSize);
+        if (Number.isNaN(binIdx)) binIdx = 0;
+        if (binIdx >= count) binIdx = count - 1;
+        if (binIdx < 0) binIdx = 0;
+        bins[binIdx].count++;
+        bins[binIdx].startYears.push(item.startYear);
+      });
+
+      bins.forEach(b => {
+        b.percentage = total > 0 ? (b.count / total) * 100 : 0;
+      });
+
+      return bins;
+    };
+
+    // Create histogram bins (Bypass static coarse bins whenever dynamic range bounds are set)
+    if (selectedYearOption === 'final' && activeDomainRange.min === null && result.defaultHistogramBins && result.defaultHistogramBins.length > 0) {
       const bins = result.defaultHistogramBins.map(b => ({
         binMin: b.binMin,
         binMax: b.binMax,
@@ -114,57 +178,9 @@ export function PortfolioValueView() {
       };
     }
 
-    const binCount = 20;
-    const minVal = 0;
-    const maxVal = largest > 0 ? largest : 1000;
-    const rawBinSize = (maxVal - minVal) / binCount || 1;
-
-    let binSize = 5000;
-    const financialSteps = [5000, 10000, 25000, 50000, 100000, 250000, 500000, 1000000, 2500000, 5000000, 10000000, 25000000, 50000000];
-    for (const step of financialSteps) {
-      if (rawBinSize <= step) {
-        binSize = step;
-        break;
-      }
-    }
-    if (rawBinSize > financialSteps[financialSteps.length - 1]) {
-      binSize = Math.ceil(rawBinSize / 10000000) * 10000000;
-    }
-
-    const formatPortfolioBinLabel = (v: number) => {
-      if (v === 0) return '$0';
-      if (v >= 1000000) {
-        const inM = v / 1000000;
-        return Number.isInteger(inM) ? `$${inM}M` : `$${inM.toFixed(1)}M`;
-      }
-      if (v >= 1000) {
-        const inK = v / 1000;
-        return Number.isInteger(inK) ? `$${inK}K` : `$${inK.toFixed(1)}K`;
-      }
-      return `$${Math.round(v)}`;
-    };
-
-    const bins = Array.from({ length: binCount }, (_, i) => ({
-      binMin: minVal + i * binSize,
-      binMax: minVal + (i + 1) * binSize,
-      count: 0,
-      label: formatPortfolioBinLabel(minVal + i * binSize),
-      startYears: [] as number[],
-      percentage: 0
-    }));
-
-    tableData.forEach(item => {
-      let binIdx = Math.floor((item.value - minVal) / binSize);
-      if (Number.isNaN(binIdx)) binIdx = 0;
-      if (binIdx >= binCount) binIdx = binCount - 1;
-      if (binIdx < 0) binIdx = 0;
-      bins[binIdx].count++;
-      bins[binIdx].startYears.push(item.startYear);
-    });
-
-    bins.forEach(b => {
-      b.percentage = total > 0 ? (b.count / total) * 100 : 0;
-    });
+    const effectiveMin = activeDomainRange.min !== null ? activeDomainRange.min : 0;
+    const effectiveMax = activeDomainRange.max !== null ? activeDomainRange.max : (largest > 0 ? largest : 1000);
+    const bins = buildBins(effectiveMin, effectiveMax, 20);
 
     return {
       median,
@@ -177,7 +193,7 @@ export function PortfolioValueView() {
       histogramData: bins,
       tableData
     };
-  }, [result, selectedYearOption, config?.currentAge, config?.retirementAge, config?.timelineMode]);
+  }, [result, selectedYearOption, activeDomainRange, config?.currentAge, config?.retirementAge, config?.timelineMode]);
 
   if (!result) {
     return <div className="p-8 text-center text-gray-600 animate-pulse">Loading Portfolio Value View...</div>;
@@ -257,14 +273,52 @@ export function PortfolioValueView() {
             ≡ Table
           </button>
         </div>
-        <p className="text-xs text-gray-700 italic hidden sm:block">Hover chart for details. Click and drag to select a range.</p>
+        <p className="text-xs text-gray-700 italic hidden sm:block">Hover chart for details. Slide brush or pick intervals below to dynamically scale bin granularity.</p>
       </div>
+
+      {/* Quick-Zoom Adaptive Range Bar */}
+      {viewMode === 'histogram' && (
+        <div className="flex flex-wrap items-center gap-2 pt-2 pb-1 bg-gray-50/70 p-3 rounded-2xl border border-gray-200 text-xs">
+          <span className="font-bold text-gray-700 uppercase tracking-wider text-[11px] mr-1">Dynamic Range Scale:</span>
+          {[
+            { label: 'All ($2.5M+ bins)', min: null, max: null },
+            { label: '< $5M ($250K bins)', min: 0, max: 5000000 },
+            { label: '< $2.5M ($250K bins)', min: 0, max: 2500000 },
+            { label: '< $1M ($50K bins)', min: 0, max: 1000000 },
+            { label: '< $500K ($25K bins)', min: 0, max: 500000 },
+            { label: '< $250K ($25K bins)', min: 0, max: 250000 },
+          ].map((pill, i) => {
+            const isActive = activeDomainRange.min === pill.min && activeDomainRange.max === pill.max;
+            return (
+              <button
+                key={i}
+                onClick={() => setActiveDomainRange({ min: pill.min, max: pill.max })}
+                className={`px-3 py-1.5 rounded-xl font-bold transition-all ${isActive ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-gray-200 text-gray-700 hover:bg-blue-50'}`}
+              >
+                {pill.label}
+              </button>
+            );
+          })}
+          {activeDomainRange.min !== null && (
+            <button
+              onClick={() => setActiveDomainRange({ min: null, max: null })}
+              className="ml-auto px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-700 font-bold rounded-xl border border-red-200 transition-all"
+            >
+              ↺ Reset Full Range
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Content View */}
       {viewMode === 'histogram' ? (
         <div className="h-96 w-full pt-4 min-w-0 overflow-hidden">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={statsAndData.histogramData} margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
+            <BarChart
+              key={activeDomainRange.max ? `chart-${activeDomainRange.min}-${activeDomainRange.max}` : 'chart-default'}
+              data={statsAndData.histogramData}
+              margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
               <XAxis dataKey="label" stroke="#64748b" angle={-15} textAnchor="end" height={50} interval="preserveStartEnd" className="text-xs" />
               <YAxis stroke="#64748b" label={{ value: 'Count', angle: -90, position: 'insideLeft', fill: '#64748b' }} className="text-xs" />
@@ -274,7 +328,23 @@ export function PortfolioValueView() {
                   <Cell key={`cell-${index}`} fill={entry.binMin <= 0 ? '#ef4444' : entry.binMin >= (config?.initialPortfolio || 1000000) ? '#22c55e' : '#3b82f6'} />
                 ))}
               </Bar>
-              <Brush dataKey="label" height={30} stroke="#3b82f6" fill="#f8fafc" />
+              <Brush
+                dataKey="label"
+                height={30}
+                stroke="#3b82f6"
+                fill="#f8fafc"
+                startIndex={0}
+                endIndex={Math.max(0, statsAndData.histogramData.length - 1)}
+                onChange={(range: any) => {
+                  if (range && range.startIndex !== undefined && range.endIndex !== undefined && statsAndData.histogramData[range.startIndex] && statsAndData.histogramData[range.endIndex]) {
+                    const nextMin = statsAndData.histogramData[range.startIndex].binMin;
+                    const nextMax = statsAndData.histogramData[range.endIndex].binMax;
+                    if (nextMin !== activeDomainRange.min || nextMax !== activeDomainRange.max) {
+                      setActiveDomainRange({ min: nextMin, max: nextMax });
+                    }
+                  }
+                }}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>

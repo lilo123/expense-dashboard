@@ -169,7 +169,13 @@ export function SummaryView() {
       {/* Inflation Banner */}
       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-blue-900 flex items-center justify-between text-sm font-medium">
         <span>ℹ️ All displayed values are inflation-adjusted (real dollars).</span>
-        <span className="cursor-pointer text-blue-800 hover:underline" title="Values are adjusted to real base-year dollars using historical Consumer Price Index (CPI) data.">(?)</span>
+        <div className="relative group inline-block ml-1.5 cursor-help" onClick={(e) => e.stopPropagation()}>
+          <span className="text-blue-800 hover:underline font-bold" title="All dollar values are adjusted to constant base-year purchasing power dollars using historical U.S. Consumer Price Index (CPI) inflation data.">(?)</span>
+          <div role="tooltip" className="pointer-events-none hidden group-hover:block absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-xs font-normal leading-relaxed rounded-xl shadow-lg border border-gray-700 z-[100] text-left">
+            All dollar values are adjusted to constant base-year purchasing power dollars using historical U.S. Consumer Price Index (CPI) inflation data.
+            <div className="absolute top-full right-3 -mt-1 border-4 border-transparent border-t-gray-900" />
+          </div>
+        </div>
       </div>
 
       {/* Hero Success Rate Banner */}
@@ -178,7 +184,13 @@ export function SummaryView() {
           <div className="flex items-center justify-center md:justify-start gap-2">
             <span className="text-2xl">✅</span>
             <h3 className="text-xl font-bold text-green-900">Success Rate</h3>
-            <span className="text-green-800 cursor-pointer hover:text-green-900" title="Percentage of simulations where the portfolio did not run out of money before the end of the retirement duration.">(?)</span>
+            <div className="relative group inline-block ml-1 cursor-help" onClick={(e) => e.stopPropagation()}>
+              <span className="text-green-800 font-bold hover:text-green-900" title="The percentage of simulated historical retirement sequences where your portfolio savings lasted through the entire duration without completely running out of money ($0 balance).">(?)</span>
+              <div role="tooltip" className="pointer-events-none hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-gray-900 text-white text-xs font-normal leading-relaxed rounded-xl shadow-lg border border-gray-700 z-[100] text-left">
+                The percentage of simulated historical retirement sequences where your portfolio savings lasted through the entire duration without completely running out of money ($0 balance).
+                <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+              </div>
+            </div>
           </div>
           <p className="text-5xl font-black text-green-800">{successRate.toFixed(1)}%</p>
           <p className="text-sm text-green-800 font-medium">{successfulRuns} out of {totalRuns} retirement simulations succeeded.</p>
@@ -200,7 +212,13 @@ export function SummaryView() {
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <span>🎢</span> Volatile Spending
             </h3>
-            <span className="text-gray-700 hover:text-gray-900" title="Runs where year-over-year change in spending exceeds threshold.">(?)</span>
+            <div className="relative group inline-block ml-1.5 cursor-help" onClick={(e) => e.stopPropagation()}>
+              <span className="text-gray-500 font-bold hover:text-blue-600 transition-colors" title="Runs where the year-over-year change (increase or decrease) in real spending exceeds the configured volatile spending limit threshold (default >25%).">(?)</span>
+              <div role="tooltip" className="pointer-events-none hidden group-hover:block absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-xs font-normal leading-relaxed rounded-xl shadow-lg border border-gray-700 z-[100] text-left">
+                Runs where the year-over-year change (increase or decrease) in real spending exceeds the configured volatile spending limit threshold (default &gt;25%).
+                <div className="absolute top-full right-3 -mt-1 border-4 border-transparent border-t-gray-900" />
+              </div>
+            </div>
           </div>
           <p className="text-4xl font-extrabold text-yellow-700 my-4">{customStats.volatilePercentage.toFixed(1)}%</p>
           <div className="flex justify-between items-center text-xs text-gray-700">
@@ -223,7 +241,13 @@ export function SummaryView() {
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <span>💎</span> Large Spending
             </h3>
-            <span className="text-gray-700 hover:text-gray-900" title="Runs where spending is >= threshold * year 1 spending.">(?)</span>
+            <div className="relative group inline-block ml-1.5 cursor-help" onClick={(e) => e.stopPropagation()}>
+              <span className="text-gray-500 font-bold hover:text-blue-600 transition-colors" title="Runs where annual retirement spending reaches or exceeds the configured multiplier threshold (default >= 1.5x) relative to your year 1 initial retirement withdrawal.">(?)</span>
+              <div role="tooltip" className="pointer-events-none hidden group-hover:block absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-xs font-normal leading-relaxed rounded-xl shadow-lg border border-gray-700 z-[100] text-left">
+                Runs where annual retirement spending reaches or exceeds the configured multiplier threshold (default &ge; 1.5x) relative to your year 1 initial retirement withdrawal.
+                <div className="absolute top-full right-3 -mt-1 border-4 border-transparent border-t-gray-900" />
+              </div>
+            </div>
           </div>
           <p className="text-4xl font-extrabold text-blue-700 my-4">{customStats.largeSpendPercentage.toFixed(1)}%</p>
           <div className="flex justify-between items-center text-xs text-gray-700">
@@ -246,7 +270,13 @@ export function SummaryView() {
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <span>🥜</span> Small Spending
             </h3>
-            <span className="text-gray-700 hover:text-gray-900" title="Runs where spending is <= threshold * year 1 spending.">(?)</span>
+            <div className="relative group inline-block ml-1.5 cursor-help" onClick={(e) => e.stopPropagation()}>
+              <span className="text-gray-500 font-bold hover:text-blue-600 transition-colors" title="Runs where annual retirement spending falls to or below the configured multiplier threshold (default <= 0.5x) relative to your year 1 initial retirement withdrawal.">(?)</span>
+              <div role="tooltip" className="pointer-events-none hidden group-hover:block absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-xs font-normal leading-relaxed rounded-xl shadow-lg border border-gray-700 z-[100] text-left">
+                Runs where annual retirement spending falls to or below the configured multiplier threshold (default &le; 0.5x) relative to your year 1 initial retirement withdrawal.
+                <div className="absolute top-full right-3 -mt-1 border-4 border-transparent border-t-gray-900" />
+              </div>
+            </div>
           </div>
           <p className="text-4xl font-extrabold text-orange-700 my-4">{customStats.smallSpendPercentage.toFixed(1)}%</p>
           <div className="flex justify-between items-center text-xs text-gray-700">
@@ -269,7 +299,13 @@ export function SummaryView() {
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <span>💰</span> Large End Portfolio
             </h3>
-            <span className="text-gray-700 hover:text-gray-900" title="Runs where ending portfolio is >= threshold * initial portfolio.">(?)</span>
+            <div className="relative group inline-block ml-1.5 cursor-help" onClick={(e) => e.stopPropagation()}>
+              <span className="text-gray-500 font-bold hover:text-blue-600 transition-colors" title="Runs where the final ending real portfolio balance equals or exceeds the configured threshold (default >= 2.0x) relative to your initial starting portfolio savings.">(?)</span>
+              <div role="tooltip" className="pointer-events-none hidden group-hover:block absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-xs font-normal leading-relaxed rounded-xl shadow-lg border border-gray-700 z-[100] text-left">
+                Runs where the final ending real portfolio balance equals or exceeds the configured threshold (default &ge; 2.0x) relative to your initial starting portfolio savings.
+                <div className="absolute top-full right-3 -mt-1 border-4 border-transparent border-t-gray-900" />
+              </div>
+            </div>
           </div>
           <p className="text-4xl font-extrabold text-purple-700 my-4">{customStats.largePortfolioPercentage.toFixed(1)}%</p>
           <div className="flex justify-between items-center text-xs text-gray-700">
@@ -292,7 +328,13 @@ export function SummaryView() {
             <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
               <span>😨</span> Small End Portfolio
             </h3>
-            <span className="text-gray-700 hover:text-gray-900" title="Runs where ending portfolio is nonzero and <= threshold * initial portfolio.">(?)</span>
+            <div className="relative group inline-block ml-1.5 cursor-help" onClick={(e) => e.stopPropagation()}>
+              <span className="text-gray-500 font-bold hover:text-blue-600 transition-colors" title="Runs where the final ending real portfolio balance is nonzero and falls below the configured threshold (default <= 0.5x) relative to your initial starting portfolio savings.">(?)</span>
+              <div role="tooltip" className="pointer-events-none hidden group-hover:block absolute bottom-full right-0 mb-2 w-64 p-3 bg-gray-900 text-white text-xs font-normal leading-relaxed rounded-xl shadow-lg border border-gray-700 z-[100] text-left">
+                Runs where the final ending real portfolio balance is nonzero and falls below the configured threshold (default &le; 0.5x) relative to your initial starting portfolio savings.
+                <div className="absolute top-full right-3 -mt-1 border-4 border-transparent border-t-gray-900" />
+              </div>
+            </div>
           </div>
           <p className="text-4xl font-extrabold text-red-700 my-4">{customStats.smallPortfolioPercentage.toFixed(1)}%</p>
           <div className="flex justify-between items-center text-xs text-gray-700">

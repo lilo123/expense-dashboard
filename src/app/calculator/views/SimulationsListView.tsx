@@ -17,7 +17,8 @@ import {
 export function SimulationsListView() {
   const { result, config, isCalculating } = useSimulation();
   const isMonteCarlo = config?.simulationMode === 'monte_carlo';
-  const [sortBy, setSortBy] = useState<'date' | 'stocks' | 'portfolio' | 'lowestMinSpend' | 'highestSuccess' | 'lowestSuccess'>('date');
+  const [sortMetric, setSortMetric] = useState<'avgSpend' | 'minSpend' | 'maxSpend' | 'endPortfolio' | 'volatility'>('endPortfolio');
+  const [sortOrder, setSortOrder] = useState<'highest' | 'lowest'>('highest');
   const [filterBy, setFilterBy] = useState<'all' | 'success' | 'depleted' | 'volatile' | 'excess'>('all');
   const [showAll, setShowAll] = useState(false);
   const [selectedRun, setSelectedRun] = useState<SimulationRunResult | null>(null);
@@ -27,19 +28,54 @@ export function SimulationsListView() {
 
   const filteredAndSortedRuns = useMemo(() => {
     if (!result || !result.runs.length) return [];
-    let copy = [...result.runs];
 
     const accumulationYears = config?.timelineMode === 'retirement_and_accumulation'
       ? Math.max(0, (config?.retirementAge || 0) - (config?.currentAge || 0))
       : 0;
 
+    // Pre-calculate metrics right for instantaneous sort comparisons
+    const runsWithMetrics = result.runs.map((r) => {
+      const retirementYears = r.years.slice(accumulationYears);
+      const n = retirementYears.length;
+
+      let minSpend = Infinity;
+      let maxSpend = -Infinity;
+      let sumSpend = 0;
+
+      for (let i = 0; i < n; i++) {
+        const w = retirementYears[i].realWithdrawal;
+        if (w < minSpend) minSpend = w;
+        if (w > maxSpend) maxSpend = w;
+        sumSpend += w;
+      }
+
+      if (minSpend === Infinity) minSpend = 0;
+      if (maxSpend === -Infinity) maxSpend = 0;
+
+      const avgSpend = n > 0 ? sumSpend / n : (r.avgRealWithdrawal || 0);
+
+      let sumSqDiff = 0;
+      for (let i = 0; i < n; i++) {
+        const diff = retirementYears[i].realWithdrawal - avgSpend;
+        sumSqDiff += diff * diff;
+      }
+      const volatility = n > 1 ? Math.sqrt(sumSqDiff / (n - 1)) : 0;
+
+      return {
+        run: r,
+        avgSpend: r.avgRealWithdrawal || avgSpend,
+        minSpend,
+        maxSpend,
+        endPortfolio: r.realEndingBalance,
+        volatility,
+      };
+    });
+
     // Filtering
-    if (filterBy === 'success') {
-      copy = copy.filter(r => r.isSuccessful);
-    } else if (filterBy === 'depleted') {
-      copy = copy.filter(r => !r.isSuccessful);
-    } else if (filterBy === 'volatile') {
-      copy = copy.filter(r => {
+    let filtered = runsWithMetrics.filter(({ run: r }) => {
+      if (filterBy === 'success') return r.isSuccessful;
+      if (filterBy === 'depleted') return !r.isSuccessful;
+      if (filterBy === 'volatile') {
         const retirementYears = r.years.slice(accumulationYears);
         for (let t = 1; t < retirementYears.length; t++) {
           const w_prev = retirementYears[t - 1].realWithdrawal;
@@ -47,34 +83,24 @@ export function SimulationsListView() {
           if (w_prev > 0 && Math.abs(w_curr - w_prev) / w_prev > 0.25) return true;
         }
         return false;
-      });
-    } else if (filterBy === 'excess') {
-      const initial = config?.initialPortfolio || 1000000;
-      copy = copy.filter(r => r.realEndingBalance >= 2.0 * initial);
-    }
-
-    // Sorting
-    copy.sort((a, b) => {
-      if (sortBy === 'date') {
-        return b.startYear - a.startYear;
-      } else if (sortBy === 'stocks') {
-        return b.avgStocksReturn - a.avgStocksReturn;
-      } else if (sortBy === 'portfolio') {
-        return b.realEndingBalance - a.realEndingBalance;
-      } else if (sortBy === 'lowestMinSpend') {
-        const minA = Math.min(...a.years.slice(accumulationYears).map(y => y.realWithdrawal));
-        const minB = Math.min(...b.years.slice(accumulationYears).map(y => y.realWithdrawal));
-        return minA - minB;
-      } else if (sortBy === 'highestSuccess') {
-        return (b.isSuccessful ? 1 : 0) - (a.isSuccessful ? 1 : 0);
-      } else if (sortBy === 'lowestSuccess') {
-        return (a.isSuccessful ? 1 : 0) - (b.isSuccessful ? 1 : 0);
       }
-      return 0;
+      if (filterBy === 'excess') {
+        const initial = config?.initialPortfolio || 1000000;
+        return r.realEndingBalance >= 2.0 * initial;
+      }
+      return true;
     });
 
-    return copy;
-  }, [result, config, sortBy, filterBy]);
+    // Instantaneous O(N log N) numeric comparison
+    filtered.sort((a, b) => {
+      const metricA = a[sortMetric];
+      const metricB = b[sortMetric];
+      const diff = metricB - metricA;
+      return sortOrder === 'highest' ? diff : -diff;
+    });
+
+    return filtered.map(item => item.run);
+  }, [result, config, sortMetric, sortOrder, filterBy]);
 
   if (!result) {
     return <div className="p-8 text-center text-gray-600 animate-pulse">Loading Simulations List...</div>;
@@ -96,29 +122,11 @@ export function SimulationsListView() {
 
   return (
     <div className={`bg-white p-6 rounded-2xl shadow-sm border border-gray-200 space-y-6 transition-opacity duration-200 ${isCalculating ? 'opacity-100' : 'opacity-100'}`}>
-      {/* Title & Sorting Dropdown */}
+      {/* Title & Filter Chips */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Simulations</h2>
           <p className="text-xs text-gray-600 mt-1">Click a simulation to view details.</p>
-        </div>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label htmlFor="sortBySelect" className="text-sm font-medium text-gray-600">Sort by:</label>
-            <select
-              id="sortBySelect"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-xl focus:ring-blue-500 focus:border-blue-500 p-2.5 font-medium"
-            >
-              <option value="date">{isMonteCarlo ? 'Run Number' : 'Date'}</option>
-              <option value="stocks">Average Stocks Return</option>
-              <option value="portfolio">End portfolio</option>
-              <option value="lowestMinSpend">Lowest Minimum Spend</option>
-              <option value="highestSuccess">Highest Success Rate</option>
-              <option value="lowestSuccess">Lowest Success Rate</option>
-            </select>
-          </div>
         </div>
       </div>
 
@@ -139,6 +147,58 @@ export function SimulationsListView() {
             {chip.label}
           </button>
         ))}
+      </div>
+
+      {/* Radio Button Sorting Controls */}
+      <div className="bg-gray-50 p-4 rounded-2xl border border-gray-200 space-y-3">
+        {/* 1st Radio Button Group: Sort Metric */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4" role="radiogroup" aria-label="Sort metric">
+          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px]">Sort Metric:</span>
+          <div className="flex flex-wrap items-center gap-4">
+            {[
+              { id: 'avgSpend', label: 'Average spending' },
+              { id: 'minSpend', label: 'Min Spending' },
+              { id: 'maxSpend', label: 'Max Spending' },
+              { id: 'endPortfolio', label: 'End portfolio value' },
+              { id: 'volatility', label: 'Spending Volatility' },
+            ].map((opt) => (
+              <label key={opt.id} className="flex items-center gap-2 text-xs font-semibold text-gray-800 cursor-pointer">
+                <input
+                  type="radio"
+                  name="sortMetric"
+                  value={opt.id}
+                  checked={sortMetric === opt.id}
+                  onChange={(e) => setSortMetric(e.target.value as any)}
+                  className="text-blue-600 focus:ring-blue-500 w-4 h-4"
+                />
+                <span>{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* 2nd Radio Button Group: Sort Direction */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 border-t border-gray-200 pt-2.5" role="radiogroup" aria-label="Sort order">
+          <span className="text-xs font-bold text-gray-700 uppercase tracking-wider min-w-[100px]">Direction:</span>
+          <div className="flex items-center gap-6">
+            {[
+              { id: 'highest', label: 'Highest first' },
+              { id: 'lowest', label: 'Lowest first' },
+            ].map((opt) => (
+              <label key={opt.id} className="flex items-center gap-2 text-xs font-semibold text-gray-800 cursor-pointer">
+                <input
+                  type="radio"
+                  name="sortOrder"
+                  value={opt.id}
+                  checked={sortOrder === opt.id}
+                  onChange={(e) => setSortOrder(e.target.value as any)}
+                  className="text-blue-600 focus:ring-blue-500 w-4 h-4"
+                />
+                <span>{opt.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Grid of simulation cards */}

@@ -360,15 +360,42 @@ export function AvailableSpendingView() {
           <div className="p-6 sm:p-8 space-y-4 bg-gray-50/30 flex flex-col justify-between">
             <div className="space-y-3">
               <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-                <span className="text-sm font-bold text-gray-700 flex items-center gap-1"><span>⚠️</span> Volatile Spending (&gt;{volatileThreshold}%)</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-bold text-gray-700 flex items-center gap-1"><span>⚠️</span> Volatile Spending (&gt;{volatileThreshold}%)</span>
+                  <div className="relative group inline-block ml-1 cursor-help" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-gray-400 hover:text-blue-600 font-normal text-xs transition-colors" title="Runs where the year-over-year change (increase or decrease) in real spending exceeds the configured limit.">(?)</span>
+                    <div role="tooltip" className="pointer-events-none hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-xs font-normal leading-relaxed rounded-xl shadow-lg border border-gray-700 z-[100] transition-opacity duration-200 text-left">
+                      Runs where the year-over-year change (increase or decrease) in real spending exceeds the configured volatile spending limit threshold (&gt;{volatileThreshold}%).
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+                    </div>
+                  </div>
+                </div>
                 <span className="font-bold text-yellow-900">{stats.volatileCount} cohorts</span>
               </div>
               <div className="flex justify-between items-center border-b border-gray-200 pb-2">
-                <span className="text-sm font-bold text-gray-700 flex items-center gap-1"><span>📈</span> Large Spending (&gt;={largeThreshold}x)</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-bold text-gray-700 flex items-center gap-1"><span>📈</span> Large Spending (&gt;={largeThreshold}x)</span>
+                  <div className="relative group inline-block ml-1 cursor-help" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-gray-400 hover:text-blue-600 font-normal text-xs transition-colors" title="Runs where annual retirement spending reaches or exceeds the configured multiplier relative to year 1 initial spending.">(?)</span>
+                    <div role="tooltip" className="pointer-events-none hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-xs font-normal leading-relaxed rounded-xl shadow-lg border border-gray-700 z-[100] transition-opacity duration-200 text-left">
+                      Runs where annual retirement spending reaches or exceeds the configured multiplier threshold (&ge;{largeThreshold}x) relative to your year 1 initial retirement withdrawal.
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+                    </div>
+                  </div>
+                </div>
                 <span className="font-bold text-blue-800">{stats.largeCount} cohorts</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-sm font-bold text-gray-700 flex items-center gap-1"><span>📉</span> Small Spending (&lt;={smallThreshold}x)</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-bold text-gray-700 flex items-center gap-1"><span>📉</span> Small Spending (&lt;={smallThreshold}x)</span>
+                  <div className="relative group inline-block ml-1 cursor-help" onClick={(e) => e.stopPropagation()}>
+                    <span className="text-gray-400 hover:text-blue-600 font-normal text-xs transition-colors" title="Runs where annual retirement spending falls to or below the configured multiplier relative to year 1 initial spending.">(?)</span>
+                    <div role="tooltip" className="pointer-events-none hidden group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2.5 bg-gray-900 text-white text-xs font-normal leading-relaxed rounded-xl shadow-lg border border-gray-700 z-[100] transition-opacity duration-200 text-left">
+                      Runs where annual retirement spending falls to or below the configured multiplier threshold (&le;{smallThreshold}x) relative to your year 1 initial retirement withdrawal.
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-4 border-transparent border-t-gray-900" />
+                    </div>
+                  </div>
+                </div>
                 <span className="font-bold text-orange-900">{stats.smallCount} cohorts</span>
               </div>
             </div>
