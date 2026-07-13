@@ -39,12 +39,19 @@ export function PortfolioValueView() {
   const [selectedYearOption, setSelectedYearOption] = useState<string>('final');
   const [viewMode, setViewMode] = useState<'histogram' | 'table'>('histogram');
   const [activeDomainRange, setActiveDomainRange] = useState<{ min: number | null; max: number | null }>({ min: null, max: null });
+  const brushTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     setActiveDomainRange({ min: null, max: null });
   }, [selectedYearOption]);
 
-  const statsAndData = useMemo(() => {
+  React.useEffect(() => {
+    return () => {
+      if (brushTimeoutRef.current) clearTimeout(brushTimeoutRef.current);
+    };
+  }, []);
+
+  const baseStatsAndOverview = useMemo(() => {
     if (!result || !result.runs.length) {
       return {
         median: 0,
@@ -54,7 +61,8 @@ export function PortfolioValueView() {
         smallest: 0,
         zeroCount: 0,
         zeroPercentage: 0,
-        histogramData: [],
+        overviewData: [] as any[],
+        histogramData: [] as any[],
         tableData: []
       };
     }
@@ -155,32 +163,19 @@ export function PortfolioValueView() {
       return bins;
     };
 
-    // Create histogram bins (Bypass static coarse bins whenever dynamic range bounds are set)
-    if (selectedYearOption === 'final' && activeDomainRange.min === null && result.defaultHistogramBins && result.defaultHistogramBins.length > 0) {
-      const bins = result.defaultHistogramBins.map(b => ({
-        binMin: b.binMin,
-        binMax: b.binMax,
-        count: b.count,
-        label: b.label,
-        startYears: b.startYears,
-        percentage: total > 0 ? (b.count / total) * 100 : 0
-      }));
-      return {
-        median,
-        average,
-        stdDev,
-        largest,
-        smallest,
-        zeroCount,
-        zeroPercentage,
-        histogramData: bins,
-        tableData
-      };
-    }
+    const globalMin = 0;
+    const globalMax = largest > 0 ? largest : 1000;
 
-    const effectiveMin = activeDomainRange.min !== null ? activeDomainRange.min : 0;
-    const effectiveMax = activeDomainRange.max !== null ? activeDomainRange.max : (largest > 0 ? largest : 1000);
-    const bins = buildBins(effectiveMin, effectiveMax, 20);
+    const overviewBins = (selectedYearOption === 'final' && result.defaultHistogramBins && result.defaultHistogramBins.length > 0)
+      ? result.defaultHistogramBins.map(b => ({
+          binMin: b.binMin,
+          binMax: b.binMax,
+          count: b.count,
+          label: b.label,
+          startYears: b.startYears,
+          percentage: total > 0 ? (b.count / total) * 100 : 0
+        }))
+      : buildBins(globalMin, globalMax, 20);
 
     return {
       median,
@@ -190,10 +185,53 @@ export function PortfolioValueView() {
       smallest,
       zeroCount,
       zeroPercentage,
-      histogramData: bins,
-      tableData
+      overviewData: overviewBins,
+      tableData,
+      buildBins,
+      globalMin,
+      globalMax
     };
-  }, [result, selectedYearOption, activeDomainRange, config?.currentAge, config?.retirementAge, config?.timelineMode]);
+  }, [result, selectedYearOption, config?.currentAge, config?.retirementAge, config?.timelineMode]);
+
+  const statsAndData = useMemo(() => {
+    if (!baseStatsAndOverview.buildBins) {
+      return { ...baseStatsAndOverview, histogramData: [] as any[] };
+    }
+    const effectiveMin = activeDomainRange.min !== null ? activeDomainRange.min : baseStatsAndOverview.globalMin;
+    const effectiveMax = activeDomainRange.max !== null ? activeDomainRange.max : baseStatsAndOverview.globalMax;
+    const detailBins = (activeDomainRange.min === null && activeDomainRange.max === null && selectedYearOption === 'final' && result?.defaultHistogramBins && result.defaultHistogramBins.length > 0)
+      ? baseStatsAndOverview.overviewData
+      : baseStatsAndOverview.buildBins(effectiveMin, effectiveMax, 20);
+
+    return {
+      ...baseStatsAndOverview,
+      histogramData: detailBins
+    };
+  }, [baseStatsAndOverview, activeDomainRange, selectedYearOption, result]);
+
+  const handleBrushChange = React.useCallback((range: { startIndex?: number; endIndex?: number }) => {
+    if (brushTimeoutRef.current) {
+      clearTimeout(brushTimeoutRef.current);
+    }
+    brushTimeoutRef.current = setTimeout(() => {
+      const overview = baseStatsAndOverview?.overviewData;
+      if (
+        range &&
+        range.startIndex !== undefined &&
+        range.endIndex !== undefined &&
+        overview &&
+        overview[range.startIndex] &&
+        overview[range.endIndex]
+      ) {
+        const nextMin = overview[range.startIndex].binMin;
+        const nextMax = overview[range.endIndex].binMax;
+        setActiveDomainRange(prev => {
+          if (prev.min === nextMin && prev.max === nextMax) return prev;
+          return { min: nextMin, max: nextMax };
+        });
+      }
+    }, 40);
+  }, [baseStatsAndOverview?.overviewData]);
 
   if (!result) {
     return <div className="p-8 text-center text-gray-600 animate-pulse">Loading Portfolio Value View...</div>;
@@ -312,41 +350,46 @@ export function PortfolioValueView() {
 
       {/* Content View */}
       {viewMode === 'histogram' ? (
-        <div className="h-96 w-full pt-4 min-w-0 overflow-hidden">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              key={activeDomainRange.max ? `chart-${activeDomainRange.min}-${activeDomainRange.max}` : 'chart-default'}
-              data={statsAndData.histogramData}
-              margin={{ top: 10, right: 30, left: 20, bottom: 20 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
-              <XAxis dataKey="label" stroke="#64748b" angle={-15} textAnchor="end" height={50} interval="preserveStartEnd" className="text-xs" />
-              <YAxis stroke="#64748b" label={{ value: 'Count', angle: -90, position: 'insideLeft', fill: '#64748b' }} className="text-xs" />
-              <Tooltip content={<CustomTooltip isMonteCarlo={isMonteCarlo} />} />
-              <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                {statsAndData.histogramData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.binMin <= 0 ? '#ef4444' : entry.binMin >= (config?.initialPortfolio || 1000000) ? '#22c55e' : '#3b82f6'} />
-                ))}
-              </Bar>
-              <Brush
-                dataKey="label"
-                height={30}
-                stroke="#3b82f6"
-                fill="#f8fafc"
-                startIndex={0}
-                endIndex={Math.max(0, statsAndData.histogramData.length - 1)}
-                onChange={(range: any) => {
-                  if (range && range.startIndex !== undefined && range.endIndex !== undefined && statsAndData.histogramData[range.startIndex] && statsAndData.histogramData[range.endIndex]) {
-                    const nextMin = statsAndData.histogramData[range.startIndex].binMin;
-                    const nextMax = statsAndData.histogramData[range.endIndex].binMax;
-                    if (nextMin !== activeDomainRange.min || nextMax !== activeDomainRange.max) {
-                      setActiveDomainRange({ min: nextMin, max: nextMax });
-                    }
-                  }
-                }}
-              />
-            </BarChart>
-          </ResponsiveContainer>
+        <div className="space-y-4 pt-4 w-full min-w-0 overflow-hidden">
+          {/* Tier 1: Primary High-Resolution Adaptive BarChart (No dynamic key, No inner Brush) */}
+          <div className="h-80 w-full min-w-0 overflow-hidden">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={statsAndData.histogramData} margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="label" stroke="#64748b" angle={-15} textAnchor="end" height={50} interval="preserveStartEnd" className="text-xs" />
+                <YAxis stroke="#64748b" label={{ value: 'Count', angle: -90, position: 'insideLeft', fill: '#64748b' }} className="text-xs" />
+                <Tooltip content={<CustomTooltip isMonteCarlo={isMonteCarlo} />} />
+                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                  {statsAndData.histogramData.map((entry, index) => (
+                    <Cell key={`detail-cell-${index}`} fill={entry.binMin <= 0 ? '#ef4444' : entry.binMin >= (config?.initialPortfolio || 1000000) ? '#22c55e' : '#3b82f6'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Tier 2: Stable Global Overview + Continuous Brush Navigator */}
+          <div className="h-28 w-full min-w-0 bg-gray-50/70 p-2 rounded-2xl border border-gray-200 overflow-hidden">
+            <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider px-2 mb-1">Macro Range Navigator (Slide to scale bin widths across timeline)</p>
+            <ResponsiveContainer width="100%" height={65}>
+              <BarChart data={statsAndData.overviewData} margin={{ top: 0, right: 30, left: 20, bottom: 5 }}>
+                <Bar dataKey="count" fill="#cbd5e1" radius={[2, 2, 0, 0]}>
+                  {statsAndData.overviewData.map((entry: any, index: number) => (
+                    <Cell key={`master-cell-${index}`} fill="#cbd5e1" />
+                  ))}
+                </Bar>
+                <Brush
+                  dataKey="label"
+                  height={28}
+                  stroke="#3b82f6"
+                  fill="#f8fafc"
+                  startIndex={0}
+                  endIndex={Math.max(0, statsAndData.overviewData.length - 1)}
+                  onChange={handleBrushChange}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       ) : (
         <div className="overflow-x-auto max-h-96 border border-gray-200 rounded-2xl shadow-inner mt-4">
