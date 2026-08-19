@@ -7,12 +7,20 @@ describe('AI Extraction Service & Orchestration Gate', () => {
     { id: 'cat-3', name: 'Misc' },
   ];
 
+  const originalEnv = process.env;
+
   beforeEach(() => {
     jest.clearAllMocks();
+    process.env = { ...originalEnv };
     process.env.GROQ_API_KEY = 'gsk_test_mock_key_for_tests';
+    delete process.env.GROQ_MODEL;
     
     // Setup mock global fetch
     global.fetch = jest.fn();
+  });
+
+  afterAll(() => {
+    process.env = originalEnv;
   });
 
   it('should extract transaction currency defaulting strictly to user base currency', async () => {
@@ -302,6 +310,122 @@ describe('AI Extraction Service & Orchestration Gate', () => {
         error: "Connection to AI service failed. Please check your connection and try again.",
         status: 503
       });
+    });
+  });
+
+  describe('Model Configuration & GROQ_MODEL Environment Overrides', () => {
+    it('should default to openai/gpt-oss-20b when GROQ_MODEL is unset', async () => {
+      delete process.env.GROQ_MODEL;
+
+      const mockLlmResponse = {
+        choices: [{
+          message: {
+            tool_calls: [{
+              function: {
+                name: 'extract_expense',
+                arguments: JSON.stringify({
+                  amount: 15,
+                  currency: 'CAD',
+                  category: 'Groceries',
+                  item: 'Apples',
+                  date: '2026-05-16',
+                }),
+              },
+            }],
+          },
+        }],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockLlmResponse),
+      });
+
+      await extractExpenseFromMessage(
+        'spent 15 on apples',
+        mockCategories,
+        'CAD'
+      );
+
+      const fetchArgs = (global.fetch as jest.Mock).mock.calls[0][1];
+      const parsedBody = JSON.parse(fetchArgs.body);
+      expect(parsedBody.model).toBe('openai/gpt-oss-20b');
+    });
+
+    it('should default to openai/gpt-oss-20b when GROQ_MODEL is empty or whitespace only', async () => {
+      process.env.GROQ_MODEL = '   ';
+
+      const mockLlmResponse = {
+        choices: [{
+          message: {
+            tool_calls: [{
+              function: {
+                name: 'extract_expense',
+                arguments: JSON.stringify({
+                  amount: 15,
+                  currency: 'CAD',
+                  category: 'Groceries',
+                  item: 'Apples',
+                  date: '2026-05-16',
+                }),
+              },
+            }],
+          },
+        }],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockLlmResponse),
+      });
+
+      await extractExpenseFromMessage(
+        'spent 15 on apples',
+        mockCategories,
+        'CAD'
+      );
+
+      const fetchArgs = (global.fetch as jest.Mock).mock.calls[0][1];
+      const parsedBody = JSON.parse(fetchArgs.body);
+      expect(parsedBody.model).toBe('openai/gpt-oss-20b');
+    });
+
+    it('should respect custom GROQ_MODEL environment variable when defined', async () => {
+      process.env.GROQ_MODEL = 'llama-3.3-70b-versatile';
+
+      const mockLlmResponse = {
+        choices: [{
+          message: {
+            tool_calls: [{
+              function: {
+                name: 'extract_expense',
+                arguments: JSON.stringify({
+                  amount: 15,
+                  currency: 'CAD',
+                  category: 'Groceries',
+                  item: 'Apples',
+                  date: '2026-05-16',
+                }),
+              },
+            }],
+          },
+        }],
+      };
+
+      (global.fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: jest.fn().mockResolvedValue(mockLlmResponse),
+      });
+
+      await extractExpenseFromMessage(
+        'spent 15 on apples',
+        mockCategories,
+        'CAD'
+      );
+
+      const fetchArgs = (global.fetch as jest.Mock).mock.calls[0][1];
+      const parsedBody = JSON.parse(fetchArgs.body);
+      expect(parsedBody.model).toBe('llama-3.3-70b-versatile');
     });
   });
 });

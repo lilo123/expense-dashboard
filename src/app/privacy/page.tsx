@@ -54,7 +54,7 @@ export default function PrivacyPage() {
                 Supabase, Inc.: Database hosting, authentication, metadata, and relational schemas (US region).
               </li>
               <li>
-                Groq Inc. / Llama 3.1 Model: Transient natural language inference and expense categorization (US servers; strict Zero-Data-Training agreements).
+                Groq Inc. / GPT-OSS 20B Model: Transient natural language inference and expense categorization (US servers; strict Zero-Data-Training agreements).
               </li>
             </ul>
           </section>
