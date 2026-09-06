@@ -97,7 +97,7 @@ export interface EmailTemplate {
 }
 
 export type DealType = 'credit_card' | 'bank_account' | 'brokerage_account';
-export type DealStatus = 'exploring' | 'active' | 'ready_to_claim' | 'claimed' | 'closed';
+export type DealStatus = 'exploring' | 'active' | 'ready_to_claim' | 'claimed' | 'closed' | 'canceled';
 
 export interface DealChecklistItem {
   id: string;

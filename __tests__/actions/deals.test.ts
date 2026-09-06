@@ -6,6 +6,7 @@ import {
   updateSpendProgressAction, 
   deleteDealAction 
 } from '@/app/actions/deals';
+import { DealStatusEnum } from '@/lib/dealValidators';
 import { createClient } from '@/utils/supabase/server';
 import { revalidatePath } from 'next/cache';
 
@@ -225,4 +226,56 @@ describe('Finance Deals Actions', () => {
     await expect(deleteDealAction('deal-1')).rejects.toThrow('Failed to delete deal');
     await expect(toggleChecklistItemAction('item-1', true)).rejects.toThrow('Failed to toggle item');
   });
+
+  it('allows creating and updating deals with canceled status', async () => {
+    const { dealsChainable } = setupPremium();
+    dealsChainable.result = { data: { id: 'canceled-deal', status: 'canceled' }, error: null };
+
+    await createDealAction({
+      type: 'credit_card',
+      company: 'Amex',
+      status: 'canceled',
+      type_specific_data: { card_name: 'Cobalt', action_date: '2026-07-01' }
+    });
+    expect(mockSupabase.from).toHaveBeenCalledWith('deals');
+    expect(dealsChainable.insert).toHaveBeenCalledWith(expect.objectContaining({ status: 'canceled' }));
+
+    await updateDealAction('deal-1', {
+      type: 'credit_card',
+      company: 'Amex',
+      status: 'canceled',
+      type_specific_data: { card_name: 'Cobalt' }
+    });
+    expect(dealsChainable.update).toHaveBeenCalledWith(expect.objectContaining({ status: 'canceled' }));
+  });
+
+  it('rejects invalid deal status in Zod schema', async () => {
+    setupPremium();
+    await expect(createDealAction({
+      type: 'credit_card',
+      company: 'Amex',
+      status: 'invalid_status' as any,
+      type_specific_data: { card_name: 'Cobalt' }
+    })).rejects.toThrow('Invalid deal data');
+  });
+
+  it('validates all 6 statuses in DealStatusEnum and permits deal creation with them', async () => {
+    const { dealsChainable } = setupPremium();
+    dealsChainable.result = { data: { id: 'status-test-deal' }, error: null };
+
+    const validStatuses = ['exploring', 'active', 'ready_to_claim', 'claimed', 'closed', 'canceled'] as const;
+
+    for (const status of validStatuses) {
+      expect(DealStatusEnum.parse(status)).toBe(status);
+
+      await createDealAction({
+        type: 'credit_card',
+        company: 'Bank',
+        status,
+        type_specific_data: { card_name: 'Card' }
+      });
+      expect(dealsChainable.insert).toHaveBeenCalledWith(expect.objectContaining({ status }));
+    }
+  });
 });
+

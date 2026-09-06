@@ -40,6 +40,7 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
       case 'ready_to_claim': return 'bg-white/80 text-blue-950 border-blue-200';
       case 'claimed': return 'bg-zen-sage/30 text-emerald-950 border-zen-sage/50';
       case 'closed': return 'bg-white/60 text-zen-charcoal/60 border-zen-lavender/40';
+      case 'canceled': return 'bg-rose-50 text-rose-950 border-rose-200';
       default: return 'bg-white/80 text-indigo-950 border-indigo-200';
     }
   };
@@ -51,6 +52,7 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
       case 'ready_to_claim': return 'bg-blue-500';
       case 'claimed': return 'bg-emerald-500';
       case 'closed': return 'bg-zinc-400';
+      case 'canceled': return 'bg-rose-500';
       default: return 'bg-indigo-500';
     }
   };
@@ -58,7 +60,12 @@ export default function DealCard({ deal, onEdit, onDelete, setOptimisticDeals }:
   const formatCurrency = (val: number | null | undefined, currency: string | null = 'USD') => {
     const validCurrency = currency || 'USD';
     const validVal = Number(val || 0);
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: validCurrency, maximumFractionDigits: 0 }).format(isNaN(validVal) ? 0 : validVal);
+    const safeVal = isNaN(validVal) ? 0 : validVal;
+    try {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: validCurrency, maximumFractionDigits: 0 }).format(safeVal);
+    } catch {
+      return `${safeVal.toLocaleString('en-US')} ${validCurrency}`;
+    }
   };
 
   return (

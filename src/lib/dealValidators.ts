@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-const DealStatusEnum = z.enum(['exploring', 'active', 'ready_to_claim', 'claimed', 'closed']);
+export const DealStatusEnum = z.enum(['exploring', 'active', 'ready_to_claim', 'claimed', 'closed', 'canceled']);
 
 export const ChecklistItemSchema = z.object({
   id: z.string().optional(),

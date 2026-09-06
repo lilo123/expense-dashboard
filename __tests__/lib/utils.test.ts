@@ -41,6 +41,11 @@ describe('Currency Utilities - Scaled Architecture', () => {
     it('should handle undefined rates mapping cleanly by defaulting to 1:1 conversion fallback', () => {
       expect(convertAmount(100, 'CAD', 'USD', undefined)).toBe(100);
     });
+
+    it('should handle lowercase and mixed-case currency strings safely', () => {
+      expect(convertAmount(4.0, 'cad', 'vnd', mockRates)).toBe(74000.0);
+      expect(convertAmount(100, 'usd', 'cad', mockRates)).toBe(136.99);
+    });
   });
 
   describe('getCurrencySymbol', () => {

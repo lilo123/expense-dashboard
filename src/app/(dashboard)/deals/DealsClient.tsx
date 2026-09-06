@@ -8,6 +8,7 @@ import DealFormModal from './DealFormModal';
 import MultiSelectDropdown from '@/components/ui/MultiSelectDropdown';
 import { deleteDealAction } from '@/app/actions/deals';
 import { DealRow } from '@/lib/dealValidators';
+import { convertAmount } from '@/lib/utils';
 
 const categoryOptions = [
   { id: 'credit_card', name: 'Credit Card' },
@@ -16,8 +17,31 @@ const categoryOptions = [
   { id: 'other', name: 'Other' }
 ];
 
-export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] }) {
+const statusOptions = [
+  { id: 'exploring', name: 'Exploring' },
+  { id: 'active', name: 'Active' },
+  { id: 'ready_to_claim', name: 'Ready to Claim' },
+  { id: 'claimed', name: 'Claimed' },
+  { id: 'closed', name: 'Closed' },
+  { id: 'canceled', name: 'Canceled' }
+];
+
+interface DealsClientProps {
+  initialDeals: DealRow[];
+  initialDisplayCurrency?: 'CAD' | 'USD';
+  exchangeRates?: Record<string, number>;
+}
+
+export default function DealsClient({
+  initialDeals,
+  initialDisplayCurrency = 'CAD',
+  exchangeRates = { CAD: 1.0, USD: 0.73 }
+}: DealsClientProps) {
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<string>>(new Set());
+  const [displayCurrency, setDisplayCurrency] = useState<'CAD' | 'USD'>(() => {
+    return initialDisplayCurrency === 'USD' ? 'USD' : 'CAD';
+  });
   const [isModalOpen, setModalOpen] = useState(false);
   const [editingDeal, setEditingDeal] = useState<DealRow | null>(null);
   const [, startTransition] = useTransition();
@@ -27,6 +51,26 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
   const [sortDirection, setSortDirection] = useState<'highest' | 'lowest'>('highest');
   const [isSortOpen, setIsSortOpen] = useState(false);
   const sortPopoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('deals_display_currency');
+      if (saved === 'CAD' || saved === 'USD') {
+        setDisplayCurrency(saved);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const handleCurrencyChange = (curr: 'CAD' | 'USD') => {
+    setDisplayCurrency(curr);
+    try {
+      localStorage.setItem('deals_display_currency', curr);
+    } catch {
+      // ignore
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -52,24 +96,32 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
     }
   );
 
-  const filteredDeals = optimisticDeals.filter(d => 
-    selectedCategories.size === 0 || selectedCategories.size === categoryOptions.length || selectedCategories.has(d.type)
-  );
+  const filteredDeals = optimisticDeals.filter(d => {
+    const matchCategory = selectedCategories.size === 0 || selectedCategories.size === categoryOptions.length || selectedCategories.has(d.type);
+    const matchStatus = selectedStatuses.size === 0 || selectedStatuses.size === statusOptions.length || selectedStatuses.has(d.status);
+    return matchCategory && matchStatus;
+  });
 
+  const safeExchangeRates = { CAD: 1.0, USD: 0.73, ...(exchangeRates || {}) };
+
+  const trimmedQuery = searchQuery.trim().toLowerCase();
   const displayDeals = [...filteredDeals]
     .filter(d => {
-      if (searchQuery === '') return true;
-      const query = searchQuery.toLowerCase();
-      const matchCompany = d.company?.toLowerCase().includes(query);
-      const matchNote = d.note?.toLowerCase().includes(query);
-      const matchCard = d.type_specific_data?.card_name?.toLowerCase().includes(query);
-      const matchChecklist = d.deal_checklist_items?.some(item => item.action_text?.toLowerCase().includes(query));
-      return matchCompany || matchNote || matchCard || matchChecklist;
+      if (!trimmedQuery) return true;
+      const matchCompany = d.company?.toLowerCase().includes(trimmedQuery);
+      const matchNote = d.note?.toLowerCase().includes(trimmedQuery);
+      const matchCard = (d.type_specific_data?.card_name as string | undefined)?.toLowerCase().includes(trimmedQuery);
+      const matchChecklist = d.deal_checklist_items?.some(item => item.action_text?.toLowerCase().includes(trimmedQuery));
+      return Boolean(matchCompany || matchNote || matchCard || matchChecklist);
     })
     .sort((a, b) => {
       if (sortMetric === 'amount') {
-        const valA = Number(a.bonus_amount || 0) || 0;
-        const valB = Number(b.bonus_amount || 0) || 0;
+        const rawA = Number(a.bonus_amount || 0) || 0;
+        const rawB = Number(b.bonus_amount || 0) || 0;
+        const currA = (a.currency || 'USD').toUpperCase();
+        const currB = (b.currency || 'USD').toUpperCase();
+        const valA = convertAmount(rawA, currA, displayCurrency, safeExchangeRates);
+        const valB = convertAmount(rawB, currB, displayCurrency, safeExchangeRates);
         const diff = valA < valB ? -1 : (valA > valB ? 1 : 0);
         return sortDirection === 'highest' ? -diff : diff;
       } else {
@@ -90,20 +142,59 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
       }
     });
 
-  const primaryCurrency = optimisticDeals.find(d => d.currency)?.currency || 'USD';
-  const claimedAmount = optimisticDeals.filter(d => d.status === 'claimed' && d.currency === primaryCurrency).reduce((sum, d) => {
-    const val = Number(d.bonus_amount);
-    return sum + (isNaN(val) ? 0 : val);
-  }, 0);
-  const pendingAmount = optimisticDeals.filter(d => d.status !== 'claimed' && d.status !== 'closed' && d.currency === primaryCurrency).reduce((sum, d) => {
-    const val = Number(d.bonus_amount);
-    return sum + (isNaN(val) ? 0 : val);
-  }, 0);
+  const claimedAmount = optimisticDeals
+    .filter(d => d.status === 'claimed' || d.status === 'closed')
+    .reduce((sum, d) => {
+      const val = Number(d.bonus_amount) || 0;
+      const curr = (d.currency || 'USD').toUpperCase();
+      return sum + convertAmount(val, curr, displayCurrency, safeExchangeRates);
+    }, 0);
+
+  const pendingAmount = optimisticDeals
+    .filter(d => ['exploring', 'active', 'ready_to_claim'].includes(d.status))
+    .reduce((sum, d) => {
+      const val = Number(d.bonus_amount) || 0;
+      const curr = (d.currency || 'USD').toUpperCase();
+      return sum + convertAmount(val, curr, displayCurrency, safeExchangeRates);
+    }, 0);
+
   const totalAmount = claimedAmount + pendingAmount;
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-US', { style: 'currency', currency: primaryCurrency, maximumFractionDigits: 0 }).format(val);
+  const eligibleDeals = optimisticDeals.filter(d =>
+    d.status !== 'canceled' && ['claimed', 'closed', 'exploring', 'active', 'ready_to_claim'].includes(d.status)
+  );
+
+  const cadSum = eligibleDeals
+    .filter(d => (d.currency || 'USD').toUpperCase() === 'CAD')
+    .reduce((sum, d) => sum + (Number(d.bonus_amount) || 0), 0);
+
+  const usdSum = eligibleDeals
+    .filter(d => (d.currency || 'USD').toUpperCase() === 'USD')
+    .reduce((sum, d) => sum + (Number(d.bonus_amount) || 0), 0);
+
+  const otherSums: Record<string, number> = {};
+  eligibleDeals.forEach(d => {
+    const curr = (d.currency || 'USD').toUpperCase();
+    if (curr !== 'CAD' && curr !== 'USD') {
+      otherSums[curr] = (otherSums[curr] || 0) + (Number(d.bonus_amount) || 0);
+    }
+  });
+
+  const formatCurrency = (val: number, curr: string = displayCurrency) => {
+    const safeVal = Number(val) || 0;
+    try {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: curr, maximumFractionDigits: 0 }).format(safeVal);
+    } catch {
+      return safeVal.toLocaleString('en-US');
+    }
   };
+
+  const nativeParts = [
+    `${formatCurrency(cadSum, 'CAD')} CAD`,
+    `${formatCurrency(usdSum, 'USD')} USD`,
+    ...Object.entries(otherSums).map(([curr, amt]) => `${formatCurrency(amt, curr)} ${curr}`)
+  ];
+  const nativeCaption = `Native: ${nativeParts.join(' • ')}`;
 
   const getSortDirectionLabel = () => {
     if (sortMetric === 'amount') {
@@ -131,8 +222,35 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
         </Link>
       </div>
 
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-zen-charcoal">Finance Deals</h1>
+      <div className="flex flex-wrap justify-between items-center gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold text-zen-charcoal">Finance Deals</h1>
+          {/* Currency Toggle Pill */}
+          <div className="inline-flex items-center bg-white/60 border border-zen-lavender/40 rounded-full p-0.5 shadow-xs">
+            <button
+              type="button"
+              onClick={() => handleCurrencyChange('CAD')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all border-none cursor-pointer ${
+                displayCurrency === 'CAD'
+                  ? 'bg-zen-charcoal text-zen-base shadow-xs'
+                  : 'bg-transparent text-zen-charcoal/60 hover:text-zen-charcoal'
+              }`}
+            >
+              CAD
+            </button>
+            <button
+              type="button"
+              onClick={() => handleCurrencyChange('USD')}
+              className={`px-3 py-1 rounded-full text-xs font-bold transition-all border-none cursor-pointer ${
+                displayCurrency === 'USD'
+                  ? 'bg-zen-charcoal text-zen-base shadow-xs'
+                  : 'bg-transparent text-zen-charcoal/60 hover:text-zen-charcoal'
+              }`}
+            >
+              USD
+            </button>
+          </div>
+        </div>
         <button 
           onClick={() => { setEditingDeal(null); setModalOpen(true); }}
           className="bg-zen-charcoal hover:bg-zen-charcoal/90 text-zen-base px-5 py-2.5 rounded-full font-extrabold text-xs uppercase tracking-wider transition-all shadow-md cursor-pointer border-none"
@@ -144,16 +262,19 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
       {/* Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col items-start shadow-sm justify-between">
-          <p className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider mb-1">Claimed ({primaryCurrency})</p>
-          <p className="text-2xl font-extrabold text-zen-charcoal/90">{formatCurrency(claimedAmount)}</p>
+          <p className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider mb-1">Claimed ({displayCurrency})</p>
+          <p className="text-2xl font-extrabold text-zen-charcoal/90">{formatCurrency(claimedAmount, displayCurrency)}</p>
         </div>
         <div className="bg-white/40 backdrop-blur-md border border-white/20 rounded-2xl p-4 flex flex-col items-start shadow-sm justify-between">
-          <p className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider mb-1">Pending ({primaryCurrency})</p>
-          <p className="text-2xl font-extrabold text-zen-charcoal/90">{formatCurrency(pendingAmount)}</p>
+          <p className="text-xs font-semibold text-zen-charcoal/60 uppercase tracking-wider mb-1">Pending ({displayCurrency})</p>
+          <p className="text-2xl font-extrabold text-zen-charcoal/90">{formatCurrency(pendingAmount, displayCurrency)}</p>
         </div>
         <div className="bg-white/60 backdrop-blur-md border border-zen-sage/40 rounded-2xl p-4 flex flex-col items-start shadow-sm justify-between">
-          <p className="text-xs font-semibold text-zen-charcoal/70 uppercase tracking-wider mb-1">Total Value ({primaryCurrency})</p>
-          <p className="text-2xl font-extrabold text-zen-charcoal">{formatCurrency(totalAmount)}</p>
+          <div>
+            <p className="text-xs font-semibold text-zen-charcoal/70 uppercase tracking-wider mb-1">Total Value ({displayCurrency})</p>
+            <p className="text-2xl font-extrabold text-zen-charcoal">{formatCurrency(totalAmount, displayCurrency)}</p>
+          </div>
+          <p className="text-[11px] font-medium text-zen-charcoal/60 mt-1">{nativeCaption}</p>
         </div>
       </div>
 
@@ -177,6 +298,14 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
             options={categoryOptions}
             selectedIds={selectedCategories}
             onChange={setSelectedCategories}
+          />
+          <MultiSelectDropdown
+            id="status-filter"
+            label="Status"
+            pluralLabel="Statuses"
+            options={statusOptions}
+            selectedIds={selectedStatuses}
+            onChange={setSelectedStatuses}
           />
 
           {/* Sort Dropdown Component */}
@@ -206,7 +335,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
                       onChange={() => setSortDirection('highest')}
                       className="w-3.5 h-3.5 accent-zen-sage shrink-0"
                     />
-                    Highest (Oldest)
+                    {sortMetric === 'amount' ? 'Highest' : 'Oldest (Ascending)'}
                   </label>
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <input
@@ -216,7 +345,7 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
                       onChange={() => setSortDirection('lowest')}
                       className="w-3.5 h-3.5 accent-zen-sage shrink-0"
                     />
-                    Lowest (Newest)
+                    {sortMetric === 'amount' ? 'Lowest' : 'Newest (Descending)'}
                   </label>
                 </div>
 
@@ -293,8 +422,10 @@ export default function DealsClient({ initialDeals }: { initialDeals: DealRow[] 
           onClose={() => { setModalOpen(false); setEditingDeal(null); }}
           editingDeal={editingDeal}
           setOptimisticDeals={setOptimisticDeals}
+          defaultCurrency={displayCurrency}
         />
       )}
     </div>
   );
 }
+

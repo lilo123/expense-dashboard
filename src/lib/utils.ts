@@ -104,12 +104,14 @@ export function convertAmount(
   rates?: Record<string, number>
 ): number {
   if (!from || !to) return amount;
+  const fromUpper = from.toUpperCase();
+  const toUpper = to.toUpperCase();
   const safeRates = rates || { CAD: 1.0 };
-  const fromRate = safeRates[from] || 1;
-  const toRate = safeRates[to] || 1;
+  const fromRate = safeRates[fromUpper] ?? safeRates[from] ?? 1;
+  const toRate = safeRates[toUpper] ?? safeRates[to] ?? 1;
   
   // Safeguard: skip FX division on identical pairs, but always execute rounding clamp
-  const converted = from === to ? amount : amount * (toRate / fromRate);
+  const converted = fromUpper === toUpper ? amount : amount * (toRate / fromRate);
   return Math.round((converted + Number.EPSILON) * 100) / 100;
 }
 

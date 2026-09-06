@@ -209,12 +209,13 @@ export function PortfolioValueView() {
     };
   }, [baseStatsAndOverview, activeDomainRange, selectedYearOption, result]);
 
+  const overviewData = baseStatsAndOverview?.overviewData;
   const handleBrushChange = React.useCallback((range: { startIndex?: number; endIndex?: number }) => {
     if (brushTimeoutRef.current) {
       clearTimeout(brushTimeoutRef.current);
     }
     brushTimeoutRef.current = setTimeout(() => {
-      const overview = baseStatsAndOverview?.overviewData;
+      const overview = overviewData;
       if (
         range &&
         range.startIndex !== undefined &&
@@ -231,7 +232,7 @@ export function PortfolioValueView() {
         });
       }
     }, 40);
-  }, [baseStatsAndOverview?.overviewData]);
+  }, [overviewData]);
 
   if (!result) {
     return <div className="p-8 text-center text-gray-600 animate-pulse">Loading Portfolio Value View...</div>;
